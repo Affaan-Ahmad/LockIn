@@ -75,7 +75,7 @@ all. Each is implemented and unit-tested; none is verified against a live databa
 | 12 | **No threat model document.** | MEDIUM | |
 | 13 | **No legal documents.** No privacy policy, terms, or security contact. | CRITICAL for launch | Drafting is in scope; legal sufficiency is not. |
 | 14 | **Google OAuth app is in Testing mode**, unverified. | CRITICAL for launch | See below. |
-| 15 | **Dev Supabase keys are knowingly compromised.** The `anon` and `service_role` keys for project `vkihrrhqduysjmmqggnm` were pasted into a chat transcript on 2026-08-30 and are still in use in `.env.local`. | HIGH | Accepted risk *only* while the database is empty. See the incident log below. |
+| 15 | **Dev `service_role` credentials exposed.** Both the `sb_secret_` key and the legacy `service_role` JWT for project `vkihrrhqduysjmmqggnm` were pasted into a chat transcript on 2026-08-30. The `sb_secret_` value has been removed from `.env.local`; the legacy JWT remains valid until legacy keys are disabled. | HIGH | See the incident log below. |
 
 ## Incident log
 
@@ -92,15 +92,27 @@ nobody wrote down is a rotation nobody can prove happened.
 Google account, and the project was minutes old. The `service_role` key bypasses RLS entirely, so
 the impact would have been total read/write across all users had any existed.
 
-**Response.** The encryption key was rotated immediately — it was never used to encrypt anything.
-The two Supabase keys were **knowingly retained** to unblock the first migration run, with the risk
-accepted on the basis that the database holds no data.
+**Triage.** Only two of the four exposed values are actually credentials:
 
-**Outstanding — blocks the following, whichever comes first:**
+| Exposed value | Action | Why |
+| --- | --- | --- |
+| `sb_publishable_` key | **None** | Public by design; ships in the browser bundle of every Supabase app. RLS protects the data, not this key's secrecy. |
+| `anon` JWT | **None** | Same, older format. |
+| `sb_secret_` key | **Rotate** | Bypasses RLS entirely. |
+| `service_role` JWT | **Rotate separately** | Same power, issued by a different mechanism. Rotating the `sb_secret_` key does **not** invalidate it. |
 
-- [ ] Rotate the `service_role` / secret key (Project Settings → API Keys)
-- [ ] Rotate the `anon` / publishable key
-- [ ] Update `.env.local` and remove the `!!! TEMPORARY` blocks
+That last row is the easy one to get wrong: two independent credentials with identical privilege,
+so killing one leaves the other live.
+
+**Response.** The encryption key was rotated immediately — it had encrypted nothing. The
+`sb_secret_` value was removed from `.env.local` and replaced with a paste placeholder.
+
+**Outstanding:**
+
+- [ ] Create a new `sb_secret_` key and paste it into `.env.local` (Project Settings → API Keys)
+- [ ] Revoke the exposed `sb_secret_` key
+- [ ] Kill the legacy `service_role` JWT — disable legacy JWT keys (preferred, this project uses the
+      new format) or roll the JWT secret
 - [ ] Confirm no production project ever reuses this development project's keys
 
 Must be done **before** any of: the first real user connecting a Google account, any deployment
