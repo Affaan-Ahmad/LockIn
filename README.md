@@ -11,6 +11,11 @@ of what a student sees in Classroom is not theirs. This backend answers one ques
 **Status: backend foundation only.** There is no frontend beyond the minimum needed to sign in and
 exercise the API during development.
 
+**Not production ready.** Security, privacy, Google API compliance and legal readiness are release
+blockers for this project, tracked in [`docs/production-readiness.md`](docs/production-readiness.md)
+— including the gaps that currently block launch and the external reviews that code cannot
+substitute for.
+
 ---
 
 ## The one thing to understand first
