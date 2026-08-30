@@ -75,6 +75,40 @@ all. Each is implemented and unit-tested; none is verified against a live databa
 | 12 | **No threat model document.** | MEDIUM | |
 | 13 | **No legal documents.** No privacy policy, terms, or security contact. | CRITICAL for launch | Drafting is in scope; legal sufficiency is not. |
 | 14 | **Google OAuth app is in Testing mode**, unverified. | CRITICAL for launch | See below. |
+| 15 | **Dev Supabase keys are knowingly compromised.** The `anon` and `service_role` keys for project `vkihrrhqduysjmmqggnm` were pasted into a chat transcript on 2026-08-30 and are still in use in `.env.local`. | HIGH | Accepted risk *only* while the database is empty. See the incident log below. |
+
+## Incident log
+
+Kept because "rotate secrets after accidental exposure" is a standing rule, and a rotation that
+nobody wrote down is a rotation nobody can prove happened.
+
+### 2026-08-30 — Supabase development keys exposed in a chat transcript
+
+**What.** The `anon` / publishable and `service_role` / secret keys for the development project
+`vkihrrhqduysjmmqggnm` were pasted into a chat transcript, along with a locally generated
+`GOOGLE_TOKEN_ENCRYPTION_KEY` that a tool notification echoed back.
+
+**Impact.** None realised. The database was empty, no migrations had run, no user had connected a
+Google account, and the project was minutes old. The `service_role` key bypasses RLS entirely, so
+the impact would have been total read/write across all users had any existed.
+
+**Response.** The encryption key was rotated immediately — it was never used to encrypt anything.
+The two Supabase keys were **knowingly retained** to unblock the first migration run, with the risk
+accepted on the basis that the database holds no data.
+
+**Outstanding — blocks the following, whichever comes first:**
+
+- [ ] Rotate the `service_role` / secret key (Project Settings → API Keys)
+- [ ] Rotate the `anon` / publishable key
+- [ ] Update `.env.local` and remove the `!!! TEMPORARY` blocks
+- [ ] Confirm no production project ever reuses this development project's keys
+
+Must be done **before** any of: the first real user connecting a Google account, any deployment
+reachable from the internet, or the production project being created. Not "before launch" — before
+the database stops being empty.
+
+**Lesson.** A credential does not need to be sent to be used. Secrets go into `.env.local` directly
+and are never pasted into a chat, a ticket, or a commit.
 
 ---
 
