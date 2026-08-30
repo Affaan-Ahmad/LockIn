@@ -75,7 +75,7 @@ all. Each is implemented and unit-tested; none is verified against a live databa
 | 12 | **No threat model document.** | MEDIUM | |
 | 13 | **No legal documents.** No privacy policy, terms, or security contact. | CRITICAL for launch | Drafting is in scope; legal sufficiency is not. |
 | 14 | **Google OAuth app is in Testing mode**, unverified. | CRITICAL for launch | See below. |
-| 15 | **Dev `service_role` credentials exposed.** Both the `sb_secret_` key and the legacy `service_role` JWT for project `vkihrrhqduysjmmqggnm` were pasted into a chat transcript on 2026-08-30. The `sb_secret_` value has been removed from `.env.local`; the legacy JWT remains valid until legacy keys are disabled. | HIGH | See the incident log below. |
+| 15 | ~~Dev `service_role` credentials exposed.~~ **RESOLVED 2026-08-30.** Both exposed credentials are dead: the `sb_secret_` key was replaced, and legacy JWT-based API keys were disabled project-wide. | ~~HIGH~~ CLOSED | See the incident log below. |
 
 ## Incident log
 
@@ -107,17 +107,21 @@ so killing one leaves the other live.
 **Response.** The encryption key was rotated immediately — it had encrypted nothing. The
 `sb_secret_` value was removed from `.env.local` and replaced with a paste placeholder.
 
-**Outstanding:**
+**Resolution — completed 2026-08-30, before the database held any data:**
 
-- [ ] Create a new `sb_secret_` key and paste it into `.env.local` (Project Settings → API Keys)
-- [ ] Revoke the exposed `sb_secret_` key
-- [ ] Kill the legacy `service_role` JWT — disable legacy JWT keys (preferred, this project uses the
-      new format) or roll the JWT secret
+- [x] Created a replacement `sb_secret_` key and put it in `.env.local`
+- [x] Disabled legacy JWT-based API keys project-wide, killing the exposed `service_role` JWT
+- [x] Verified both replacement keys against `/auth/v1/settings`, `/rest/v1/` and
+      `/auth/v1/admin/users` after disabling — all 200
+- [ ] Revoke the superseded `sb_secret_zMnSz…` key if it is still listed
 - [ ] Confirm no production project ever reuses this development project's keys
 
-Must be done **before** any of: the first real user connecting a Google account, any deployment
-reachable from the internet, or the production project being created. Not "before launch" — before
-the database stops being empty.
+**Verification note.** An initial 401 against `/rest/v1/` using the publishable key was misread as
+the new key format being unsupported. It was not: that endpoint deliberately accepts only secret
+keys. Checking against `/auth/v1/settings` showed the format works, which removed the reason to keep
+legacy keys as a fallback and turned a JWT-secret rotation into a single disable action.
+
+Nothing was exposed for longer than it took to replace it, and no user data existed at any point.
 
 **Lesson.** A credential does not need to be sent to be used. Secrets go into `.env.local` directly
 and are never pasted into a chat, a ticket, or a commit.
