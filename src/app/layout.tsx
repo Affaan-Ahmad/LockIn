@@ -9,8 +9,8 @@ import type { ReactNode } from 'react';
  */
 
 export const metadata = {
-  title: 'Assignment Scrapper',
-  description: 'Personalised academic deadline layer over Google Classroom',
+  title: 'LockIn',
+  description: 'Personalised deadline layer over Google Classroom',
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

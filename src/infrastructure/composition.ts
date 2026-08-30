@@ -44,7 +44,7 @@ import { createLogger, type Logger } from '@/shared/logger';
 
 export function createRootLogger(): Logger {
   const env = getServerEnv();
-  return createLogger({ level: env.LOG_LEVEL, base: { service: 'assignment-scrapper' } });
+  return createLogger({ level: env.LOG_LEVEL, base: { service: 'lockin' } });
 }
 
 export function createGoogleTokenService(logger: Logger): GoogleTokenService {

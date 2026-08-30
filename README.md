@@ -1,6 +1,6 @@
-# Assignment Scrapper
+# LockIn
 
-A personalised academic data layer over Google Classroom.
+A personalised deadline layer over Google Classroom.
 
 At this university one Google Classroom is shared by several sections — A, B, C, G and so on — and
 teachers post section-specific assignments, labs, quizzes and deadlines into the same course. Most

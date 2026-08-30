@@ -8,7 +8,7 @@
 export default function Page() {
   return (
     <main>
-      <h1>Assignment Scrapper — backend</h1>
+      <h1>LockIn — backend</h1>
       <p>No interface yet. These endpoints exist for development:</p>
       <ul>
         <li>
