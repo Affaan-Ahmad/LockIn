@@ -1,0 +1,96 @@
+import js from '@eslint/js';
+import tseslint from 'typescript-eslint';
+
+/**
+ * The `no-restricted-imports` blocks below are the mechanical enforcement of the
+ * dependency rule described in the README. Without them "domain must not depend on
+ * infrastructure" is a comment that decays; with them it is a build failure.
+ */
+export default tseslint.config(
+  {
+    ignores: ['node_modules/**', '.next/**', 'coverage/**', 'next-env.d.ts'],
+  },
+  js.configs.recommended,
+  ...tseslint.configs.recommendedTypeChecked,
+  {
+    languageOptions: {
+      parserOptions: {
+        // The two .mjs config files at the root are not part of tsconfig's
+        // include list; allowDefaultProject lets them be linted without
+        // widening the type-checked program.
+        projectService: { allowDefaultProject: ['*.mjs'] },
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'error',
+      '@typescript-eslint/explicit-module-boundary-types': 'off',
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
+      ],
+      '@typescript-eslint/consistent-type-imports': [
+        'error',
+        { prefer: 'type-imports', fixStyle: 'separate-type-imports' },
+      ],
+      '@typescript-eslint/require-await': 'error',
+      '@typescript-eslint/no-floating-promises': 'error',
+      'no-console': 'error',
+      eqeqeq: ['error', 'always'],
+    },
+  },
+  {
+    files: ['src/domain/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: [
+                'next',
+                'next/*',
+                'react',
+                '@supabase/*',
+                'server-only',
+                '**/infrastructure/**',
+                '**/application/**',
+                '../../infrastructure/*',
+                '../../application/*',
+              ],
+              message:
+                'domain/ must stay pure: no framework, no persistence, no transport. Depend inward only.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['src/application/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['next', 'next/*', 'react', '@supabase/*', '**/infrastructure/**'],
+              message:
+                'application/ orchestrates through ports. Concrete adapters are injected, never imported.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['tests/**/*.ts', '**/*.test.ts'],
+    rules: {
+      'no-console': 'off',
+      '@typescript-eslint/no-non-null-assertion': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-argument': 'off',
+    },
+  },
+);
