@@ -1,50 +1,102 @@
+import { CheckIcon } from '@/components/icons';
+import { AppShell } from '@/components/shell/AppShell';
+import { Button } from '@/components/ui/Button';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { DeadlineGroups } from '@/features/dashboard/DeadlineGroups';
+import { WorkloadHeader } from '@/features/dashboard/WorkloadHeader';
+import { SyncStatus } from '@/features/sync/SyncStatus';
+import { urgencyBand } from '@/lib/format';
+import { loadDashboard, loadSetupState, requireSessionUser } from '@/lib/queries';
+import { redirect } from 'next/navigation';
+import Link from 'next/link';
+
 /**
- * Development entry point.
+ * Today. The screen the product exists for.
  *
- * Plain links, no styling, no components. Its only job is to make the backend
- * reachable during development so the OAuth flow and the sync can be exercised
- * end to end. The real interface is a later milestone.
+ * A Server Component with no client boundary at all: the whole dashboard is
+ * HTML by the time it reaches the browser, and the only JavaScript on the page
+ * is the navigation island.
+ *
+ * Deadlines are freshness-sensitive, so this is never cached. A cached
+ * dashboard would show yesterday's coursework as today's, which is the exact
+ * failure the product is built to prevent.
  */
-export default function Page() {
+export const dynamic = 'force-dynamic';
+
+export default async function TodayPage() {
+  const user = await requireSessionUser();
+  const setup = await loadSetupState(user.id);
+
+  // A half-configured account is sent to the step it is missing rather than
+  // shown an empty dashboard it cannot explain.
+  if (!setup.hasConnection || !setup.hasProfile) redirect('/welcome');
+  if (!setup.hasTrackedCourses) redirect('/courses?setup=1');
+
+  const data = await loadDashboard(user.id);
+  const now = new Date();
+  const { timeZone } = data.freshness;
+
+  const todayCount = data.upcoming.filter(
+    (item) => urgencyBand(item.deadline, now, timeZone) === 'today',
+  ).length;
+
+  const hour = Number(
+    new Intl.DateTimeFormat('en-GB', { timeZone, hour: 'numeric', hour12: false }).format(now),
+  );
+
+  // Overdue first, deliberately. It is the most urgent thing a student has, and
+  // burying it under future work is how it gets missed twice.
+  const items = [...data.overdue, ...data.upcoming];
+
   return (
-    <main>
-      <h1>LockIn — backend</h1>
-      <p>No interface yet. These endpoints exist for development:</p>
-      <ul>
-        <li>
-          <a href="/api/auth/google">Connect Google Classroom</a>
-        </li>
-        <li>
-          <a href="/api/connection">GET /api/connection</a> — connection status
-        </li>
-        <li>
-          <a href="/api/courses?refresh=true">GET /api/courses?refresh=true</a> — discover courses;
-          <code>PUT /api/courses</code> chooses which to track
-        </li>
-        <li>
-          <a href="/api/assignments/upcoming">GET /api/assignments/upcoming</a> — deadline feed
-        </li>
-        <li>
-          <a href="/api/assignments/overdue">GET /api/assignments/overdue</a> — past due, not
-          submitted
-        </li>
-        <li>
-          <a href="/api/assignments/undated">GET /api/assignments/undated</a> — tracked coursework
-          with no due date
-        </li>
-        <li>
-          <code>POST /api/sync</code> — run a synchronisation
-        </li>
-        <li>
-          <code>PUT /api/overrides</code> — mark an assignment relevant or not
-        </li>
-        <li>
-          <code>DELETE /api/connection</code> — disconnect Google (keeps imported coursework)
-        </li>
-        <li>
-          <code>DELETE /api/account</code> — delete everything, irreversible
-        </li>
-      </ul>
-    </main>
+    <AppShell
+      title="Today"
+      reviewCount={data.reviewCount}
+      headerAside={<SyncStatus freshness={data.freshness} />}
+    >
+      <SyncStatus freshness={data.freshness} variant="banner" />
+
+      <WorkloadHeader
+        hour={hour}
+        overdueCount={data.overdue.length}
+        todayCount={todayCount}
+        upcomingCount={data.upcoming.length}
+      />
+
+      {items.length === 0 ? (
+        <EmptyState
+          icon={<CheckIcon className="size-6" />}
+          title="You're all caught up"
+          body="Nothing is due right now. LockIn will show new coursework here after the next sync."
+          action={
+            <Link href="/courses">
+              <Button variant="secondary">Manage courses</Button>
+            </Link>
+          }
+        />
+      ) : (
+        <DeadlineGroups items={items} now={now} timeZone={timeZone} />
+      )}
+
+      {data.reviewCount > 0 ? (
+        <Link
+          href="/review"
+          className="clay press mt-6 flex items-center justify-between gap-3 p-4 active:scale-[0.99]"
+        >
+          <span className="min-w-0">
+            <span className="block text-[0.9375rem] font-semibold text-ink">
+              {data.reviewCount} {data.reviewCount === 1 ? 'item needs' : 'items need'} your
+              attention
+            </span>
+            <span className="mt-0.5 block text-[0.8125rem] text-ink-soft">
+              LockIn wasn&rsquo;t sure whether these are for your section.
+            </span>
+          </span>
+          <span aria-hidden="true" className="shrink-0 text-review">
+            &rarr;
+          </span>
+        </Link>
+      ) : null}
+    </AppShell>
   );
 }
