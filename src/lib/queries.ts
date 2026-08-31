@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { redirect } from 'next/navigation';
+import { cache } from 'react';
 
 import { buildStudentSectionProfile } from '@/domain/academic/alias-generation';
 import { createBackendContext, type BackendContext } from '@/infrastructure/composition';
@@ -21,22 +22,55 @@ import type { ApiDeadline } from './format';
  * the same row-level security and the same user-scoped Supabase client are
  * used; only the HTTP hop is skipped. The route handlers remain the entry point
  * for client-side mutations, where an HTTP call is genuinely what is happening.
+ *
+ * Latency is the design constraint here. Every Supabase call is a round trip
+ * to another continent -- measured at 280-500ms from the author's network --
+ * so what matters is not how many queries a screen makes but how many of them
+ * are forced to wait for each other. Two sequential queries cost more than ten
+ * concurrent ones. Hence the `cache()` wrappers below, which collapse repeated
+ * questions inside a single render, and the deliberate `Promise.all` grouping
+ * in each loader.
  */
+
+/**
+ * Per-request memoisation.
+ *
+ * React's `cache()` is scoped to one server render, so two loaders on the same
+ * screen asking the same question share one round trip. It is not a data cache
+ * across requests: a second page load re-reads everything, which is what a
+ * deadline product needs.
+ */
+const context = cache(createBackendContext);
+
+const cachedConnection = cache(async (userId: string) =>
+  (await context()).connections.snapshot(userId),
+);
+
+const cachedProfile = cache(async (userId: string) =>
+  (await context()).profiles.findByUserId(userId),
+);
+
+const cachedCourses = cache(async (userId: string) => (await context()).discovery.list(userId));
 
 export interface SessionUser {
   readonly id: string;
   readonly email: string | null;
 }
 
-/** The signed-in user, or null. Pages decide what to do about it. */
-export async function getSessionUser(): Promise<SessionUser | null> {
+/**
+ * The signed-in user, or null. Pages decide what to do about it.
+ *
+ * Cached per request because it is a network call, not a cookie read, and a
+ * page that asks twice pays for it twice.
+ */
+export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
   const db = await createUserScopedClient();
   // getUser(), not getSession(): it revalidates the JWT with the auth server
   // rather than trusting a cookie the browser handed us.
   const { data, error } = await db.auth.getUser();
   if (error !== null || data.user === null) return null;
   return { id: data.user.id, email: data.user.email ?? null };
-}
+});
 
 export async function requireSessionUser(): Promise<SessionUser> {
   const user = await getSessionUser();
@@ -85,18 +119,18 @@ export interface DashboardData {
 }
 
 export async function loadDashboard(userId: string): Promise<DashboardData> {
-  const context = await createBackendContext();
+  const backend = await context();
   const now = new Date();
 
   const [upcoming, overdue, review, ignored, courses, freshness] = await Promise.all([
-    context.assignments.findUpcoming({
+    backend.assignments.findUpcoming({
       userId,
       to: null,
       relevance: ['RELEVANT'],
       includeSubmitted: false,
       limit: 100,
     }),
-    context.assignments.findOverdue({
+    backend.assignments.findOverdue({
       userId,
       // Two months back. Far enough to catch a missed deadline, short enough
       // that a returning student is not buried under a year of history.
@@ -105,16 +139,16 @@ export async function loadDashboard(userId: string): Promise<DashboardData> {
       includeSubmitted: false,
       limit: 50,
     }),
-    context.assignments.findUpcoming({
+    backend.assignments.findUpcoming({
       userId,
       to: null,
       relevance: ['UNCERTAIN'],
       includeSubmitted: false,
       limit: 100,
     }),
-    context.assignments.findIgnored(userId, 200),
-    context.discovery.list(userId),
-    loadFreshnessView(context, userId, now),
+    backend.assignments.findIgnored(userId, 200),
+    cachedCourses(userId),
+    loadFreshnessView(userId, now),
   ]);
 
   return {
@@ -132,26 +166,26 @@ export async function loadReviewQueue(userId: string): Promise<{
   readonly items: readonly AssignmentView[];
   readonly freshness: FreshnessView;
 }> {
-  const context = await createBackendContext();
+  const backend = await context();
   const now = new Date();
 
   const [upcoming, overdue, undated, freshness] = await Promise.all([
-    context.assignments.findUpcoming({
+    backend.assignments.findUpcoming({
       userId,
       to: null,
       relevance: ['UNCERTAIN'],
       includeSubmitted: true,
       limit: 100,
     }),
-    context.assignments.findOverdue({
+    backend.assignments.findOverdue({
       userId,
       since: null,
       relevance: ['UNCERTAIN'],
       includeSubmitted: true,
       limit: 100,
     }),
-    context.assignments.findUndated({ userId, relevance: ['UNCERTAIN'], limit: 100 }),
-    loadFreshnessView(context, userId, now),
+    backend.assignments.findUndated({ userId, relevance: ['UNCERTAIN'], limit: 100 }),
+    loadFreshnessView(userId, now),
   ]);
 
   return {
@@ -169,13 +203,32 @@ export async function loadIgnored(userId: string): Promise<{
   readonly items: readonly AssignmentView[];
   readonly freshness: FreshnessView;
 }> {
-  const context = await createBackendContext();
+  const backend = await context();
   const [items, freshness] = await Promise.all([
-    context.assignments.findIgnored(userId, 200),
-    loadFreshnessView(context, userId, new Date()),
+    backend.assignments.findIgnored(userId, 200),
+    loadFreshnessView(userId, new Date()),
   ]);
   return { items: items.map(toView), freshness };
 }
+
+/**
+ * Just the number on the Review tab.
+ *
+ * Secondary screens need this one integer for the nav badge and nothing else.
+ * They used to get it by calling loadDashboard, which cost nine queries and a
+ * second freshness computation to produce a single digit.
+ */
+export const loadReviewCount = cache(async (userId: string): Promise<number> => {
+  const backend = await context();
+  const items = await backend.assignments.findUpcoming({
+    userId,
+    to: null,
+    relevance: ['UNCERTAIN'],
+    includeSubmitted: false,
+    limit: 100,
+  });
+  return items.length;
+});
 
 export interface CourseView {
   readonly courseId: string;
@@ -191,11 +244,9 @@ export async function loadCourses(userId: string): Promise<{
   readonly courses: readonly CourseView[];
   readonly freshness: FreshnessView;
 }> {
-  const context = await createBackendContext();
-
   const [courses, freshness] = await Promise.all([
-    context.discovery.list(userId),
-    loadFreshnessView(context, userId, new Date()),
+    cachedCourses(userId),
+    loadFreshnessView(userId, new Date()),
   ]);
 
   return {
@@ -227,13 +278,13 @@ export interface SetupState {
  * Read once by the shell so every screen can route a half-configured account to
  * the right step, instead of each page inventing its own idea of "ready".
  */
-export async function loadSetupState(userId: string): Promise<SetupState> {
-  const context = await createBackendContext();
-
+export const loadSetupState = cache(async (userId: string): Promise<SetupState> => {
+  // All three are shared with the freshness check, so on a screen that needs
+  // both this costs nothing the other did not already pay for.
   const [connection, profile, courses] = await Promise.all([
-    context.connections.snapshot(userId),
-    context.profiles.findByUserId(userId),
-    context.discovery.list(userId),
+    cachedConnection(userId),
+    cachedProfile(userId),
+    cachedCourses(userId),
   ]);
 
   const aliases =
@@ -250,22 +301,19 @@ export async function loadSetupState(userId: string): Promise<SetupState> {
     hasTrackedCourses: courses.some((course) => course.decision === 'TRACKED'),
     discoveredCourseCount: courses.length,
   };
-}
+});
 
 // ---------------------------------------------------------------------------
 
-async function loadFreshnessView(
-  context: BackendContext,
-  userId: string,
-  now: Date,
-): Promise<FreshnessView> {
+async function loadFreshnessView(userId: string, now: Date): Promise<FreshnessView> {
   const { assessFreshness } = await import('@/domain/sync/freshness');
+  const backend = await context();
 
   const [lastSuccessfulSyncAt, latestRun, connection, profile] = await Promise.all([
-    context.syncRuns.lastSuccessfulAt(userId),
-    context.syncRuns.latestForUser(userId),
-    context.connections.snapshot(userId),
-    context.profiles.findByUserId(userId),
+    backend.syncRuns.lastSuccessfulAt(userId),
+    backend.syncRuns.latestForUser(userId),
+    cachedConnection(userId),
+    cachedProfile(userId),
   ]);
 
   const report = assessFreshness({

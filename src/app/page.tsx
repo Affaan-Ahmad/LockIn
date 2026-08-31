@@ -25,14 +25,25 @@ export const dynamic = 'force-dynamic';
 
 export default async function TodayPage() {
   const user = await requireSessionUser();
-  const setup = await loadSetupState(user.id);
+
+  // Started together, not one after the other. Every Supabase call is a round
+  // trip to another region, so awaiting the setup check before beginning the
+  // dashboard added a full one to the screen a student opens most.
+  //
+  // A half-configured account does pay for a dashboard it will not see. That
+  // happens at most a handful of times per account, against a cost paid on
+  // every load thereafter.
+  const setupPromise = loadSetupState(user.id);
+  const dashboardPromise = loadDashboard(user.id);
+
+  const setup = await setupPromise;
 
   // A half-configured account is sent to the step it is missing rather than
   // shown an empty dashboard it cannot explain.
   if (!setup.hasConnection || !setup.hasProfile) redirect('/welcome');
   if (!setup.hasTrackedCourses) redirect('/courses?setup=1');
 
-  const data = await loadDashboard(user.id);
+  const data = await dashboardPromise;
   const now = new Date();
   const { timeZone } = data.freshness;
 

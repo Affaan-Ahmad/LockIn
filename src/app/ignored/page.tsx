@@ -7,7 +7,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { AssignmentCard } from '@/features/assignments/AssignmentCard';
 import { IgnoreButton } from '@/features/assignments/IgnoreButton';
 import { SyncStatus } from '@/features/sync/SyncStatus';
-import { loadDashboard, loadIgnored, requireSessionUser } from '@/lib/queries';
+import { loadIgnored, loadReviewCount, requireSessionUser } from '@/lib/queries';
 
 /**
  * Work the student chose to hide.
@@ -23,9 +23,11 @@ export const dynamic = 'force-dynamic';
 
 export default async function IgnoredPage() {
   const user = await requireSessionUser();
-  const [{ items, freshness }, dashboard] = await Promise.all([
+  // The review count and nothing else. Loading the whole dashboard here cost
+  // nine queries and a duplicate freshness check to fill in one nav badge.
+  const [{ items, freshness }, reviewCount] = await Promise.all([
     loadIgnored(user.id),
-    loadDashboard(user.id),
+    loadReviewCount(user.id),
   ]);
 
   const now = new Date();
@@ -43,7 +45,7 @@ export default async function IgnoredPage() {
     <AppShell
       title="Hidden"
       {...subtitle}
-      reviewCount={dashboard.reviewCount}
+      reviewCount={reviewCount}
       headerAside={<SyncStatus freshness={freshness} />}
     >
       {items.length === 0 ? (
