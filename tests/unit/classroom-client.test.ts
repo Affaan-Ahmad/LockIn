@@ -151,6 +151,31 @@ describe('error translation', () => {
     expect(calls).toHaveLength(1);
   });
 
+  it('separates a disabled-API 403 from a permission 403', async () => {
+    // Regression: this surfaced in the first real run against Google as
+    // "The granted scopes may be insufficient", which sends whoever is
+    // debugging to re-check the consent screen when the fix is one click in
+    // Cloud Console.
+    const { fetchImpl } = fakeFetch([
+      {
+        status: 403,
+        body: {
+          error: {
+            code: 403,
+            status: 'PERMISSION_DENIED',
+            message:
+              'Google Classroom API has not been used in project 1017170078493 before or it is disabled.',
+          },
+        },
+      },
+    ]);
+
+    await expect(makeClient(fetchImpl).listCourses()).rejects.toMatchObject({
+      code: 'GOOGLE_API_DISABLED',
+      retryable: false,
+    });
+  });
+
   it('separates a quota 403 from a permission 403', async () => {
     const quota = fakeFetch([
       { status: 403, body: { error: { code: 403, message: 'userRateLimitExceeded' } } },

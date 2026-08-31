@@ -30,6 +30,8 @@ const CLIENT_SAFE_CODES: ReadonlySet<ErrorCode> = new Set<ErrorCode>([
   'NOT_FOUND',
   'INVALID_INPUT',
   'RATE_LIMITED',
+  // Safe and useful to surface: the fix is a config change the operator makes.
+  'GOOGLE_API_DISABLED',
 ]);
 
 const STATUS_BY_CODE: Readonly<Record<ErrorCode, number>> = {
@@ -37,6 +39,7 @@ const STATUS_BY_CODE: Readonly<Record<ErrorCode, number>> = {
   AUTHENTICATION_ERROR: 401,
   AUTHORIZATION_EXPIRED: 403,
   GOOGLE_API_ERROR: 502,
+  GOOGLE_API_DISABLED: 503,
   RATE_LIMITED: 429,
   EXTERNAL_VALIDATION_ERROR: 502,
   PERSISTENCE_ERROR: 500,

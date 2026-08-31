@@ -6,7 +6,9 @@ import type { Logger } from '@/shared/logger';
 import {
   AuthorizationExpiredError,
   ExternalValidationError,
+  GoogleApiDisabledError,
   GoogleApiError,
+  isAppError,
   RateLimitError,
 } from '@/shared/errors';
 import { withRetry } from '@/shared/retry';
@@ -285,14 +287,14 @@ export class GoogleClassroomClient {
           context: { operation },
         });
       }
-      if (
-        caught instanceof GoogleApiError ||
-        caught instanceof RateLimitError ||
-        caught instanceof AuthorizationExpiredError ||
-        caught instanceof ExternalValidationError
-      ) {
-        throw caught;
-      }
+      // Anything already in our taxonomy came from translateHttpError or the
+      // JSON parse below and is deliberate -- pass it through untouched.
+      //
+      // This deliberately tests the base class rather than listing subclasses.
+      // The list version silently mislabelled every newly added error type as a
+      // network failure, which is how a disabled-API 403 first surfaced as
+      // "Network failure calling classroom.courses.list".
+      if (isAppError(caught)) throw caught;
       // Network-level failure: DNS, TLS, socket reset. Safe to retry a GET.
       throw new GoogleApiError(`Network failure calling ${operation}`, {
         retryable: true,
@@ -327,9 +329,15 @@ function translateHttpError(response: Response, body: string, operation: string)
   }
 
   if (status === 403) {
-    // 403 is overloaded: it covers both "quota exceeded" (retryable) and
-    // "insufficient permission" (not). Reading the reason is the only way to
-    // tell them apart, and guessing wrong in either direction is costly.
+    // 403 is overloaded three ways: the API is switched off, quota is exhausted,
+    // or permission is genuinely missing. They need completely different fixes,
+    // so read the reason rather than guessing.
+    if (/SERVICE_DISABLED|has not been used in project|is disabled/i.test(body)) {
+      return new GoogleApiDisabledError(
+        `The Google Classroom API is not enabled on the Cloud project. Enable it in Cloud Console, wait a minute for it to propagate, then retry. (${operation})`,
+        { context },
+      );
+    }
     const quotaRelated = /quota|rate limit|userRateLimitExceeded|rateLimitExceeded/i.test(body);
     if (quotaRelated) {
       return new RateLimitError(`Google quota exceeded during ${operation}: ${detail}`, {

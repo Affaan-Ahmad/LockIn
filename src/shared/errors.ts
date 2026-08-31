@@ -17,6 +17,7 @@ export type ErrorCode =
   | 'AUTHENTICATION_ERROR'
   | 'AUTHORIZATION_EXPIRED'
   | 'GOOGLE_API_ERROR'
+  | 'GOOGLE_API_DISABLED'
   | 'RATE_LIMITED'
   | 'EXTERNAL_VALIDATION_ERROR'
   | 'PERSISTENCE_ERROR'
@@ -98,6 +99,21 @@ export class GoogleApiError extends AppError {
   override toLogObject(): Record<string, unknown> {
     return { ...super.toLogObject(), status: this.status };
   }
+}
+
+/**
+ * The Google API itself is not enabled on the Cloud project.
+ *
+ * Arrives as a 403 and is easily mistaken for a scope or consent problem, which
+ * sends whoever is debugging to re-check the consent screen when the actual fix
+ * is one click in Cloud Console. Given its own code so the message can say so.
+ *
+ * Not retryable: enabling an API is a human action, and retrying in a loop
+ * would just burn quota against a service that is switched off.
+ */
+export class GoogleApiDisabledError extends AppError {
+  readonly code = 'GOOGLE_API_DISABLED' as const;
+  readonly retryable = false;
 }
 
 export class RateLimitError extends AppError {
