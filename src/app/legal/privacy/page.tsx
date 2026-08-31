@@ -111,12 +111,28 @@ export default function PrivacyPage() {
         </p>
       </Section>
 
+      <Section heading="Getting a copy">
+        <p>
+          Settings has a link that downloads everything LockIn holds about you as a single JSON
+          file: your profile, your courses, every assignment it has read, and the decision it made
+          about each one along with the section evidence behind that decision.
+        </p>
+        <p>
+          Your Google tokens are deliberately not included. They are credentials rather than
+          information about you, and putting a live key to your Classroom account in your downloads
+          folder would be a worse outcome than omitting it.
+        </p>
+      </Section>
+
       <Section heading="How long it is kept">
         <p>
           Coursework and your decisions are kept until you delete your account or stop tracking the
-          course. Sync history and error records currently have no automatic expiry, which is a
-          known gap rather than a deliberate choice, and it is recorded as an open item in the
-          project&rsquo;s own release checklist.
+          course.
+        </p>
+        <p>
+          Sync history is kept for 90 days and then deleted, except for the most recent attempt and
+          the most recent successful sync, which are retained so LockIn can still tell you how
+          current your data is.
         </p>
       </Section>
 

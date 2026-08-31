@@ -842,6 +842,153 @@ describeIntegration('persistence invariants', () => {
     });
   });
 
+  describe('submission upsert', () => {
+    // Covers app_upsert_submissions, which migration 0009 rewrote when the
+    // grade columns were dropped. It had no integration coverage at the point
+    // it was replaced, which meant the only evidence the rewrite worked was
+    // reading it.
+
+    async function createAssignment(sourceId: string): Promise<string> {
+      const created = await alice.db.rpc('app_upsert_assignments', {
+        p_user_id: alice.id,
+        p_course_id: aliceCourseId,
+        p_items: [assignmentPayload({ source_item_id: sourceId })],
+        p_synced_at: new Date().toISOString(),
+      });
+      expect(created.error).toBeNull();
+      return created.data![0]!.assignment_id;
+    }
+
+    function submissionPayload(sourceItemId: string, overrides: Record<string, unknown> = {}) {
+      return {
+        source_submission_id: `sub-${sourceItemId}`,
+        source_item_id: sourceItemId,
+        state: 'TURNED_IN' as const,
+        late: false,
+        alternate_link: null,
+        source_created_at: null,
+        source_updated_at: null,
+        ...overrides,
+      };
+    }
+
+    it('records submission state against the right assignment', async () => {
+      const assignmentId = await createAssignment('sub-target-1');
+
+      const { data, error } = await alice.db.rpc('app_upsert_submissions', {
+        p_user_id: alice.id,
+        p_course_id: aliceCourseId,
+        p_items: [submissionPayload('sub-target-1')],
+        p_synced_at: new Date().toISOString(),
+      });
+
+      expect(error).toBeNull();
+      expect(data).toBe(1);
+
+      const stored = await alice.db
+        .from('submissions')
+        .select('assignment_id, state, late')
+        .eq('assignment_id', assignmentId)
+        .maybeSingle();
+
+      expect(stored.data?.state).toBe('TURNED_IN');
+      expect(stored.data?.late).toBe(false);
+    });
+
+    it('updates an existing submission rather than duplicating it', async () => {
+      const assignmentId = await createAssignment('sub-target-2');
+      const args = {
+        p_user_id: alice.id,
+        p_course_id: aliceCourseId,
+        p_synced_at: new Date().toISOString(),
+      };
+
+      await alice.db.rpc('app_upsert_submissions', {
+        ...args,
+        p_items: [submissionPayload('sub-target-2', { state: 'CREATED', late: false })],
+      });
+      const second = await alice.db.rpc('app_upsert_submissions', {
+        ...args,
+        p_items: [submissionPayload('sub-target-2', { state: 'TURNED_IN', late: true })],
+      });
+      expect(second.error).toBeNull();
+
+      const rows = await alice.db
+        .from('submissions')
+        .select('state, late')
+        .eq('assignment_id', assignmentId);
+
+      // One row, carrying the newer state. A second row here would make a
+      // handed-in assignment look outstanding depending on which one was read.
+      expect(rows.data ?? []).toHaveLength(1);
+      expect(rows.data![0]!.state).toBe('TURNED_IN');
+      expect(rows.data![0]!.late).toBe(true);
+    });
+
+    it('drops a submission for coursework that was never ingested', async () => {
+      const { data, error } = await alice.db.rpc('app_upsert_submissions', {
+        p_user_id: alice.id,
+        p_course_id: aliceCourseId,
+        p_items: [submissionPayload('never-ingested-item')],
+        p_synced_at: new Date().toISOString(),
+      });
+
+      // Silently skipped, not an error: without the assignment row there is
+      // nothing for the submission to describe, and failing the batch would
+      // let one orphan abort a whole course's sync.
+      expect(error).toBeNull();
+      expect(data).toBe(0);
+    });
+
+    it('hides a submitted assignment from the upcoming feed', async () => {
+      const created = await alice.db.rpc('app_upsert_assignments', {
+        p_user_id: alice.id,
+        p_course_id: aliceCourseId,
+        p_items: [
+          assignmentPayload({
+            source_item_id: 'sub-target-3',
+            due_date_raw: '2099-06-01',
+            due_time_raw: '18:59:00',
+            due_at: '2099-06-01T18:59:00.000Z',
+          }),
+        ],
+        p_synced_at: new Date().toISOString(),
+      });
+      const id = created.data![0]!.assignment_id;
+
+      await alice.db.rpc('app_upsert_submissions', {
+        p_user_id: alice.id,
+        p_course_id: aliceCourseId,
+        p_items: [submissionPayload('sub-target-3', { state: 'TURNED_IN' })],
+        p_synced_at: new Date().toISOString(),
+      });
+
+      const upcoming = await alice.db.rpc('app_upcoming_assignments', {
+        p_user_id: alice.id,
+        p_to: null,
+        p_relevance: ['RELEVANT', 'NOT_RELEVANT', 'UNCERTAIN'],
+        p_include_submitted: false,
+        p_limit: 500,
+      });
+
+      // The whole reason the submissions scope is requested at all: work the
+      // student has already handed in stops competing for their attention.
+      expect((upcoming.data ?? []).map((r) => r.assignment_id)).not.toContain(id);
+    });
+
+    it('refuses a submission write for another student', async () => {
+      const { error } = await bob.db.rpc('app_upsert_submissions', {
+        p_user_id: alice.id,
+        p_course_id: aliceCourseId,
+        p_items: [submissionPayload('sub-target-1')],
+        p_synced_at: new Date().toISOString(),
+      });
+
+      expect(error).not.toBeNull();
+      expect(error!.message).toMatch(/cross-user access denied/i);
+    });
+  });
+
   describe('hiding an assignment', () => {
     async function createOverdue(sourceId: string): Promise<string> {
       const created = await alice.db.rpc('app_upsert_assignments', {
