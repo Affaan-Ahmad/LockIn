@@ -75,8 +75,22 @@ export default async function TodayPage() {
           }
         />
       ) : (
-        <DeadlineGroups items={items} now={now} timeZone={timeZone} />
+        <DeadlineGroups items={items} now={now} timeZone={timeZone} allowHideOverdue />
       )}
+
+      {data.ignoredCount > 0 ? (
+        <Link
+          href="/ignored"
+          className="press mt-6 flex items-center justify-between gap-3 rounded-card px-4 py-3 text-[0.8125rem] text-ink-soft active:scale-[0.99] hover:text-ink"
+        >
+          <span>
+            {data.ignoredCount} hidden {data.ignoredCount === 1 ? 'item' : 'items'}
+          </span>
+          <span aria-hidden="true" className="shrink-0">
+            &rarr;
+          </span>
+        </Link>
+      ) : null}
 
       {data.reviewCount > 0 ? (
         <Link

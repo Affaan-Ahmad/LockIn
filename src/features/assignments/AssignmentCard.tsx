@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+
 import { Badge } from '@/components/ui/Badge';
 import { ClockIcon, ExternalIcon } from '@/components/icons';
 import { cx } from '@/lib/cx';
@@ -24,9 +26,21 @@ export interface AssignmentCardProps {
   readonly timeZone: string;
   /** Review cards explain the scope; the normal feed does not need to. */
   readonly showScope?: boolean;
+  /**
+   * Client islands the card hosts but does not own -- the hide control, the
+   * relevance choice. Passed in so the card itself stays a Server Component
+   * regardless of what interactive controls a screen decides to attach.
+   */
+  readonly actions?: ReactNode;
 }
 
-export function AssignmentCard({ item, now, timeZone, showScope = false }: AssignmentCardProps) {
+export function AssignmentCard({
+  item,
+  now,
+  timeZone,
+  showScope = false,
+  actions,
+}: AssignmentCardProps) {
   const deadline = formatDeadline(item.deadline, now, timeZone);
   const urgency = URGENCY[deadline.band];
   const relevance = RELEVANCE[item.relevance];
@@ -38,10 +52,12 @@ export function AssignmentCard({ item, now, timeZone, showScope = false }: Assig
     <article
       className={cx(
         'clay lift group relative p-4 active:translate-y-px hover:-translate-y-px',
-        // A left edge rather than a full red card. Turning the whole surface
-        // red destroys the meaning of red once three things are overdue.
-        overdue ? 'border-l-[3px] border-l-danger' : '',
-        deadline.band === 'today' && !overdue ? 'border-l-[3px] border-l-warning' : '',
+        // Overdue carries no edge accent. The red badge and the red time already
+        // say it twice; a third marker on the card frame turned a list of two
+        // missed items into a wall of red, which is exactly how red stops
+        // meaning anything. Due-today keeps its amber edge because nothing else
+        // on the card is amber.
+        deadline.band === 'today' ? 'border-l-[3px] border-l-warning' : '',
       )}
     >
       <div className="flex items-start justify-between gap-3">
@@ -107,6 +123,8 @@ export function AssignmentCard({ item, now, timeZone, showScope = false }: Assig
         {item.hasManualOverride ? (
           <span className="text-[0.75rem] text-ink-muted">Your choice</span>
         ) : null}
+
+        {actions === undefined ? null : <span className="ml-auto">{actions}</span>}
       </div>
 
       {showScope ? <ScopeLine item={item} /> : null}

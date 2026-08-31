@@ -79,6 +79,7 @@ export interface DashboardData {
   readonly upcoming: readonly AssignmentView[];
   readonly overdue: readonly AssignmentView[];
   readonly reviewCount: number;
+  readonly ignoredCount: number;
   readonly freshness: FreshnessView;
   readonly trackedCourseCount: number;
 }
@@ -87,7 +88,7 @@ export async function loadDashboard(userId: string): Promise<DashboardData> {
   const context = await createBackendContext();
   const now = new Date();
 
-  const [upcoming, overdue, review, courses, freshness] = await Promise.all([
+  const [upcoming, overdue, review, ignored, courses, freshness] = await Promise.all([
     context.assignments.findUpcoming({
       userId,
       to: null,
@@ -111,6 +112,7 @@ export async function loadDashboard(userId: string): Promise<DashboardData> {
       includeSubmitted: false,
       limit: 100,
     }),
+    context.assignments.findIgnored(userId, 200),
     context.discovery.list(userId),
     loadFreshnessView(context, userId, now),
   ]);
@@ -119,6 +121,7 @@ export async function loadDashboard(userId: string): Promise<DashboardData> {
     upcoming: upcoming.map(toView),
     overdue: overdue.map(toView),
     reviewCount: review.length,
+    ignoredCount: ignored.length,
     freshness,
     trackedCourseCount: courses.filter((course) => course.decision === 'TRACKED').length,
   };
@@ -159,6 +162,19 @@ export async function loadReviewQueue(userId: string): Promise<{
     ],
     freshness,
   };
+}
+
+/** What the student has hidden. Reachable, reversible, never a void. */
+export async function loadIgnored(userId: string): Promise<{
+  readonly items: readonly AssignmentView[];
+  readonly freshness: FreshnessView;
+}> {
+  const context = await createBackendContext();
+  const [items, freshness] = await Promise.all([
+    context.assignments.findIgnored(userId, 200),
+    loadFreshnessView(context, userId, new Date()),
+  ]);
+  return { items: items.map(toView), freshness };
 }
 
 export interface CourseView {

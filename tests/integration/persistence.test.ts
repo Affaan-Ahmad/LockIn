@@ -842,6 +842,144 @@ describeIntegration('persistence invariants', () => {
     });
   });
 
+  describe('hiding an assignment', () => {
+    async function createOverdue(sourceId: string): Promise<string> {
+      const created = await alice.db.rpc('app_upsert_assignments', {
+        p_user_id: alice.id,
+        p_course_id: aliceCourseId,
+        p_items: [
+          assignmentPayload({
+            source_item_id: sourceId,
+            title: 'Missed and dealt with',
+            due_date_raw: '2020-02-02',
+            due_time_raw: '18:59:00',
+            due_at: '2020-02-02T18:59:00.000Z',
+          }),
+        ],
+        p_synced_at: new Date().toISOString(),
+      });
+      expect(created.error).toBeNull();
+      return created.data![0]!.assignment_id;
+    }
+
+    async function overdueIds(): Promise<string[]> {
+      const { data } = await alice.db.rpc('app_overdue_assignments', {
+        p_user_id: alice.id,
+        p_since: null,
+        p_relevance: ['RELEVANT', 'NOT_RELEVANT', 'UNCERTAIN'],
+        p_include_submitted: true,
+        p_limit: 500,
+      });
+      return (data ?? []).map((r) => r.assignment_id);
+    }
+
+    it('removes a hidden assignment from the overdue feed and restores it', async () => {
+      const id = await createOverdue('hide-1');
+      expect(await overdueIds()).toContain(id);
+
+      const hidden = await alice.db.rpc('app_set_assignment_ignored', {
+        p_user_id: alice.id,
+        p_assignment_id: id,
+        p_ignored: true,
+        p_note: null,
+      });
+      expect(hidden.error).toBeNull();
+      expect(await overdueIds()).not.toContain(id);
+
+      const restored = await alice.db.rpc('app_set_assignment_ignored', {
+        p_user_id: alice.id,
+        p_assignment_id: id,
+        p_ignored: false,
+        p_note: null,
+      });
+      expect(restored.error).toBeNull();
+
+      // The point of the whole feature: hiding is reversible, and what comes
+      // back is the same row, not a rebuilt approximation of it.
+      expect(await overdueIds()).toContain(id);
+    });
+
+    it('still lists a hidden assignment on the hidden screen', async () => {
+      const id = await createOverdue('hide-2');
+      await alice.db.rpc('app_set_assignment_ignored', {
+        p_user_id: alice.id,
+        p_assignment_id: id,
+        p_ignored: true,
+        p_note: 'submitted late in person',
+      });
+
+      const { data, error } = await alice.db.rpc('app_ignored_assignments', {
+        p_user_id: alice.id,
+        p_limit: 500,
+      });
+
+      expect(error).toBeNull();
+      // Hidden must never mean gone. An item with no way back would be data
+      // loss the student performed on themselves.
+      expect((data ?? []).map((r) => r.assignment_id)).toContain(id);
+    });
+
+    it('does not record hiding as a decision about relevance', async () => {
+      const id = await createOverdue('hide-3');
+      await alice.db.rpc('app_set_assignment_ignored', {
+        p_user_id: alice.id,
+        p_assignment_id: id,
+        p_ignored: true,
+        p_note: null,
+      });
+
+      const { data } = await alice.db
+        .from('classification_overrides')
+        .select('assignment_id')
+        .eq('user_id', alice.id)
+        .eq('assignment_id', id);
+
+      // "Stop showing me this" is not "this was for another section". Writing
+      // an override here would poison the record the classifier will one day
+      // learn from.
+      expect(data ?? []).toHaveLength(0);
+    });
+
+    it('treats hiding twice and restoring twice as no-ops', async () => {
+      const id = await createOverdue('hide-4');
+
+      for (const ignored of [true, true, false, false]) {
+        const { error } = await alice.db.rpc('app_set_assignment_ignored', {
+          p_user_id: alice.id,
+          p_assignment_id: id,
+          p_ignored: ignored,
+          p_note: null,
+        });
+        // A double tap on a phone must not produce a failure dialog.
+        expect(error).toBeNull();
+      }
+
+      expect(await overdueIds()).toContain(id);
+    });
+
+    it('refuses to hide an assignment belonging to another student', async () => {
+      const id = await createOverdue('hide-5');
+
+      const { error } = await bob.db.rpc('app_set_assignment_ignored', {
+        p_user_id: alice.id,
+        p_assignment_id: id,
+        p_ignored: true,
+        p_note: null,
+      });
+
+      expect(error).not.toBeNull();
+      expect(error!.message).toMatch(/cross-user access denied/i);
+    });
+
+    it('does not let a student see what another student hid', async () => {
+      const { data } = await bob.db
+        .from('ignored_assignments')
+        .select('assignment_id')
+        .eq('user_id', alice.id);
+      expect(data ?? []).toHaveLength(0);
+    });
+  });
+
   describe('row level security', () => {
     it('hides one student coursework from another', async () => {
       const { data } = await bob.db

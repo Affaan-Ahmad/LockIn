@@ -235,6 +235,29 @@ export interface AssignmentRepository {
   findOverdue(query: OverdueQuery): Promise<readonly UpcomingAssignment[]>;
 
   /**
+   * Work the student has chosen to hide.
+   *
+   * A real list, not a void. Anything hideable must be findable again, or the
+   * control is a delete button wearing a friendlier label.
+   */
+  findIgnored(userId: string, limit: number): Promise<readonly UpcomingAssignment[]>;
+
+  /**
+   * Hides or restores one assignment.
+   *
+   * Distinct from a classification override, and deliberately so. An override
+   * says "this is not mine"; ignoring says "I know, stop showing me". Folding
+   * the second into the first would record a missed lab that genuinely was for
+   * the student's section as evidence that it was not.
+   */
+  setIgnored(
+    userId: string,
+    assignmentId: string,
+    ignored: boolean,
+    note: string | null,
+  ): Promise<void>;
+
+  /**
    * Tracked coursework Google gave no due date for.
    *
    * A separate query rather than a flag on the one above, because it is a

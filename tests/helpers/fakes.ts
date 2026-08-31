@@ -220,6 +220,18 @@ export class FakeAssignmentRepository implements AssignmentRepository {
   findOverdue(): Promise<readonly UpcomingAssignment[]> {
     return Promise.resolve([]);
   }
+
+  ignored = new Set<string>();
+
+  findIgnored(): Promise<readonly UpcomingAssignment[]> {
+    return Promise.resolve([]);
+  }
+
+  setIgnored(_userId: string, assignmentId: string, ignored: boolean): Promise<void> {
+    if (ignored) this.ignored.add(assignmentId);
+    else this.ignored.delete(assignmentId);
+    return Promise.resolve();
+  }
 }
 
 /**

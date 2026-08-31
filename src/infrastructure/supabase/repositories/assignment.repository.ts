@@ -168,6 +168,32 @@ export class SupabaseAssignmentRepository implements AssignmentRepository {
     return (data ?? []).map(toUpcoming);
   }
 
+  async findIgnored(userId: string, limit: number): Promise<readonly UpcomingAssignment[]> {
+    const { data, error } = await this.db.rpc('app_ignored_assignments', {
+      p_user_id: userId,
+      p_limit: limit,
+    });
+
+    if (error !== null) throw translatePostgrestError(error, 'assignments.findIgnored');
+    return (data ?? []).map(toUpcoming);
+  }
+
+  async setIgnored(
+    userId: string,
+    assignmentId: string,
+    ignored: boolean,
+    note: string | null,
+  ): Promise<void> {
+    const { error } = await this.db.rpc('app_set_assignment_ignored', {
+      p_user_id: userId,
+      p_assignment_id: assignmentId,
+      p_ignored: ignored,
+      p_note: note,
+    });
+
+    if (error !== null) throw translatePostgrestError(error, 'assignments.setIgnored');
+  }
+
   /**
    * Tracked coursework with no due date.
    *

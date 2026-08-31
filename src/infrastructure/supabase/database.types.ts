@@ -167,6 +167,14 @@ export type ClassificationOverrideRow = {
   updated_at: string;
 };
 
+export type IgnoredAssignmentRow = {
+  id: string;
+  user_id: string;
+  assignment_id: string;
+  note: string | null;
+  ignored_at: string;
+};
+
 export type SyncRunRow = {
   id: string;
   user_id: string;
@@ -384,6 +392,7 @@ export type Database = {
       google_connections: TableDef<GoogleConnectionRow>;
       assignment_classifications: TableDef<AssignmentClassificationRow>;
       classification_overrides: TableDef<ClassificationOverrideRow>;
+      ignored_assignments: TableDef<IgnoredAssignmentRow>;
       sync_runs: TableDef<SyncRunRow>;
       sync_course_results: TableDef<SyncCourseResultRow>;
       sync_errors: TableDef<SyncErrorRow>;
@@ -490,6 +499,19 @@ export type Database = {
           p_include_submitted: boolean;
           p_limit: number;
         };
+        Returns: UpcomingAssignmentRow[];
+      };
+      app_set_assignment_ignored: {
+        Args: {
+          p_user_id: string;
+          p_assignment_id: string;
+          p_ignored: boolean;
+          p_note: string | null;
+        };
+        Returns: boolean;
+      };
+      app_ignored_assignments: {
+        Args: { p_user_id: string; p_limit: number };
         Returns: UpcomingAssignmentRow[];
       };
       app_overdue_assignments: {

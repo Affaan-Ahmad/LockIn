@@ -1,4 +1,5 @@
 import { AssignmentCard } from '@/features/assignments/AssignmentCard';
+import { IgnoreButton } from '@/features/assignments/IgnoreButton';
 import { GROUP_LABEL, GROUP_ORDER } from '@/features/assignments/presentation';
 import { urgencyBand, type UrgencyBand } from '@/lib/format';
 import type { AssignmentView } from '@/lib/queries';
@@ -18,9 +19,22 @@ export interface DeadlineGroupsProps {
   readonly items: readonly AssignmentView[];
   readonly now: Date;
   readonly timeZone: string;
+  /**
+   * Offer a hide control on overdue items only.
+   *
+   * Deliberately not offered on future work. Hiding something that has not
+   * happened yet is how a student loses a deadline they still have time to
+   * meet; hiding something already missed and dealt with is housekeeping.
+   */
+  readonly allowHideOverdue?: boolean;
 }
 
-export function DeadlineGroups({ items, now, timeZone }: DeadlineGroupsProps) {
+export function DeadlineGroups({
+  items,
+  now,
+  timeZone,
+  allowHideOverdue = false,
+}: DeadlineGroupsProps) {
   const grouped = new Map<UrgencyBand, AssignmentView[]>();
 
   for (const item of items) {
@@ -48,7 +62,20 @@ export function DeadlineGroups({ items, now, timeZone }: DeadlineGroupsProps) {
             <ul className="flex flex-col gap-2.5">
               {group.map((item) => (
                 <li key={item.assignmentId}>
-                  <AssignmentCard item={item} now={now} timeZone={timeZone} />
+                  <AssignmentCard
+                    item={item}
+                    now={now}
+                    timeZone={timeZone}
+                    actions={
+                      allowHideOverdue && band === 'overdue' ? (
+                        <IgnoreButton
+                          assignmentId={item.assignmentId}
+                          ignored={false}
+                          title={item.title}
+                        />
+                      ) : undefined
+                    }
+                  />
                 </li>
               ))}
             </ul>
