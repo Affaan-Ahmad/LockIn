@@ -1,30 +1,26 @@
 import type { ReactNode } from 'react';
 import { headers } from 'next/headers';
-import { Inter } from 'next/font/google';
+import { GeistSans } from 'geist/font/sans';
 
 import './globals.css';
 
 /**
  * Root layout.
  *
- * One font family, self-hosted by next/font. Self-hosting is not only a
- * performance choice: it means the Content-Security-Policy needs no
- * fonts.gstatic.com entry, so the policy stays as tight as it was written.
+ * One font family, self-hosted. Self-hosting is not only a performance choice:
+ * it means the Content-Security-Policy needs no fonts.gstatic.com entry, so the
+ * policy stays as tight as it was written.
  *
- * Inter rather than a display face, deliberately. The brief asks for a small
- * font payload, and LockIn's character comes from colour, shape and surface —
- * a second family would cost real bytes for decoration the design system is
- * already providing.
+ * Geist rather than Inter. Inter is the default of every generated interface
+ * and of most of the products LockIn sits beside, which is the opposite of what
+ * the brief asked for. Geist is quieter at the 13px this interface mostly lives
+ * at, its numerals are unambiguous at a glance, and it ships tabular figures,
+ * which matters when a column of deadline times has to line up.
+ *
+ * Still one family. LockIn's character comes from colour, shape and surface; a
+ * display face would cost real bytes for decoration the design system already
+ * provides.
  */
-
-const inter = Inter({
-  subsets: ['latin'],
-  display: 'swap',
-  variable: '--font-sans',
-  // A variable font ships one file for every weight, so restricting the axis
-  // is what actually saves bytes here.
-  axes: [],
-});
 
 export const metadata = {
   title: 'LockIn',
@@ -68,7 +64,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   const nonce = (await headers()).get('x-nonce') ?? undefined;
 
   return (
-    <html lang="en" className={inter.variable} suppressHydrationWarning>
+    <html lang="en" className={GeistSans.variable} suppressHydrationWarning>
       <head>
         <script nonce={nonce} dangerouslySetInnerHTML={{ __html: THEME_BOOT }} />
       </head>

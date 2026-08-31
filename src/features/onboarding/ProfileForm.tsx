@@ -174,11 +174,11 @@ export function ProfileForm({ initial, nextHref, submitLabel }: ProfileFormProps
       />
 
       <div className="surface-sunken p-3.5">
-        <p className="text-[0.8125rem] font-semibold text-ink">
+        <p className="text-sm font-semibold text-ink">
           What LockIn will look for in a post
         </p>
         {aliases.length === 0 ? (
-          <p className="mt-1.5 text-[0.8125rem] text-ink-muted">
+          <p className="mt-1.5 text-sm text-ink-muted">
             Enter your section to see this.
           </p>
         ) : (
@@ -186,14 +186,14 @@ export function ProfileForm({ initial, nextHref, submitLabel }: ProfileFormProps
             {aliases.map((alias) => (
               <li
                 key={alias}
-                className="rounded-pill bg-raised px-2.5 py-1 text-[0.75rem] font-semibold text-ink"
+                className="rounded-pill bg-raised px-2.5 py-1 text-xs font-semibold text-ink"
               >
                 {alias}
               </li>
             ))}
           </ul>
         )}
-        <p className="mt-2.5 text-[0.75rem] leading-relaxed text-ink-muted">
+        <p className="measure mt-2.5 text-xs leading-relaxed text-ink-muted">
           A post that mentions none of these is treated as being for everyone. Anything LockIn
           cannot read confidently goes to Review for you to decide. It is never guessed
           at.
@@ -201,7 +201,7 @@ export function ProfileForm({ initial, nextHref, submitLabel }: ProfileFormProps
       </div>
 
       {error === null ? null : (
-        <p role="alert" className="text-[0.875rem] font-medium text-danger">
+        <p role="alert" className="text-sm font-medium text-danger">
           {error}
         </p>
       )}
@@ -236,7 +236,7 @@ function Field({
 
   return (
     <div className="min-w-0">
-      <label htmlFor={id} className="block text-[0.875rem] font-semibold text-ink">
+      <label htmlFor={id} className="block text-sm font-semibold text-ink">
         {label}
         {required ? null : <span className="ml-1.5 font-normal text-ink-muted">optional</span>}
       </label>
@@ -252,11 +252,11 @@ function Field({
         autoComplete="off"
         aria-describedby={`${id}-hint`}
         className={cx(
-          'surface-sunken mt-1.5 min-h-11 w-full rounded-control px-3.5 text-[0.9375rem] text-ink',
+          'surface-sunken mt-1.5 min-h-11 w-full rounded-control px-3.5 text-base text-ink',
           'outline-none placeholder:text-ink-muted focus-visible:ring-2 focus-visible:ring-brand',
         )}
       />
-      <p id={`${id}-hint`} className="mt-1 text-[0.75rem] text-ink-muted">
+      <p id={`${id}-hint`} className="mt-1 text-xs text-ink-muted">
         {hint}
       </p>
     </div>

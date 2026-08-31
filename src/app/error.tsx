@@ -31,10 +31,10 @@ export default function Error({
       <span className="surface-sunken flex size-14 items-center justify-center rounded-pill text-danger">
         <AlertIcon className="size-6" />
       </span>
-      <h1 className="mt-5 text-[1.5rem] leading-tight font-bold text-ink">
+      <h1 className="mt-5 text-xl font-bold text-balance text-ink">
         This screen didn&rsquo;t load
       </h1>
-      <p className="mt-2 text-[0.9375rem] leading-relaxed text-ink-soft">
+      <p className="measure mt-2 text-base leading-relaxed text-ink-soft">
         Nothing was changed and nothing was lost. Your coursework and your decisions are stored on
         the server, not in this page.
       </p>
@@ -47,7 +47,7 @@ export default function Error({
         </a>
       </div>
       {error.digest === undefined ? null : (
-        <p className="mt-6 text-[0.75rem] text-ink-muted">
+        <p className="mt-6 text-xs text-ink-muted">
           Reference <span className="font-mono">{error.digest}</span>
         </p>
       )}

@@ -12,8 +12,8 @@ import { Button } from '@/components/ui/Button';
 export default function NotFound() {
   return (
     <main className="mx-auto flex min-h-dvh max-w-[30rem] flex-col justify-center px-5 py-12">
-      <h1 className="text-[1.5rem] leading-tight font-bold text-ink">There is nothing here</h1>
-      <p className="mt-2 text-[0.9375rem] leading-relaxed text-ink-soft">
+      <h1 className="text-xl font-bold text-balance text-ink">There is nothing here</h1>
+      <p className="measure mt-2 text-base leading-relaxed text-ink-soft">
         That address does not match any screen in LockIn.
       </p>
       <div className="mt-6">

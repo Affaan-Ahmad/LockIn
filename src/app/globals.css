@@ -328,6 +328,59 @@
   --ease-in-out: var(--curve-in-out);
 
   /* ----------------------------------------------------------------------
+     Type scale.
+
+     Eight steps, each carrying its own line height and tracking, so a size is
+     chosen by name and its vertical rhythm comes with it. Before this the
+     interface used eleven arbitrary sizes across eighty-eight call sites, and
+     no two screens agreed on what "small text" meant.
+
+     Line height falls as size rises. A 13px line needs room to breathe between
+     rows; a 36px headline set at the same ratio drifts apart into separate
+     lines rather than reading as one phrase.
+
+     Tracking moves the other way. Small optical sizes want a touch of positive
+     tracking to stay legible, large ones want negative to stop looking loose.
+     Geist is already fairly tight, so the display steps only need a little.
+     -------------------------------------------------------------------- */
+  --text-2xs: 0.6875rem;
+  --text-2xs--line-height: 1.35;
+  --text-2xs--letter-spacing: 0.01em;
+
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1.45;
+  --text-xs--letter-spacing: 0.005em;
+
+  --text-sm: 0.8125rem;
+  --text-sm--line-height: 1.55;
+
+  --text-base: 0.9375rem;
+  --text-base--line-height: 1.6;
+
+  --text-lg: 1.0625rem;
+  --text-lg--line-height: 1.4;
+  --text-lg--letter-spacing: -0.01em;
+
+  --text-xl: 1.375rem;
+  --text-xl--line-height: 1.3;
+  --text-xl--letter-spacing: -0.015em;
+
+  --text-2xl: 1.75rem;
+  --text-2xl--line-height: 1.2;
+  --text-2xl--letter-spacing: -0.022em;
+
+  --text-3xl: 2.25rem;
+  --text-3xl--line-height: 1.1;
+  --text-3xl--letter-spacing: -0.03em;
+
+  /* One step past the page titles, for the sign-in headline only. */
+  --text-4xl: 2.75rem;
+  --text-4xl--line-height: 1.05;
+  --text-4xl--letter-spacing: -0.035em;
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+
+  /* ----------------------------------------------------------------------
      shadcn/ui bridge.
 
      shadcn components are written against a fixed set of variable names
@@ -559,4 +612,20 @@ a { color: inherit; text-decoration: none; }
   [data-slot='dialog-content'] {
     animation: none !important;
   }
+}
+
+/* Reading measure.
+
+   The content column is 44rem, which at the body size is around 85 characters
+   per line. That is comfortable for a list of cards, where each line is short
+   anyway, and too wide for a paragraph: the eye loses the start of the next
+   line on the way back. Explanatory copy gets capped here instead of at the
+   column.
+
+   `text-wrap: pretty` comes with it. It costs nothing and stops a paragraph
+   ending on a single orphaned word, which is the most visible way a block of
+   text looks unconsidered. */
+@utility measure {
+  max-width: 62ch;
+  text-wrap: pretty;
 }

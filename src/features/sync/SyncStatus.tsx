@@ -26,7 +26,7 @@ export function SyncStatus({ freshness, variant = 'inline' }: SyncStatusProps) {
 
   if (variant === 'inline' && !config.prominent) {
     return (
-      <p className="flex items-center gap-1.5 text-[0.75rem] text-ink-muted">
+      <p className="flex items-center gap-1.5 text-xs text-ink-muted">
         <ClockIcon className="size-3.5" aria-hidden="true" />
         Updated {formatAge(freshness.ageMs)}
       </p>
@@ -66,8 +66,8 @@ export function SyncStatus({ freshness, variant = 'inline' }: SyncStatusProps) {
         )}
       />
       <div className="min-w-0">
-        <p className="text-[0.9375rem] font-semibold text-ink">{headline}</p>
-        <p className="mt-0.5 text-[0.8125rem] text-ink-soft">{detail}</p>
+        <p className="text-base font-semibold text-ink">{headline}</p>
+        <p className="mt-0.5 text-sm text-ink-soft">{detail}</p>
       </div>
     </div>
   );

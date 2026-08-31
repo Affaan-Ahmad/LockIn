@@ -49,17 +49,17 @@ export function WorkloadHeader({
 
   return (
     <Surface variant="clay" pad="lg" className="mb-6">
-      <p className="text-[0.8125rem] font-medium text-ink-soft">{greeting(hour)}</p>
-      <p className={cx('mt-1 text-[1.75rem] leading-tight font-bold tracking-[-0.02em]', tone)}>
+      <p className="text-sm font-medium text-ink-soft">{greeting(hour)}</p>
+      <p className={cx('mt-1 text-2xl font-bold tabular-nums', tone)}>
         {headline}
       </p>
 
       {nothing ? (
-        <p className="mt-1.5 text-[0.9375rem] text-ink-soft">
+        <p className="mt-1.5 text-base text-pretty text-ink-soft">
           Nothing needs your attention right now.
         </p>
       ) : (
-        <dl className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-[0.8125rem]">
+        <dl className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm">
           {overdueCount > 0 ? <Stat label="Overdue" value={overdueCount} tone="text-danger" /> : null}
           {todayCount > 0 ? <Stat label="Today" value={todayCount} tone="text-warning" /> : null}
           <Stat label="Coming up" value={upcomingCount} tone="text-ink" />
@@ -80,8 +80,10 @@ function Stat({
 }) {
   return (
     <div className="flex items-baseline gap-1.5">
+      {/* Value before label in the DOM, reordered visually. A screen reader
+          reads "Overdue, 2"; the eye scans the number first. */}
       <dt className="order-2 text-ink-soft">{label}</dt>
-      <dd className={cx('order-1 text-[1.0625rem] font-bold', tone)}>{value}</dd>
+      <dd className={cx('order-1 text-lg font-bold tabular-nums', tone)}>{value}</dd>
     </div>
   );
 }

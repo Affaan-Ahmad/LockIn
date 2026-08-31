@@ -5,6 +5,7 @@ import { useState, useTransition } from 'react';
 
 import { Button } from '@/components/ui/Button';
 import { RefreshIcon } from '@/components/icons';
+import { cx } from '@/lib/cx';
 
 /**
  * Runs a sync now.
@@ -88,7 +89,7 @@ export function SyncButton({ mode = 'INCREMENTAL', label = 'Sync now' }: SyncBut
       {message === null ? null : (
         <span
           role="status"
-          className={failed ? 'text-[0.8125rem] text-danger' : 'text-[0.8125rem] text-ink-soft'}
+          className={cx('text-sm', failed ? 'text-danger' : 'text-ink-soft')}
         >
           {message}
         </span>

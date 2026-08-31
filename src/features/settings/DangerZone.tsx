@@ -96,8 +96,8 @@ function DisconnectCard({ connected }: { readonly connected: boolean }) {
 
   return (
     <section className="surface-raised p-4">
-      <h3 className="text-[0.9375rem] font-semibold text-ink">Google Classroom</h3>
-      <p className="mt-1 text-[0.8125rem] leading-relaxed text-ink-soft">
+      <h3 className="text-base font-semibold text-ink">Google Classroom</h3>
+      <p className="measure mt-1 text-sm leading-relaxed text-ink-soft">
         {connected
           ? 'LockIn reads your courses and coursework. Disconnecting stops all syncing. Your existing deadlines stay, and stop updating.'
           : 'Not connected. LockIn cannot see any coursework until you connect.'}
@@ -140,7 +140,7 @@ function DisconnectCard({ connected }: { readonly connected: boolean }) {
       {message === null ? null : (
         <p
           role="status"
-          className={cx('mt-3 text-[0.8125rem]', failed ? 'text-danger' : 'text-ink-soft')}
+          className={cx('mt-3 text-sm', failed ? 'text-danger' : 'text-ink-soft')}
         >
           {message}
         </p>
@@ -187,8 +187,8 @@ function DeleteCard() {
 
   return (
     <section className="surface-flat border-danger/35 bg-danger-soft p-4">
-      <h3 className="text-[0.9375rem] font-semibold text-ink">Delete your account</h3>
-      <p className="mt-1 text-[0.8125rem] leading-relaxed text-ink-soft">
+      <h3 className="text-base font-semibold text-ink">Delete your account</h3>
+      <p className="measure mt-1 text-sm leading-relaxed text-ink-soft">
         Removes your profile, courses, coursework, classifications and your decisions, and revokes
         LockIn&rsquo;s access to your Google account. This cannot be undone.
       </p>
@@ -219,7 +219,7 @@ function DeleteCard() {
           </DialogHeader>
 
           <div className="mt-1">
-            <label htmlFor="confirm-delete" className="block text-[0.8125rem] font-semibold text-ink">
+            <label htmlFor="confirm-delete" className="block text-sm font-semibold text-ink">
               Type <span className="font-mono">{CONFIRM_PHRASE}</span> to confirm
             </label>
             <input
@@ -229,7 +229,7 @@ function DeleteCard() {
                 setTyped(event.target.value);
               }}
               autoComplete="off"
-              className="surface-sunken mt-1.5 min-h-11 w-full rounded-control px-3.5 text-[0.9375rem] text-ink outline-none focus-visible:ring-2 focus-visible:ring-danger"
+              className="surface-sunken mt-1.5 min-h-11 w-full rounded-control px-3.5 text-base text-ink outline-none focus-visible:ring-2 focus-visible:ring-danger"
             />
           </div>
 
@@ -258,7 +258,7 @@ function DeleteCard() {
       </Dialog>
 
       {error === null ? null : (
-        <p role="alert" className="mt-3 text-[0.8125rem] font-medium text-danger">
+        <p role="alert" className="mt-3 text-sm font-medium text-danger">
           {error}
         </p>
       )}

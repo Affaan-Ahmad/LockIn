@@ -46,8 +46,8 @@ export default async function CoursesPage({
 
       {courses.length === 0 ? (
         <div className="surface-raised p-4">
-          <p className="text-[0.9375rem] font-semibold text-ink">No courses found yet</p>
-          <p className="mt-1 text-[0.8125rem] leading-relaxed text-ink-soft">
+          <p className="text-base font-semibold text-ink">No courses found yet</p>
+          <p className="measure mt-1 text-sm leading-relaxed text-ink-soft">
             LockIn has not read your Classroom course list, or your account has no active courses.
           </p>
           <div className="mt-3">
@@ -60,7 +60,7 @@ export default async function CoursesPage({
 
       {courses.length === 0 || setupMode ? null : (
         <div className="mt-7 border-t border-line pt-5">
-          <p className="text-[0.8125rem] leading-relaxed text-ink-soft">
+          <p className="measure text-sm leading-relaxed text-ink-soft">
             Turning a course on does not fetch its coursework straight away. Its assignments
             appear after the next sync.
           </p>

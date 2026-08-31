@@ -59,10 +59,12 @@ export function DeadlineGroups({
                 instead, and the count sits in a quieter tone beside it. */}
             <h2
               id={`group-${band}`}
-              className="mb-2.5 flex items-baseline gap-2 px-1 text-[0.9375rem] font-bold tracking-[-0.01em] text-ink"
+              className="mb-2.5 flex items-baseline gap-2 px-1 text-base font-bold tracking-[-0.01em] text-ink"
             >
               {GROUP_LABEL[band]}
-              <span className="text-[0.8125rem] font-semibold text-ink-muted">{group.length}</span>
+              <span className="text-sm font-semibold tabular-nums text-ink-muted">
+                {group.length}
+              </span>
             </h2>
             <ul className="flex flex-col gap-2.5">
               {group.map((item) => (

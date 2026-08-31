@@ -37,8 +37,8 @@ export default async function SettingsPage() {
         <section aria-labelledby="account">
           <SectionHeading id="account">Account</SectionHeading>
           <div className="surface-raised p-4">
-            <p className="text-[0.8125rem] text-ink-muted">Signed in as</p>
-            <p className="mt-0.5 text-[0.9375rem] font-semibold break-all text-ink">
+            <p className="text-sm text-ink-muted">Signed in as</p>
+            <p className="mt-0.5 text-base font-semibold break-all text-ink">
               {user.email ?? 'your Google account'}
             </p>
           </div>
@@ -46,7 +46,7 @@ export default async function SettingsPage() {
 
         <section aria-labelledby="section">
           <SectionHeading id="section">Your section</SectionHeading>
-          <p className="mb-4 text-[0.8125rem] leading-relaxed text-ink-soft">
+          <p className="measure mb-4 text-sm leading-relaxed text-ink-soft">
             Changing this re-checks every assignment on the next sync, so verdicts you see now may
             change.
           </p>
@@ -59,7 +59,7 @@ export default async function SettingsPage() {
         <section aria-labelledby="appearance">
           <SectionHeading id="appearance">Appearance</SectionHeading>
           <div className="surface-raised flex flex-wrap items-center justify-between gap-3 p-4">
-            <p className="text-[0.8125rem] text-ink-soft">
+            <p className="text-sm text-ink-soft">
               LockIn follows your device by default. Choose one to override it.
             </p>
             <ThemeToggle />
@@ -69,14 +69,14 @@ export default async function SettingsPage() {
         <section aria-labelledby="data">
           <SectionHeading id="data">Your data</SectionHeading>
           <div className="surface-raised p-4">
-            <p className="text-[0.8125rem] text-ink-soft">
+            <p className="text-sm text-ink-soft">
               {setup.discoveredCourseCount} courses found, {data.trackedCourseCount} tracked. Last
               successful sync {formatAge(data.freshness.ageMs)}.
             </p>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <SyncButton mode="FULL" label="Re-check everything" />
             </div>
-            <ul className="mt-4 flex flex-col gap-1.5 text-[0.875rem]">
+            <ul className="mt-4 flex flex-col gap-1.5 text-sm">
               <li>
                 <Link href="/courses" className="font-semibold text-brand hover:underline">
                   Manage tracked courses
@@ -105,7 +105,7 @@ export default async function SettingsPage() {
           <DangerZone connected={setup.hasConnection} />
         </section>
 
-        <p className="text-[0.75rem] leading-relaxed text-ink-muted">
+        <p className="measure text-xs leading-relaxed text-ink-muted">
           LockIn reads your Classroom courses and coursework. It never posts, submits or changes
           anything in Classroom, and it does not share your coursework with anyone.
         </p>
@@ -116,7 +116,7 @@ export default async function SettingsPage() {
 
 function SectionHeading({ id, children }: { readonly id: string; readonly children: string }) {
   return (
-    <h2 id={id} className="mb-2.5 px-1 text-[0.9375rem] font-bold tracking-[-0.01em] text-ink">
+    <h2 id={id} className="mb-2.5 px-1 text-base font-bold tracking-[-0.01em] text-ink">
       {children}
     </h2>
   );

@@ -23,9 +23,9 @@ export function EmptyState({ icon, title, body, action }: EmptyStateProps) {
           {icon}
         </span>
       )}
-      <h2 className="text-[1.0625rem] font-semibold text-ink">{title}</h2>
+      <h2 className="text-lg font-semibold text-ink">{title}</h2>
       {body === undefined ? null : (
-        <p className="max-w-[26rem] text-[0.9375rem] text-ink-soft">{body}</p>
+        <p className="max-w-[26rem] text-base text-ink-soft">{body}</p>
       )}
       {action === undefined ? null : <div className="mt-1">{action}</div>}
     </div>

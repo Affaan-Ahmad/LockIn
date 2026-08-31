@@ -85,10 +85,10 @@ export default async function ReviewPage() {
         <section className="mt-9" aria-labelledby="decisions">
           <h2
             id="decisions"
-            className="mb-2.5 flex items-baseline gap-2 px-1 text-[0.9375rem] font-bold tracking-[-0.01em] text-ink"
+            className="mb-2.5 flex items-baseline gap-2 px-1 text-base font-bold tracking-[-0.01em] text-ink"
           >
             Your answers
-            <span className="text-[0.8125rem] font-semibold text-ink-muted">
+            <span className="text-sm font-semibold tabular-nums text-ink-muted">
               {decisions.length}
             </span>
           </h2>

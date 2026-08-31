@@ -65,7 +65,7 @@ export function RelevanceChoice({ assignmentId, current, title }: RelevanceChoic
   if (current !== null) {
     return (
       <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-line pt-3">
-        <p className="text-[0.8125rem] text-ink-soft">
+        <p className="text-sm text-ink-soft">
           You said this is{' '}
           <strong className="font-semibold text-ink">
             {current === 'RELEVANT' ? 'yours' : 'not yours'}
@@ -78,12 +78,12 @@ export function RelevanceChoice({ assignmentId, current, title }: RelevanceChoic
           aria-busy={pending || undefined}
           aria-label={`Undo your answer for ${title}`}
           onClick={() => void choose(null)}
-          className="press min-h-9 rounded-pill px-3 text-[0.75rem] font-semibold text-ink-muted hover:bg-sunken hover:text-ink disabled:opacity-55"
+          className="press min-h-9 rounded-pill px-3 text-xs font-semibold text-ink-muted hover:bg-sunken hover:text-ink disabled:opacity-55"
         >
           {pending ? '…' : 'Undo'}
         </button>
         {error === null ? null : (
-          <span role="alert" className="text-[0.75rem] font-medium text-danger">
+          <span role="alert" className="text-xs font-medium text-danger">
             {error}
           </span>
         )}
@@ -93,7 +93,7 @@ export function RelevanceChoice({ assignmentId, current, title }: RelevanceChoic
 
   return (
     <div className="mt-3 border-t border-line pt-3">
-      <p className="text-[0.8125rem] text-ink-soft">Is this yours?</p>
+      <p className="text-sm text-ink-soft">Is this yours?</p>
       <div className="mt-2 flex flex-wrap items-center gap-2">
         <Choice
           label="Yes, it's mine"
@@ -110,7 +110,7 @@ export function RelevanceChoice({ assignmentId, current, title }: RelevanceChoic
           describedBy={title}
         />
         {error === null ? null : (
-          <span role="alert" className="text-[0.75rem] font-medium text-danger">
+          <span role="alert" className="text-xs font-medium text-danger">
             {error}
           </span>
         )}
@@ -139,7 +139,7 @@ function Choice({
       disabled={disabled}
       aria-label={`${label}: ${describedBy}`}
       className={cx(
-        'press min-h-11 rounded-pill px-4 text-[0.8125rem] font-semibold active:scale-[0.97]',
+        'press min-h-11 rounded-pill px-4 text-sm font-semibold active:scale-[0.97]',
         'transition-colors duration-[120ms] disabled:opacity-55',
         tone === 'brand'
           ? 'bg-brand text-on-brand shadow-clay hover:bg-brand-hover'

@@ -53,9 +53,9 @@ export function AppShell({
       <header className="px-4 pt-6 pb-2 md:px-8 md:pt-10">
         <div className="mx-auto flex max-w-[var(--content-max)] items-start justify-between gap-4">
           <div className="min-w-0">
-            <h1 className="truncate text-[1.75rem] leading-tight font-bold text-ink">{title}</h1>
+            <h1 className="truncate text-2xl font-bold text-ink">{title}</h1>
             {subtitle === undefined ? null : (
-              <p className="mt-1 text-[0.9375rem] text-ink-soft">{subtitle}</p>
+              <p className="mt-1 text-base text-ink-soft">{subtitle}</p>
             )}
           </div>
 

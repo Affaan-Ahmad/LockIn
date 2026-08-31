@@ -55,13 +55,13 @@ function SignInScreen() {
     <main className="min-h-dvh lg:grid lg:grid-cols-[1.05fr_0.95fr]">
       <div className="flex min-h-dvh flex-col justify-center px-6 py-14 sm:px-10 lg:min-h-0 lg:px-14">
         <div className="w-full max-w-[30rem]">
-          <p className="text-[0.75rem] font-bold tracking-[0.08em] text-brand uppercase">LockIn</p>
+          <p className="text-xs font-bold tracking-[0.08em] text-brand uppercase">LockIn</p>
 
-          <h1 className="mt-3 text-[2.125rem] leading-[1.08] font-bold tracking-[-0.03em] text-balance text-ink sm:text-[2.5rem]">
+          <h1 className="mt-3 text-3xl font-bold text-balance text-ink sm:text-4xl">
             Every deadline that is actually yours.
           </h1>
 
-          <p className="mt-4 max-w-[34ch] text-[1.0625rem] leading-relaxed text-ink-soft">
+          <p className="mt-4 max-w-[34ch] text-lg leading-relaxed text-ink-soft">
             Your section shares a Classroom with several others. LockIn reads the section out of
             each post and shows you the rest.
           </p>
@@ -72,7 +72,7 @@ function SignInScreen() {
             </Button>
           </a>
 
-          <p className="mt-5 max-w-[42ch] text-[0.75rem] leading-relaxed text-ink-muted">
+          <p className="mt-5 max-w-[42ch] text-xs leading-relaxed text-ink-muted">
             Read-only access to your Classroom courses and coursework. LockIn never posts, submits
             or changes anything.
           </p>
@@ -113,11 +113,11 @@ function StepFrame({
 }) {
   return (
     <main className="mx-auto flex min-h-dvh max-w-[34rem] flex-col justify-center px-5 py-12">
-      <p className="text-[0.8125rem] font-semibold text-brand">{step}</p>
-      <h1 className="mt-2 text-[1.75rem] leading-[1.15] font-bold tracking-[-0.02em] text-balance text-ink">
+      <p className="text-sm font-semibold text-brand">{step}</p>
+      <h1 className="mt-2 text-2xl font-bold text-balance text-ink">
         {title}
       </h1>
-      <p className="mt-3 text-[0.9375rem] leading-relaxed text-ink-soft">{intro}</p>
+      <p className="mt-3 text-base leading-relaxed text-ink-soft">{intro}</p>
       <div className="mt-7">{children}</div>
     </main>
   );

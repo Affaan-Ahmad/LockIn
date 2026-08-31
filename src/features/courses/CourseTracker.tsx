@@ -92,7 +92,7 @@ export function CourseTracker({ courses, setupMode = false }: CourseTrackerProps
 
   if (courses.length === 0) {
     return (
-      <p className="text-[0.9375rem] text-ink-soft">
+      <p className="text-base text-ink-soft">
         No courses found in your Google Classroom account yet.
       </p>
     );
@@ -125,10 +125,10 @@ export function CourseTracker({ courses, setupMode = false }: CourseTrackerProps
                   className="mt-0.5 size-5 shrink-0 accent-[var(--color-brand)]"
                 />
                 <span className="min-w-0 flex-1">
-                  <span className="block text-[0.9375rem] leading-snug font-semibold text-ink">
+                  <span className="block text-base leading-snug font-semibold text-ink">
                     {course.name}
                   </span>
-                  <span className="mt-0.5 block text-[0.8125rem] text-ink-soft">
+                  <span className="mt-0.5 block text-sm text-ink-soft">
                     {/* Google's own course-level section field, shown as-is.
                         It is frequently useless ("A,B,C,D,E,F,G", "Fall 2026"),
                         which is exactly why LockIn classifies per assignment
@@ -140,7 +140,7 @@ export function CourseTracker({ courses, setupMode = false }: CourseTrackerProps
                   </span>
                 </span>
                 {dirty ? (
-                  <span className="shrink-0 self-center text-[0.75rem] font-semibold text-brand">
+                  <span className="shrink-0 self-center text-xs font-semibold text-brand">
                     {on ? 'Adding' : 'Removing'}
                   </span>
                 ) : null}
@@ -159,7 +159,7 @@ export function CourseTracker({ courses, setupMode = false }: CourseTrackerProps
           'md:bottom-4',
         )}
       >
-        <p className="text-[0.8125rem] text-ink-soft">
+        <p className="text-sm tabular-nums text-ink-soft">
           {selectedCount} of {courses.length} tracked
           {changed.length > 0 ? ` · ${String(changed.length)} unsaved` : ''}
         </p>
@@ -175,7 +175,7 @@ export function CourseTracker({ courses, setupMode = false }: CourseTrackerProps
       </div>
 
       {error === null ? null : (
-        <p role="alert" className="mt-3 text-[0.8125rem] font-medium text-danger">
+        <p role="alert" className="mt-3 text-sm font-medium text-danger">
           {error}
         </p>
       )}

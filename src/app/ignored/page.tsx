@@ -71,7 +71,7 @@ export default async function IgnoredPage() {
         </ul>
       )}
 
-      <p className="mt-6 px-1 text-[0.8125rem] text-ink-soft">
+      <p className="measure mt-6 px-1 text-sm text-ink-soft">
         Hiding is only about what you see. It does not tell LockIn the work was for someone
         else, and it does not mark anything as done in Google Classroom.
       </p>

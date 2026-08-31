@@ -55,7 +55,7 @@ export function Nav({ reviewCount = 0 }: NavProps) {
     >
       <div className="mx-auto flex max-w-lg items-stretch justify-around md:h-full md:max-w-none md:flex-col md:justify-start md:gap-1 md:p-3">
         <div className="hidden md:mb-4 md:flex md:items-center md:gap-2 md:px-3 md:pt-2">
-          <span className="text-[1.0625rem] font-bold tracking-[-0.03em] text-ink">LockIn</span>
+          <span className="text-lg font-bold tracking-[-0.03em] text-ink">LockIn</span>
         </div>
 
         {ITEMS.map(({ href, label, Icon }) => {
@@ -72,8 +72,8 @@ export function Nav({ reviewCount = 0 }: NavProps) {
               className={cx(
                 // 44px minimum on every axis.
                 'group relative flex min-h-[3.25rem] flex-1 flex-col items-center justify-center gap-1',
-                'rounded-control px-2 py-2 text-[0.6875rem] font-semibold',
-                'md:min-h-11 md:flex-none md:flex-row md:justify-start md:gap-3 md:px-3 md:text-[0.9375rem]',
+                'rounded-control px-2 py-2 text-2xs font-semibold',
+                'md:min-h-11 md:flex-none md:flex-row md:justify-start md:gap-3 md:px-3 md:text-base',
                 'press active:scale-[0.97]',
                 active
                   ? 'text-brand md:bg-brand-soft'
@@ -86,7 +86,7 @@ export function Nav({ reviewCount = 0 }: NavProps) {
                   <span
                     className={cx(
                       'absolute -top-1.5 -right-2 min-w-[1.05rem] rounded-pill px-1',
-                      'bg-review text-center text-[0.625rem] leading-[1.05rem] font-bold text-white',
+                      'bg-review text-center text-2xs leading-[1.05rem] font-bold tabular-nums text-white',
                     )}
                   >
                     {badge > 9 ? '9+' : badge}

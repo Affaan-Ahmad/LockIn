@@ -92,7 +92,7 @@ export default async function TodayPage() {
       {data.ignoredCount > 0 ? (
         <Link
           href="/ignored"
-          className="press mt-6 flex items-center justify-between gap-3 rounded-card px-4 py-3 text-[0.8125rem] text-ink-soft active:scale-[0.99] hover:text-ink"
+          className="press mt-6 flex items-center justify-between gap-3 rounded-card px-4 py-3 text-sm text-ink-soft active:scale-[0.99] hover:text-ink"
         >
           <span>
             {data.ignoredCount} hidden {data.ignoredCount === 1 ? 'item' : 'items'}
@@ -109,11 +109,11 @@ export default async function TodayPage() {
           className="clay press mt-6 flex items-center justify-between gap-3 p-4 active:scale-[0.99]"
         >
           <span className="min-w-0">
-            <span className="block text-[0.9375rem] font-semibold text-ink">
+            <span className="block text-base font-semibold text-ink">
               {data.reviewCount} {data.reviewCount === 1 ? 'item needs' : 'items need'} your
               attention
             </span>
-            <span className="mt-0.5 block text-[0.8125rem] text-ink-soft">
+            <span className="mt-0.5 block text-sm text-ink-soft">
               LockIn wasn&rsquo;t sure whether these are for your section.
             </span>
           </span>

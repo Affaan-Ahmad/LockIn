@@ -81,7 +81,7 @@ export function ThemeToggle() {
             key={option.value}
             className={cx(
               'relative flex min-h-9 cursor-pointer items-center rounded-pill px-3.5',
-              'text-[0.8125rem] font-semibold transition-colors duration-[120ms]',
+              'text-sm font-semibold transition-colors duration-[120ms]',
               // Focus is drawn on the label because the input itself is
               // visually hidden; :has keeps that tied to the real focus state
               // rather than a manually tracked one.

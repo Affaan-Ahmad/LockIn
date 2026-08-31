@@ -62,7 +62,7 @@ export function AssignmentCard({
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <h3 className="text-[1.0625rem] leading-snug font-semibold text-balance text-ink">
+          <h3 className="text-lg leading-snug font-semibold text-balance text-ink">
             {item.link === null ? (
               item.title
             ) : (
@@ -80,7 +80,7 @@ export function AssignmentCard({
               </a>
             )}
           </h3>
-          <p className="mt-0.5 truncate text-[0.8125rem] text-ink-soft">{item.courseName}</p>
+          <p className="mt-0.5 truncate text-sm text-ink-soft">{item.courseName}</p>
         </div>
 
         <div className="flex shrink-0 flex-col items-end gap-1.5">
@@ -93,10 +93,13 @@ export function AssignmentCard({
         </div>
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[0.8125rem]">
+      <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm">
         <span
           className={cx(
-            'inline-flex items-center gap-1.5 font-semibold',
+            // Tabular figures: a stack of cards is read down its left edge,
+            // and proportional digits make "11:59" narrower than "10:00", so
+            // the times drift against each other row to row.
+            'inline-flex items-center gap-1.5 font-semibold tabular-nums',
             overdue ? 'text-danger' : deadline.band === 'today' ? 'text-warning' : 'text-ink',
           )}
         >
@@ -121,7 +124,7 @@ export function AssignmentCard({
         {submission.show ? <Badge tone={submission.tone}>{submission.label}</Badge> : null}
 
         {item.hasManualOverride ? (
-          <span className="text-[0.75rem] text-ink-muted">Your choice</span>
+          <span className="text-xs text-ink-muted">Your choice</span>
         ) : null}
 
         {actions === undefined ? null : <span className="ml-auto">{actions}</span>}
@@ -152,6 +155,6 @@ function ScopeLine({ item }: { readonly item: AssignmentView }) {
           : 'The post mentions sections, but not clearly enough to be sure.';
 
   return (
-    <p className="mt-3 border-t border-line pt-3 text-[0.8125rem] text-ink-soft">{explanation}</p>
+    <p className="mt-3 border-t border-line pt-3 text-sm text-ink-soft">{explanation}</p>
   );
 }

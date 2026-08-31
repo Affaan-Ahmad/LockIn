@@ -57,7 +57,7 @@ export function Button({
       className={cx(
         BASE,
         VARIANT[variant],
-        size === 'sm' ? 'min-h-9 px-4 text-[0.8125rem]' : 'min-h-11 px-6 text-[0.9375rem]',
+        size === 'sm' ? 'min-h-9 px-4 text-sm' : 'min-h-11 px-6 text-base',
         fullWidth ? 'w-full' : '',
         className,
       )}
