@@ -105,10 +105,7 @@ export default async function SettingsPage() {
 
 function SectionHeading({ id, children }: { readonly id: string; readonly children: string }) {
   return (
-    <h2
-      id={id}
-      className="mb-2.5 px-1 text-[0.75rem] font-bold tracking-[0.06em] text-ink-muted uppercase"
-    >
+    <h2 id={id} className="mb-2.5 px-1 text-[0.9375rem] font-bold tracking-[-0.01em] text-ink">
       {children}
     </h2>
   );

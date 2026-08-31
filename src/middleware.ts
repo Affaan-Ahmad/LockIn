@@ -13,7 +13,26 @@ import { buildContentSecurityPolicy } from '@/shared/security-headers';
  * `getUser()` rather than `getSession()`: getUser revalidates the JWT with the
  * auth server, so an expired or tampered cookie is rejected here instead of
  * being trusted all the way down to a repository call.
+ *
+ * That same call now also gates the protected screens. It was already being
+ * made and its answer thrown away; using it here means an unauthenticated
+ * request never starts rendering a screen it will be redirected away from.
+ * Without this the streamed loading state flushes first, so a signed-out
+ * visitor sees a skeleton of Today for a moment before landing on sign-in.
+ *
+ * The page-level `requireSessionUser()` calls stay exactly where they are. This
+ * is a redirect for the sake of the visitor, not the authorization boundary;
+ * a misconfigured matcher must not be able to expose a screen.
  */
+
+/** Reachable without a session. Everything else redirects to sign-in. */
+const PUBLIC_PATHS = ['/welcome', '/auth', '/api'];
+
+function isPublic(pathname: string): boolean {
+  return PUBLIC_PATHS.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+  );
+}
 export async function middleware(request: NextRequest) {
   // A fresh nonce per request. Reusing one across requests would let an
   // attacker who learns it inject a script that passes the policy.
@@ -61,7 +80,19 @@ export async function middleware(request: NextRequest) {
     },
   });
 
-  await supabase.auth.getUser();
+  const { data, error } = await supabase.auth.getUser();
+
+  if (!isPublic(request.nextUrl.pathname) && (error !== null || data.user === null)) {
+    const target = request.nextUrl.clone();
+    target.pathname = '/welcome';
+    // Any query string belonged to the screen they could not see. Carrying it
+    // to sign-in would leak it into history and browser autocomplete for no
+    // gain, since nothing on the welcome screen reads it.
+    target.search = '';
+    // Redirect, not rewrite: the address bar must end up on /welcome, or a
+    // refresh silently retries a screen the visitor still cannot open.
+    return applyCsp(NextResponse.redirect(target));
+  }
 
   return applyCsp(response);
 }

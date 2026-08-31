@@ -34,7 +34,7 @@ const ITEMS: readonly NavItem[] = [
 ];
 
 export interface NavProps {
-  /** Shown as a count on Review. Omitted when zero — a badge of 0 is noise. */
+  /** Shown as a count on Review. Omitted when zero, because a badge of 0 is noise. */
   readonly reviewCount?: number;
 }
 

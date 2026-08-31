@@ -63,7 +63,7 @@ export function BooksIcon(props: IconProps) {
   );
 }
 
-/** Needs Review. A question, not a warning — the app is asking, not alerting. */
+/** Needs Review. A question, not a warning: the app is asking, not alerting. */
 export function ReviewIcon(props: IconProps) {
   return (
     <Icon {...props}>

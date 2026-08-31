@@ -195,7 +195,7 @@ export function ProfileForm({ initial, nextHref, submitLabel }: ProfileFormProps
         )}
         <p className="mt-2.5 text-[0.75rem] leading-relaxed text-ink-muted">
           A post that mentions none of these is treated as being for everyone. Anything LockIn
-          cannot read confidently goes to Review for you to decide &mdash; it is never guessed
+          cannot read confidently goes to Review for you to decide. It is never guessed
           at.
         </p>
       </div>

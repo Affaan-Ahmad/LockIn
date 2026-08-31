@@ -137,7 +137,7 @@ function Choice({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      aria-label={`${label} — ${describedBy}`}
+      aria-label={`${label}: ${describedBy}`}
       className={cx(
         'press min-h-11 rounded-pill px-4 text-[0.8125rem] font-semibold active:scale-[0.97]',
         'transition-colors duration-[120ms] disabled:opacity-55',

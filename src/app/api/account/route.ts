@@ -59,7 +59,7 @@ export async function DELETE(request: Request): Promise<NextResponse> {
       // the student needs to know to finish the job themselves.
       note: result.googleRevoked
         ? 'Your account, coursework and Google authorisation have been removed.'
-        : 'Your account and coursework have been removed. Google authorisation could not be revoked automatically — remove it at myaccount.google.com/permissions.',
+        : 'Your account and coursework have been removed. Google authorisation could not be revoked automatically. Remove it at myaccount.google.com/permissions.',
     });
   });
 }

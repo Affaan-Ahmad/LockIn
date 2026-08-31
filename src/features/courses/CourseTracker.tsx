@@ -140,7 +140,7 @@ export function CourseTracker({ courses, setupMode = false }: CourseTrackerProps
                   </span>
                 </span>
                 {dirty ? (
-                  <span className="shrink-0 self-center text-[0.6875rem] font-bold tracking-[0.05em] text-brand uppercase">
+                  <span className="shrink-0 self-center text-[0.75rem] font-semibold text-brand">
                     {on ? 'Adding' : 'Removing'}
                   </span>
                 ) : null}

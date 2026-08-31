@@ -63,7 +63,7 @@ export async function DELETE(): Promise<NextResponse> {
       dataRetained: true,
       note: result.revokedAtGoogle
         ? 'Google access revoked. Coursework already imported is kept; delete your account to remove it.'
-        : 'Local credentials cleared, but Google did not confirm revocation — remove it at myaccount.google.com/permissions.',
+        : 'Local credentials cleared, but Google did not confirm revocation. Remove it at myaccount.google.com/permissions.',
     });
   });
 }

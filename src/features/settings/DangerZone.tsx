@@ -66,7 +66,7 @@ function DisconnectCard({ connected }: { readonly connected: boolean }) {
         body.revokedAtGoogle === true
           ? 'Disconnected, and access was revoked at Google.'
           : (body.note ??
-              'Disconnected here. Google may still list LockIn — remove it in your Google account.'),
+              'Disconnected here. Google may still list LockIn. Remove it in your Google account.'),
       );
       setConfirming(false);
       router.refresh();
