@@ -66,7 +66,7 @@ verified against a live Postgres by 27 passing integration tests.
 | 2 | ~~No Google disconnect.~~ **RESOLVED 2026-08-31.** `DELETE /api/connection` revokes at Google then clears local credentials. Imported coursework is deliberately kept, and the response says so. | ~~CRITICAL~~ CLOSED | `revoke()` is no longer dead code. |
 | 3 | ~~No inbound rate limiting.~~ **RESOLVED 2026-08-31.** Database-backed fixed-window limiter on both Google-facing endpoints, with `Retry-After` on the 429. | ~~HIGH~~ CLOSED | Verified against the live database. Fails open by design if the limiter itself is unreachable — it guards a quota, not authorisation. |
 | 4 | ~~No security headers / CSP.~~ **RESOLVED 2026-08-31.** Nonce-based CSP set per request in middleware; static headers in `next.config.mjs`. Verified on a live response. | ~~HIGH~~ CLOSED | One documented relaxation: `style-src 'unsafe-inline'`, because Next.js injects inline styles that cannot yet carry a nonce. Revisit once the UI exists. |
-| 5 | **No CI.** No typecheck/lint/test gate, no dependency scan, no secret scan. | HIGH | |
+| 5 | **No CI.** ~~None existed.~~ **ADDRESSED 2026-08-31.** `.github/workflows/ci.yml` runs typecheck, lint, unit tests and a production build on every push and pull request, plus a runtime dependency audit. **NOT VERIFIED** until it has run green once on GitHub. Integration tests stay out: they need a live service-role key, and putting one in CI trades a testing gap for a credential-exposure risk. | HIGH | |
 | 6 | **OAuth callback `state` handling unverified.** `exchangeCodeForSession` is assumed to validate PKCE; not confirmed. | HIGH | Must be read and proven, not assumed. |
 | 7 | ~~The entire SQL layer has never been executed.~~ **RESOLVED 2026-08-31.** All four migrations applied to a live Postgres; 27/27 integration tests pass against it. | ~~HIGH~~ CLOSED | RLS isolation, the confidence floor, the ALL_SECTIONS guard, deadline coherence, two-strike reconciliation, single-active-sync and duplicate prevention are now measured rather than argued. |
 | 8 | **No data export.** | MEDIUM | Required if GDPR/UK GDPR applies. |
@@ -74,7 +74,7 @@ verified against a live Postgres by 27 passing integration tests.
 | 10 | **No monitoring or alerting.** | MEDIUM | Nobody would know sync had been failing for a week. |
 | 11 | **No backup restore test.** | MEDIUM | Supabase takes backups; an untested restore is not a proven restore. |
 | 12 | **No threat model document.** | MEDIUM | |
-| 13 | **No legal documents.** ~~None existed.~~ **PARTIALLY ADDRESSED 2026-08-31.** Privacy policy, terms, cookie policy and disclaimer drafted from the schema and scope list, published at `/legal/*`, public in middleware, linked from a footer on both the app shell and the signed-out screen. **STILL OPEN:** never reviewed by a lawyer; controller legal name and the privacy/security contact addresses are unfilled placeholders. | CRITICAL for launch | Drafting is in scope; legal sufficiency is not. |
+| 13 | **No legal documents.** ~~None existed.~~ **PARTIALLY ADDRESSED 2026-08-31.** Privacy policy, terms, cookie policy and disclaimer drafted from the schema and scope list, published at `/legal/*`, public in middleware, linked from a footer on both the app shell and the signed-out screen. **UPDATED 2026-08-31:** controller named (Affaan Ahmad, individual, Pakistan) and contact address set to contact@lockinapp.tech. **STILL OPEN:** never reviewed by anyone qualified, and the contact mailbox is NOT VERIFIED as receiving until Cloudflare Email Routing is live. | CRITICAL for launch | Drafting is in scope; legal sufficiency is not. |
 | 14 | **Google OAuth app is in Testing mode**, unverified. | CRITICAL for launch | See below. |
 | 15 | ~~Dev `service_role` credentials exposed.~~ **RESOLVED 2026-08-30.** Both exposed credentials are dead: the `sb_secret_` key was replaced, and legacy JWT-based API keys were disabled project-wide. | ~~HIGH~~ CLOSED | See the incident log below. |
 
@@ -256,8 +256,8 @@ sensitive fields in the database, and minimal collection is the standing rule.
 ## Subprocessors
 
 **Data controller:** an individual based in Pakistan. Legal name and contact addresses are
-placeholders in `src/app/legal/content.tsx` and must be filled before launch; grep for
-`TO BE CONFIRMED`.
+`src/app/legal/content.tsx`: Affaan Ahmad, an individual in Pakistan, reachable at
+contact@lockinapp.tech. Production domain is lockinapp.tech.
 
 | Provider | Data | Region | Status |
 | --- | --- | --- | --- |

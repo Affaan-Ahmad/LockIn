@@ -1,0 +1,88 @@
+name: CI
+
+# Every push and every pull request. A gate that only runs on main is a gate
+# that tells you about a regression after it has already landed.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# A second push to the same branch cancels the first. Without this a busy
+# branch queues runs that are already answering a stale question.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.11'
+          cache: npm
+
+      # `npm ci` rather than `npm install`: it installs exactly the lockfile and
+      # fails if package.json and the lock have drifted, which is the whole
+      # point of running this on a clean machine.
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      # Unit only. The integration suite needs live Supabase credentials, and
+      # putting a service-role key in CI to run them would trade a testing gap
+      # for a credential-exposure risk. Those run locally against a real
+      # database; see the release checklist.
+      - name: Unit tests
+        run: npm run test:unit
+
+      # Catches what typecheck cannot: a Server Component importing something
+      # client-only, a route that fails to compile, a broken static export.
+      - name: Build
+        run: npm run build
+        env:
+          # Build-time placeholders. The app reads real values at runtime from
+          # the host's environment; these exist only so `next build` can resolve
+          # the config module. Nothing here is a credential.
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+          NEXT_PUBLIC_SITE_URL: https://placeholder.invalid
+
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.11'
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      # Runtime dependencies only. A vulnerability in a build tool does not ship
+      # to a student's browser, and mixing the two produces a number nobody
+      # acts on.
+      #
+      # Reports without failing the job, deliberately: there is a known high
+      # advisory in postcss reached through Next, whose only fix is a major
+      # upgrade. Failing here would turn CI red permanently, and a permanently
+      # red pipeline is one nobody reads. It is tracked as an open finding
+      # instead.
+      - name: Dependency audit
+        run: npm audit --omit=dev --audit-level=moderate || true

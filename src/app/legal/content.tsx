@@ -3,9 +3,12 @@ import type { ReactNode } from 'react';
 /**
  * Shared furniture for the legal pages.
  *
- * The unresolved facts live here as named constants rather than scattered
- * through four documents, so filling one in is a single edit and a grep for
- * TO BE CONFIRMED finds everything still outstanding.
+ * The facts that vary live here as named constants rather than scattered
+ * through four documents, so changing one is a single edit.
+ *
+ * All of them are now filled in. What is still outstanding is not a value but a
+ * review: nobody qualified has read these documents, and LEGAL_STATUS says so
+ * on every page until somebody has.
  */
 
 /**
@@ -15,11 +18,21 @@ import type { ReactNode } from 'react';
  * implying an organisation that does not exist, and it is what a reader needs
  * in order to know who they are actually dealing with.
  */
-export const CONTROLLER = '[LEGAL NAME - TO BE CONFIRMED]';
+export const CONTROLLER = 'Affaan Ahmad';
 
-/** Not the operator's personal address; a role address on a domain they own. */
-export const PRIVACY_CONTACT = '[privacy@your-domain - TO BE CONFIRMED]';
-export const SECURITY_CONTACT = '[security@your-domain - TO BE CONFIRMED]';
+/**
+ * A role address on the project's own domain, not the operator's personal one.
+ *
+ * Both names point at the same mailbox today. LockIn is run by one person, and
+ * advertising a `security@` nobody reads is worse than not advertising one: it
+ * publishes a promise to receive reports and then breaks it, and a researcher
+ * who gets silence tends to publish instead.
+ *
+ * They stay as two constants rather than one so splitting them later is a
+ * one-line change here rather than an edit to four documents.
+ */
+export const PRIVACY_CONTACT = 'contact@lockinapp.tech';
+export const SECURITY_CONTACT = 'contact@lockinapp.tech';
 
 export const JURISDICTION = 'Pakistan';
 

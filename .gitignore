@@ -4,8 +4,11 @@ out/
 dist/
 coverage/
 *.tsbuildinfo
+# Every env file except the committed template. The previous patterns missed
+# `.env.local.bak`, which is exactly the shape a hand-made backup takes, and
+# GitHub's push protection was the only thing that stopped it being published.
 .env
-.env.local
-.env*.local
+.env.*
+!.env.example
 .DS_Store
 .vercel
