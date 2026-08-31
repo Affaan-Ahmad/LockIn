@@ -198,6 +198,47 @@ export async function loadReviewQueue(userId: string): Promise<{
   };
 }
 
+/**
+ * Everything the student has personally decided.
+ *
+ * Exists so a wrong answer is recoverable. Once an item is overridden it stops
+ * being UNCERTAIN and leaves the review queue, and a mistaken "not my section"
+ * would otherwise hide real coursework with no way back -- the exact failure
+ * the product is built to prevent.
+ *
+ * Six reads rather than one because the assignment feeds are partitioned by
+ * deadline, not by decision. They run concurrently, so the screen waits for the
+ * slowest, not the sum.
+ */
+export async function loadDecisions(userId: string): Promise<readonly AssignmentView[]> {
+  const backend = await context();
+  const relevance: readonly ['RELEVANT', 'NOT_RELEVANT'] = ['RELEVANT', 'NOT_RELEVANT'];
+
+  const [upcoming, overdue, undated] = await Promise.all([
+    backend.assignments.findUpcoming({
+      userId,
+      to: null,
+      relevance,
+      includeSubmitted: true,
+      limit: 200,
+    }),
+    backend.assignments.findOverdue({
+      userId,
+      since: null,
+      relevance,
+      includeSubmitted: true,
+      limit: 200,
+    }),
+    backend.assignments.findUndated({ userId, relevance, limit: 200 }),
+  ]);
+
+  return [
+    ...overdue.map(toView),
+    ...upcoming.map(toView),
+    ...undated.map(toUndatedView),
+  ].filter((item) => item.hasManualOverride);
+}
+
 /** What the student has hidden. Reachable, reversible, never a void. */
 export async function loadIgnored(userId: string): Promise<{
   readonly items: readonly AssignmentView[];
@@ -261,6 +302,37 @@ export async function loadCourses(userId: string): Promise<{
     freshness,
   };
 }
+
+export interface ProfileView {
+  readonly primarySection: string;
+  readonly programCode: string | null;
+  readonly batch: string | null;
+  readonly timeZone: string;
+  readonly extraAliases: readonly string[];
+}
+
+/**
+ * The student's saved academic identity, in full.
+ *
+ * Separate from SetupState, which only answers "is there one?". A form that
+ * edits the profile needs every field it will send back: rendering it from a
+ * partial view and posting the gaps as null silently erases whatever the
+ * student had entered before.
+ */
+export const loadProfile = cache(async (userId: string): Promise<ProfileView | null> => {
+  const profile = await cachedProfile(userId);
+  if (profile === null) return null;
+
+  return {
+    primarySection: profile.identity.primarySection,
+    programCode: profile.identity.programCode,
+    batch: profile.identity.batch,
+    timeZone: profile.timeZone,
+    extraAliases: profile.aliases
+      .filter((alias) => alias.source === 'USER')
+      .map((alias) => alias.raw),
+  };
+});
 
 export interface SetupState {
   readonly hasConnection: boolean;

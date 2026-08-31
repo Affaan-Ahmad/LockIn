@@ -17,8 +17,15 @@ import { Nav } from './Nav';
 
 export interface AppShellProps {
   readonly title: string;
-  /** Optional line under the title. Kept short — this is not a place for prose. */
-  readonly subtitle?: string;
+  /**
+   * Optional line under the title. Kept short -- this is not a place for prose.
+   *
+   * Explicitly `| undefined` so pages can write `cond ? text : undefined`
+   * inline. Under exactOptionalPropertyTypes a bare `?:` rejects that, and the
+   * workaround is conditional prop spreading, which is far harder to read than
+   * the ternary it replaces.
+   */
+  readonly subtitle?: string | undefined;
   readonly reviewCount?: number;
   /** Freshness, sync controls: rendered by the page, placed by the shell. */
   readonly headerAside?: ReactNode;

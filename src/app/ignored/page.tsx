@@ -32,19 +32,14 @@ export default async function IgnoredPage() {
 
   const now = new Date();
 
-  // Spread rather than `subtitle={... : undefined}`: exactOptionalPropertyTypes
-  // treats an explicit undefined as a value, not an omission.
-  const subtitle =
-    items.length === 0
-      ? {}
-      : {
-          subtitle: `${String(items.length)} ${items.length === 1 ? 'item is' : 'items are'} hidden from your lists.`,
-        };
-
   return (
     <AppShell
       title="Hidden"
-      {...subtitle}
+      subtitle={
+        items.length === 0
+          ? undefined
+          : `${String(items.length)} ${items.length === 1 ? 'item is' : 'items are'} hidden from your lists.`
+      }
       reviewCount={reviewCount}
       headerAside={<SyncStatus freshness={freshness} />}
     >
