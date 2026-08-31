@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { headers } from 'next/headers';
 import { Inter } from 'next/font/google';
 
 import './globals.css';
@@ -37,16 +38,40 @@ export const viewport = {
   // not look like it is sitting inside a differently coloured frame.
   themeColor: [
     { media: '(prefers-color-scheme: light)', color: '#f7f4ef' },
-    { media: '(prefers-color-scheme: dark)', color: '#2b2c33' },
+    // Re-measured against the deepened ground. Left at the old value the
+    // browser chrome sat visibly lighter than the page below it.
+    { media: '(prefers-color-scheme: dark)', color: '#1c1d23' },
   ],
   // Zoom stays enabled. Locking it is an accessibility failure that mostly
   // hurts people who need to magnify text.
   viewportFit: 'cover' as const,
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+/**
+ * Applies a saved theme before the first paint.
+ *
+ * Has to be inline and synchronous. Anything deferred, including a React
+ * effect, runs after the browser has already painted, so a student who chose
+ * light on a dark-set phone would see a dark page flash first. That flash is
+ * the entire problem this solves.
+ *
+ * Reading storage can throw outright in private mode or with site data
+ * blocked, so the whole body is wrapped: a failure here must leave the device
+ * preference in charge, not leave the page unstyled.
+ */
+const THEME_BOOT = `try{var t=localStorage.getItem('lockin-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t)}catch(e){}`;
+
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  // The nonce the middleware minted for this request. The CSP is nonce-based
+  // with strict-dynamic, so an inline script without it is blocked, and a
+  // blocked boot script is exactly the flash above.
+  const nonce = (await headers()).get('x-nonce') ?? undefined;
+
   return (
     <html lang="en" className={inter.variable} suppressHydrationWarning>
+      <head>
+        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: THEME_BOOT }} />
+      </head>
       <body>{children}</body>
     </html>
   );

@@ -146,3 +146,45 @@ export function LockInMark(props: IconProps) {
     </Icon>
   );
 }
+
+/**
+ * Glyphs the shadcn primitives expect.
+ *
+ * Added here rather than installing lucide-react for three shapes. The library
+ * would be a dependency and a supply-chain surface for an X, a chevron and a
+ * dot, and mixing two icon families in one tree gives two grids, two stroke
+ * weights and two optical sizes.
+ */
+
+/** Dismiss. Used by the dialog close control, which carries its own label. */
+export function CloseIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M18 6 6 18" />
+      <path d="m6 6 12 12" />
+    </Icon>
+  );
+}
+
+/** Submenu affordance. Points along the direction the menu will open. */
+export function ChevronRightIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="m9 6 6 6-6 6" />
+    </Icon>
+  );
+}
+
+/**
+ * The selected marker in a radio group.
+ *
+ * Filled rather than stroked: shadcn renders it at 8px, where a 1.8px stroke
+ * leaves almost no interior and the dot reads as a ring.
+ */
+export function CircleIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <circle cx="12" cy="12" r="9" fill="currentColor" stroke="none" />
+    </Icon>
+  );
+}

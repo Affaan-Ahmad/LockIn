@@ -4,6 +4,15 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/Button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { cx } from '@/lib/cx';
 
 /**
@@ -18,6 +27,13 @@ import { cx } from '@/lib/cx';
  * wear the student down. Deletion asks for typed confirmation because
  * `{"confirm":true}` is something a misfiring client can send by accident and
  * "DELETE MY ACCOUNT" is not.
+ *
+ * Deletion is the one place here that uses a real dialog. An inline panel let
+ * the page scroll behind it, kept the rest of the page in the tab order, and
+ * did not close on Escape, which is the wrong set of properties for the only
+ * irreversible action in the product. Radix supplies the focus trap, the scroll
+ * lock and the aria wiring; those are genuinely hard to get right by hand, and
+ * that is what its weight is being spent on.
  */
 
 export interface DangerZoneProps {
@@ -177,41 +193,47 @@ function DeleteCard() {
         LockIn&rsquo;s access to your Google account. This cannot be undone.
       </p>
 
-      {!open ? (
-        <Button
-          variant="secondary"
-          size="sm"
-          className="mt-3"
-          onClick={() => {
-            setOpen(true);
-          }}
-        >
-          Delete account
-        </Button>
-      ) : (
-        <div className="mt-3">
-          <label htmlFor="confirm-delete" className="block text-[0.8125rem] font-semibold text-ink">
-            Type <span className="font-mono">{CONFIRM_PHRASE}</span> to confirm
-          </label>
-          <input
-            id="confirm-delete"
-            value={typed}
-            onChange={(event) => {
-              setTyped(event.target.value);
-            }}
-            autoComplete="off"
-            className="surface-sunken mt-1.5 min-h-11 w-full rounded-control px-3.5 text-[0.9375rem] text-ink outline-none focus-visible:ring-2 focus-visible:ring-danger"
-          />
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <Button
-              variant="danger"
-              size="sm"
-              busy={busy}
-              disabled={typed !== CONFIRM_PHRASE}
-              onClick={() => void remove()}
-            >
-              Delete permanently
-            </Button>
+      <Dialog
+        open={open}
+        onOpenChange={(next) => {
+          setOpen(next);
+          // Closing clears the phrase. Leaving it typed would mean a reopened
+          // dialog is one click from deleting the account.
+          if (!next) setTyped('');
+        }}
+      >
+        <DialogTrigger asChild>
+          <Button variant="secondary" size="sm" className="mt-3">
+            Delete account
+          </Button>
+        </DialogTrigger>
+
+        <DialogContent showCloseButton={false}>
+          <DialogHeader>
+            <DialogTitle>Delete your account?</DialogTitle>
+            <DialogDescription>
+              This removes your profile, courses, coursework, classifications and every decision
+              you have made, and revokes LockIn&rsquo;s access to your Google account. It cannot be
+              undone.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="mt-1">
+            <label htmlFor="confirm-delete" className="block text-[0.8125rem] font-semibold text-ink">
+              Type <span className="font-mono">{CONFIRM_PHRASE}</span> to confirm
+            </label>
+            <input
+              id="confirm-delete"
+              value={typed}
+              onChange={(event) => {
+                setTyped(event.target.value);
+              }}
+              autoComplete="off"
+              className="surface-sunken mt-1.5 min-h-11 w-full rounded-control px-3.5 text-[0.9375rem] text-ink outline-none focus-visible:ring-2 focus-visible:ring-danger"
+            />
+          </div>
+
+          <DialogFooter>
             <Button
               variant="ghost"
               size="sm"
@@ -222,9 +244,18 @@ function DeleteCard() {
             >
               Cancel
             </Button>
-          </div>
-        </div>
-      )}
+            <Button
+              variant="danger"
+              size="sm"
+              busy={busy}
+              disabled={typed !== CONFIRM_PHRASE}
+              onClick={() => void remove()}
+            >
+              Delete permanently
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {error === null ? null : (
         <p role="alert" className="mt-3 text-[0.8125rem] font-medium text-danger">

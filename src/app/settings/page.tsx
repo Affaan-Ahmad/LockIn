@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { AppShell } from '@/components/shell/AppShell';
 import { ProfileForm } from '@/features/onboarding/ProfileForm';
 import { DangerZone } from '@/features/settings/DangerZone';
+import { ThemeToggle } from '@/features/settings/ThemeToggle';
 import { SyncButton } from '@/features/sync/SyncButton';
 import { SyncStatus } from '@/features/sync/SyncStatus';
 import { formatAge } from '@/lib/format';
@@ -53,6 +54,16 @@ export default async function SettingsPage() {
               sends every field back, so any it was not given would be written
               as null -- erasing a programme code the student had entered. */}
           <ProfileForm initial={profile} nextHref="/settings" submitLabel="Save section" />
+        </section>
+
+        <section aria-labelledby="appearance">
+          <SectionHeading id="appearance">Appearance</SectionHeading>
+          <div className="surface-raised flex flex-wrap items-center justify-between gap-3 p-4">
+            <p className="text-[0.8125rem] text-ink-soft">
+              LockIn follows your device by default. Choose one to override it.
+            </p>
+            <ThemeToggle />
+          </div>
         </section>
 
         <section aria-labelledby="data">
