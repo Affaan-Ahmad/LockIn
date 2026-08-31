@@ -16,6 +16,11 @@
 --   3. NO LONG-HELD TRANSACTIONS. Each function is short and holds no network
 --      call. Google is contacted before these run, never during.
 --
+-- Enum literals inside INSERT ... SELECT are cast explicitly (::lifecycle_status,
+-- ::academic_source). Unlike INSERT ... VALUES, a SELECT list does not infer the
+-- target column's type, so a bare 'ACTIVE' stays text and Postgres refuses the
+-- assignment. The same applies to a CASE whose branches are all bare literals.
+--
 -- All functions are SECURITY INVOKER (the default): row-level security still
 -- applies inside them, so a caller holding a user's JWT can only ever touch
 -- that user's rows. The explicit guard below turns a silent no-op into a loud
@@ -229,12 +234,12 @@ begin
       source_fingerprint, last_synced_at
     )
     select
-      p_user_id, p_course_id, 'GOOGLE_CLASSROOM', r.source_item_id,
+      p_user_id, p_course_id, 'GOOGLE_CLASSROOM'::academic_source, r.source_item_id,
       r.title, r.description, r.work_type, r.source_state, r.max_points, r.alternate_link,
       r.topic_id, r.source_topic_id, r.assignee_mode, r.individual_student_ids,
       r.due_date_raw, r.due_time_raw, r.due_at, r.due_precision,
       r.source_created_at, r.source_updated_at,
-      'ACTIVE', 0, null,
+      'ACTIVE'::lifecycle_status, 0, null,
       r.source_fingerprint, p_synced_at
     from resolved r
     on conflict (user_id, source, source_item_id) do update
@@ -261,8 +266,8 @@ begin
           -- ARCHIVED item stays archived: that is a deliberate user/system
           -- decision, not a consequence of Google's listing.
           lifecycle_status = case
-            when assignments.lifecycle_status = 'ARCHIVED' then 'ARCHIVED'
-            else 'ACTIVE'
+            when assignments.lifecycle_status = 'ARCHIVED' then 'ARCHIVED'::lifecycle_status
+            else 'ACTIVE'::lifecycle_status
           end,
           missing_streak   = 0,
           first_missing_at = null
@@ -309,9 +314,9 @@ begin
        set missing_streak   = a.missing_streak + 1,
            first_missing_at = coalesce(a.first_missing_at, p_at),
            lifecycle_status = case
-             when a.lifecycle_status = 'ARCHIVED' then 'ARCHIVED'
-             when a.missing_streak + 1 >= p_threshold then 'SOURCE_REMOVED'
-             else 'SOURCE_MISSING'
+             when a.lifecycle_status = 'ARCHIVED' then 'ARCHIVED'::lifecycle_status
+             when a.missing_streak + 1 >= p_threshold then 'SOURCE_REMOVED'::lifecycle_status
+             else 'SOURCE_MISSING'::lifecycle_status
            end,
            last_synced_at   = p_at
      where a.user_id = p_user_id
@@ -377,7 +382,7 @@ begin
       source_created_at, source_updated_at, last_synced_at
     )
     select
-      p_user_id, p_course_id, r.assignment_id, 'GOOGLE_CLASSROOM', r.source_submission_id,
+      p_user_id, p_course_id, r.assignment_id, 'GOOGLE_CLASSROOM'::academic_source, r.source_submission_id,
       r.state, r.late, r.assigned_grade, r.draft_grade, r.alternate_link,
       r.source_created_at, r.source_updated_at, p_synced_at
     from resolved r
@@ -510,9 +515,9 @@ begin
     last_synced_at, lifecycle_status
   )
   select
-    p_user_id, 'GOOGLE_CLASSROOM', i.source_course_id, i.name, i.section,
+    p_user_id, 'GOOGLE_CLASSROOM'::academic_source, i.source_course_id, i.name, i.section,
     i.description_heading, i.room, i.course_state, i.alternate_link,
-    i.source_created_at, i.source_updated_at, p_synced_at, 'ACTIVE'
+    i.source_created_at, i.source_updated_at, p_synced_at, 'ACTIVE'::lifecycle_status
   from incoming i
   on conflict (user_id, source, source_course_id) do update
     set name                = excluded.name,
@@ -525,8 +530,8 @@ begin
         source_updated_at   = excluded.source_updated_at,
         last_synced_at      = excluded.last_synced_at,
         lifecycle_status    = case
-          when courses.lifecycle_status = 'ARCHIVED' then 'ARCHIVED'
-          else 'ACTIVE'
+          when courses.lifecycle_status = 'ARCHIVED' then 'ARCHIVED'::lifecycle_status
+          else 'ACTIVE'::lifecycle_status
         end
   returning *;
 end;
@@ -559,7 +564,7 @@ begin
     insert into topics (
       user_id, course_id, source, source_topic_id, name, source_updated_at, last_synced_at
     )
-    select p_user_id, p_course_id, 'GOOGLE_CLASSROOM', i.source_topic_id, i.name,
+    select p_user_id, p_course_id, 'GOOGLE_CLASSROOM'::academic_source, i.source_topic_id, i.name,
            i.source_updated_at, p_synced_at
     from incoming i
     on conflict (course_id, source_topic_id) do update
