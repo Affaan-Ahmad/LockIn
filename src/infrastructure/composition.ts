@@ -84,6 +84,7 @@ export interface BackendContext {
   readonly sync: ClassroomSyncService;
   readonly discovery: CourseDiscoveryService;
   readonly account: AccountService;
+  readonly profiles: SupabaseAcademicProfileRepository;
   readonly tokens: GoogleTokenService;
   readonly rateLimiter: SupabaseRateLimiter;
   readonly limits: {
@@ -180,6 +181,7 @@ export async function createBackendContext(): Promise<BackendContext> {
     sync,
     discovery,
     account,
+    profiles,
     tokens,
     rateLimiter,
     assignments,

@@ -1,4 +1,5 @@
 import type {
+  AcademicProfileInput,
   AcademicProfileRecord,
   AcademicProfileRepository,
   AssignmentRepository,
@@ -335,6 +336,24 @@ export class FakeAcademicProfileRepository implements AcademicProfileRepository 
 
   findByUserId(): Promise<AcademicProfileRecord | null> {
     return Promise.resolve(this.profile);
+  }
+
+  upsert(userId: string, input: AcademicProfileInput): Promise<AcademicProfileRecord> {
+    this.profile = {
+      userId,
+      identity: {
+        primarySection: input.primarySection,
+        programCode: input.programCode,
+        batch: input.batch,
+      },
+      aliases: this.profile?.aliases ?? [],
+      timeZone: input.timeZone,
+    };
+    return Promise.resolve(this.profile);
+  }
+
+  replaceAliases(_userId: string, aliases: readonly string[]): Promise<number> {
+    return Promise.resolve(aliases.length);
   }
 }
 

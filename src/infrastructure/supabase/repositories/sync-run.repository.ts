@@ -1,6 +1,7 @@
 import 'server-only';
 
 import type {
+  AcademicProfileInput,
   AcademicProfileRepository,
   AcademicProfileRecord,
   SyncRunLease,
@@ -244,6 +245,87 @@ export class SupabaseAcademicProfileRepository implements AcademicProfileReposit
       aliases,
       timeZone: profile.time_zone,
     };
+  }
+
+  /**
+   * Writes the student's academic identity.
+   *
+   * Derived aliases are not stored: they are regenerated from this row on every
+   * classification run. Persisting them would create a second copy that goes
+   * stale the moment the alias generator changes, and the generator is an
+   * explicit extension point.
+   */
+  async upsert(userId: string, input: AcademicProfileInput): Promise<AcademicProfileRecord> {
+    const { data, error } = await this.db
+      .from('academic_profiles')
+      .upsert(
+        {
+          user_id: userId,
+          primary_section: input.primarySection.trim(),
+          program_code: input.programCode,
+          batch: input.batch,
+          university: input.university,
+          time_zone: input.timeZone,
+        },
+        { onConflict: 'user_id' },
+      )
+      .select('user_id, university, program_code, batch, primary_section, time_zone')
+      .single();
+
+    if (error !== null) throw translatePostgrestError(error, 'academicProfiles.upsert');
+    if (data === null) throw new PersistenceError('Academic profile was not persisted');
+
+    const existing = await this.findByUserId(userId);
+
+    return {
+      userId: data.user_id,
+      identity: {
+        primarySection: data.primary_section,
+        programCode: data.program_code,
+        batch: data.batch,
+      },
+      aliases: existing?.aliases ?? [],
+      timeZone: data.time_zone,
+    };
+  }
+
+  /**
+   * Replaces the hand-added aliases.
+   *
+   * Delete-then-insert rather than a diff: the set is a handful of rows, and a
+   * diff would be more code for no benefit. Only USER-sourced rows are touched,
+   * so a future stored derived alias could not be destroyed by this.
+   */
+  async replaceAliases(userId: string, aliases: readonly string[]): Promise<number> {
+    const cleaned = [...new Set(aliases.map((a) => a.trim()).filter((a) => a !== ''))];
+
+    const { error: deleteError } = await this.db
+      .from('section_aliases')
+      .delete()
+      .eq('user_id', userId)
+      .eq('source', 'USER');
+
+    if (deleteError !== null) {
+      throw translatePostgrestError(deleteError, 'academicProfiles.clearAliases');
+    }
+
+    if (cleaned.length === 0) return 0;
+
+    const { error } = await this.db.from('section_aliases').insert(
+      cleaned.map((alias) => ({
+        user_id: userId,
+        alias_raw: alias,
+        // alias_key is derived by a database trigger, so the normalisation the
+        // classifier relies on cannot drift from what is stored here.
+        alias_key: '',
+        kind: 'CUSTOM' as const,
+        source: 'USER' as const,
+        is_active: true,
+      })),
+    );
+
+    if (error !== null) throw translatePostgrestError(error, 'academicProfiles.setAliases');
+    return cleaned.length;
   }
 }
 

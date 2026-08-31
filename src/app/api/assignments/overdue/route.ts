@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { createBackendContext } from '@/infrastructure/composition';
 import { InvalidInputError } from '@/shared/errors';
 
+import { loadFreshness } from '../../_lib/freshness';
 import { handleRoute, jsonOk, requireUser } from '../../_lib/handler';
 
 /**
@@ -58,15 +59,19 @@ export async function GET(request: Request): Promise<NextResponse> {
         ? null
         : new Date(now.getTime() - parsed.data.withinDays * 24 * 60 * 60 * 1000);
 
-    const items = await context.assignments.findOverdue({
-      userId: user.id,
-      since,
-      relevance: parsed.data.relevance,
-      includeSubmitted: parsed.data.includeSubmitted,
-      limit: parsed.data.limit,
-    });
+    const [items, freshness] = await Promise.all([
+      context.assignments.findOverdue({
+        userId: user.id,
+        since,
+        relevance: parsed.data.relevance,
+        includeSubmitted: parsed.data.includeSubmitted,
+        limit: parsed.data.limit,
+      }),
+      loadFreshness(context, user.id, now),
+    ]);
 
     return jsonOk({
+      freshness,
       items: items.map((item) => ({
         assignmentId: item.assignmentId,
         courseId: item.courseId,

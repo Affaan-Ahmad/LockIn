@@ -38,8 +38,30 @@ export interface AcademicProfileRecord {
   readonly timeZone: string;
 }
 
+export interface AcademicProfileInput {
+  readonly primarySection: string;
+  readonly programCode: string | null;
+  readonly batch: string | null;
+  readonly university: string | null;
+  /** IANA zone. Decides where the day ends, so overdue depends on it. */
+  readonly timeZone: string;
+}
+
 export interface AcademicProfileRepository {
   findByUserId(userId: string): Promise<AcademicProfileRecord | null>;
+
+  /**
+   * Creates or replaces the student's academic identity.
+   *
+   * Changing the section changes the alias set, which changes every
+   * classification input fingerprint -- so the next sync re-evaluates
+   * everything rather than leaving verdicts computed for the old section in
+   * place. That is the intended behaviour, not a side effect to work around.
+   */
+  upsert(userId: string, input: AcademicProfileInput): Promise<AcademicProfileRecord>;
+
+  /** Extra spellings the student adds by hand, beyond the generated ones. */
+  replaceAliases(userId: string, aliases: readonly string[]): Promise<number>;
 }
 
 export interface StoredCourse {

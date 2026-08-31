@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { createBackendContext } from '@/infrastructure/composition';
 import { InvalidInputError } from '@/shared/errors';
 
+import { loadFreshness } from '../_lib/freshness';
 import { enforceRateLimit, handleRoute, jsonOk, requireUser } from '../_lib/handler';
 
 /**
@@ -58,6 +59,7 @@ export async function GET(request: Request): Promise<NextResponse> {
 
     return jsonOk({
       refreshed: refresh,
+      freshness: await loadFreshness(context, user.id),
       courses: courses.map((course) => ({
         courseId: course.courseId,
         googleCourseId: course.sourceCourseId,

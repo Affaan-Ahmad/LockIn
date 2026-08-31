@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { createBackendContext } from '@/infrastructure/composition';
 import { InvalidInputError } from '@/shared/errors';
 
+import { loadFreshness } from '../../_lib/freshness';
 import { handleRoute, jsonOk, requireUser } from '../../_lib/handler';
 
 /**
@@ -43,13 +44,17 @@ export async function GET(request: Request): Promise<NextResponse> {
     }
 
     const context = await createBackendContext();
-    const items = await context.assignments.findUndated({
-      userId: user.id,
-      relevance: parsed.data.relevance,
-      limit: parsed.data.limit,
-    });
+    const [items, freshness] = await Promise.all([
+      context.assignments.findUndated({
+        userId: user.id,
+        relevance: parsed.data.relevance,
+        limit: parsed.data.limit,
+      }),
+      loadFreshness(context, user.id),
+    ]);
 
     return jsonOk({
+      freshness,
       items: items.map((item) => ({
         assignmentId: item.assignmentId,
         courseId: item.courseId,

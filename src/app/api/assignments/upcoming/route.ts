@@ -1,10 +1,10 @@
 import type { NextResponse } from 'next/server';
 import { z } from 'zod';
 
-import { assessFreshness } from '@/domain/sync/freshness';
 import { createBackendContext } from '@/infrastructure/composition';
 import { InvalidInputError } from '@/shared/errors';
 
+import { loadFreshness } from '../../_lib/freshness';
 import { handleRoute, jsonOk, requireUser } from '../../_lib/handler';
 
 /**
@@ -54,7 +54,7 @@ export async function GET(request: Request): Promise<NextResponse> {
     const now = new Date();
     const to = new Date(now.getTime() + parsed.data.withinDays * 24 * 60 * 60 * 1000);
 
-    const [items, lastSuccessfulSyncAt, latestRun, connection] = await Promise.all([
+    const [items, freshness] = await Promise.all([
       context.assignments.findUpcoming({
         userId: user.id,
         to,
@@ -62,28 +62,11 @@ export async function GET(request: Request): Promise<NextResponse> {
         includeSubmitted: parsed.data.includeSubmitted,
         limit: parsed.data.limit,
       }),
-      context.syncRuns.lastSuccessfulAt(user.id),
-      context.syncRuns.latestForUser(user.id),
-      context.connections.snapshot(user.id),
+      loadFreshness(context, user.id, now),
     ]);
 
-    const freshness = assessFreshness({
-      lastSuccessfulSyncAt,
-      lastAttemptedSyncAt: latestRun?.startedAt ?? null,
-      lastRunStatus: latestRun?.status ?? null,
-      connectionUsable: connection !== null && connection.status === 'ACTIVE',
-      now,
-    });
-
     return jsonOk({
-      freshness: {
-        level: freshness.level,
-        reason: freshness.reason,
-        ageMs: freshness.ageMs,
-        lastSuccessfulSyncAt: freshness.lastSuccessfulSyncAt?.toISOString() ?? null,
-        lastAttemptedSyncAt: freshness.lastAttemptedSyncAt?.toISOString() ?? null,
-        lastRunStatus: freshness.lastRunStatus,
-      },
+      freshness,
       items: items.map((item) => ({
         assignmentId: item.assignmentId,
         courseId: item.courseId,
