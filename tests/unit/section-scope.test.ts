@@ -228,6 +228,23 @@ describe('false-negative protection', () => {
     expect(relevanceOf('Assignment for remaining sections').relevance).not.toBe('NOT_RELEVANT');
   });
 
+  it('never hides coursework because a technology looks like a section code', () => {
+    // 4G and 5G are course *content* in Computer Networks. Reading them as
+    // section targeting hid real coursework from every other section.
+    for (const title of [
+      'Quiz on 5G',
+      'Assignment 2: Comparison of 4G and 5G',
+      'Lab 4 - 5G Architecture',
+      '5G network slicing report',
+    ]) {
+      const forA = classifier.classify(relevanceInput({ student: studentA(), title }));
+      const forG = classifier.classify(relevanceInput({ student: studentG(), title }));
+      expect(forA.relevance, title).toBe('RELEVANT');
+      expect(forG.relevance, title).toBe('RELEVANT');
+      expect(forA.scope.type, title).toBe('ALL_SECTIONS');
+    }
+  });
+
   it('never hides on a weak or unparseable signal', () => {
     for (const title of ['Please read chapter 4g', 'Sections G-A', 'a) Introduction to trees']) {
       expect(relevanceOf(title).relevance).not.toBe('NOT_RELEVANT');

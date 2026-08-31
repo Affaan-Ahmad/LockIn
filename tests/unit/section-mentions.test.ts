@@ -75,6 +75,28 @@ describe('false friends that must NOT be read as sections', () => {
     expect(extractSectionMentions(title)).toHaveLength(0);
   });
 
+  it('does not read an English word as a program-code prefix', () => {
+    // Regression, found against real Computer Networks coursework. "on 5G"
+    // was parsed as program "on", semester 5, section G -- so a quiz about the
+    // cellular standard was hidden from every student outside section G.
+    for (const title of [
+      'Quiz on 5G',
+      'Assignment 2: Comparison of 4G and 5G',
+      'Notes on 4G',
+      'Report for 3B',
+      'Migration to 5G',
+    ]) {
+      const strong = extractSectionMentions(title).filter((m) => m.strength === 'STRONG');
+      expect(strong, `"${title}" must yield no strong mention`).toHaveLength(0);
+    }
+  });
+
+  it('still reads a hyphenated or joined program code', () => {
+    // The fix must not cost genuine targeting.
+    expect(sectionsOf('Assignment 3 - BCS-5G')).toContain('g');
+    expect(sectionsOf('Assignment 3 - BCS5G')).toContain('g');
+  });
+
   it('does not treat a letter bound to a digit as a section', () => {
     // "G1" has no word boundary between G and 1, so the bare-letter pass
     // never sees a standalone G.

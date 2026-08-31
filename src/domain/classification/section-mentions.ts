@@ -161,6 +161,21 @@ const NEGATION_FILLER = new Set([
   'secs',
 ]);
 
+/**
+ * Ordinary words that must never be read as a program-code prefix.
+ *
+ * Without this, "Quiz on 5G" parses as program `on`, semester 5, section G --
+ * and a Computer Networks quiz about the cellular standard gets hidden from
+ * every student outside section G. Found against real coursework, not invented.
+ */
+const NON_PROGRAM_WORDS = new Set([
+  'on', 'and', 'the', 'for', 'of', 'in', 'at', 'to', 'is', 'are', 'was', 'be',
+  'by', 'via', 'with', 'from', 'into', 'onto', 'over', 'under', 'about', 'vs',
+  'versus', 'or', 'not', 'all', 'any', 'per', 'use', 'using', 'new', 'old',
+  'due', 'lab', 'labs', 'quiz', 'test', 'exam', 'task', 'part', 'unit', 'week',
+  'day', 'end', 'sem', 'term', 'year', 'note', 'notes', 'read', 'write', 'sub',
+]);
+
 const SEPARATOR_PUNCT = new Set([',', '&', '/', '+', ';']);
 const SEPARATOR_WORDS = new Set(['and', 'or']);
 const RANGE_PUNCT = new Set(['-', '–', '—', '~']);
@@ -593,18 +608,24 @@ function readCompoundCode(tokens: readonly Token[], index: number): CompoundCode
   }
 
   if (!/^[a-z]{2,6}$/.test(token.text)) return null;
+  // "on", "and", "the" are not degree programmes.
+  if (NON_PROGRAM_WORDS.has(token.text)) return null;
 
-  let cursor = index + 1;
-  const maybeSeparator = tokens[cursor];
-  if (
-    maybeSeparator !== undefined &&
-    !maybeSeparator.isWord &&
-    RANGE_PUNCT.has(maybeSeparator.text)
-  ) {
-    cursor += 1;
+  // A multi-token code must be hyphenated: "BCS-4G" is a code, "on 5G" is
+  // prose. Joining across a plain space is what turned every <word> <batch>
+  // <section> sequence in ordinary English into fake section targeting.
+  //
+  // This under-detects "BCS 4G" written with a space. That is the safe
+  // direction: the item falls through to ALL_SECTIONS and stays visible,
+  // whereas the over-detection it replaces silently hid real coursework.
+  const separator = tokens[index + 1];
+  if (separator === undefined || separator.isWord || !RANGE_PUNCT.has(separator.text)) {
+    return null;
   }
-  const tail = tokens[cursor];
+
+  const tail = tokens[index + 2];
   if (tail === undefined || !tail.isWord) return null;
+  const cursor = index + 2;
 
   const parsed = parseCompoundSectionCode(`${token.text}${tail.text}`);
   if (parsed === null || parsed.programCode === null) return null;
