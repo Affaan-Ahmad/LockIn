@@ -1,0 +1,59 @@
+/* Neomorphic surfaces: structural chrome only.
+
+   Depth is never the sole signal. Every variant also changes background
+   lightness and carries a border, so the control still reads as raised or
+   pressed with shadows suppressed -- forced-colours mode, or a user who has
+   turned them off. */
+
+.surface {
+  background: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.raised {
+  box-shadow: var(--shadow-raised);
+}
+
+.raisedLg {
+  box-shadow: var(--shadow-raised-lg);
+}
+
+.sunken {
+  background: var(--surface-sunken);
+  box-shadow: var(--shadow-inset);
+}
+
+.flat {
+  box-shadow: none;
+}
+
+/* Clay: content that should feel touchable. Rounder, one drop plus one inner
+   highlight. Restrained on purpose -- the card's job is to make a deadline
+   scannable, not to look inflated. */
+.clay {
+  background: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-clay);
+}
+
+/* Pointer devices only, and transform-only so it never triggers layout.
+   Animating the shadow itself would repaint on every frame. */
+@media (hover: hover) and (pointer: fine) {
+  .interactive:hover {
+    transform: translateY(-1px);
+  }
+}
+
+.interactive {
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.interactive:active {
+  transform: translateY(0.5px);
+}
+
+.padSm { padding: var(--space-3); }
+.padMd { padding: var(--space-4); }
+.padLg { padding: var(--space-5); }
