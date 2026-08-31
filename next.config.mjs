@@ -1,5 +1,30 @@
+/**
+ * Static security headers.
+ *
+ * Duplicated from src/shared/security-headers.ts rather than imported: this
+ * file is loaded by the Next.js build before TypeScript path aliases resolve.
+ * The TS module is the one under test; keep the two in step.
+ */
+const STATIC_SECURITY_HEADERS = [
+  { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
+  { key: 'X-Content-Type-Options', value: 'nosniff' },
+  { key: 'X-Frame-Options', value: 'DENY' },
+  { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+  {
+    key: 'Permissions-Policy',
+    value: 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()',
+  },
+  { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
+  { key: 'Cross-Origin-Resource-Policy', value: 'same-origin' },
+];
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  headers() {
+    // Next.js accepts a plain value here; the signature is only typed as async.
+    return Promise.resolve([{ source: '/:path*', headers: STATIC_SECURITY_HEADERS }]);
+  },
+
   reactStrictMode: true,
   // Fail the build on type or lint errors. A backend whose invariants are enforced
   // by the type system must not ship with those checks disabled.

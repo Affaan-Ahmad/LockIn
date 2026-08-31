@@ -1,6 +1,8 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
+import { buildContentSecurityPolicy } from '@/shared/security-headers';
+
 /**
  * Session refresh.
  *
@@ -13,14 +15,34 @@ import { NextResponse, type NextRequest } from 'next/server';
  * being trusted all the way down to a repository call.
  */
 export async function middleware(request: NextRequest) {
-  let response = NextResponse.next({ request });
+  // A fresh nonce per request. Reusing one across requests would let an
+  // attacker who learns it inject a script that passes the policy.
+  const nonce = crypto.randomUUID().replace(/-/g, '');
+
+  // Forwarded so server components can stamp it onto any script they render.
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set('x-nonce', nonce);
+
+  let response = NextResponse.next({ request: { headers: requestHeaders } });
 
   const supabaseUrl = process.env['NEXT_PUBLIC_SUPABASE_URL'];
   const supabaseAnonKey = process.env['NEXT_PUBLIC_SUPABASE_ANON_KEY'];
 
   // Middleware runs on every request including during a misconfigured boot;
   // failing open here would only turn a config error into a confusing 500.
-  if (supabaseUrl === undefined || supabaseAnonKey === undefined) return response;
+  const applyCsp = (target: NextResponse): NextResponse => {
+    target.headers.set(
+      'Content-Security-Policy',
+      buildContentSecurityPolicy({
+        nonce,
+        isDevelopment: process.env.NODE_ENV !== 'production',
+        supabaseOrigin: supabaseUrl ?? "'self'",
+      }),
+    );
+    return target;
+  };
+
+  if (supabaseUrl === undefined || supabaseAnonKey === undefined) return applyCsp(response);
 
   const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
@@ -31,7 +53,7 @@ export async function middleware(request: NextRequest) {
         for (const { name, value } of cookiesToSet) {
           request.cookies.set(name, value);
         }
-        response = NextResponse.next({ request });
+        response = NextResponse.next({ request: { headers: requestHeaders } });
         for (const { name, value, options } of cookiesToSet) {
           response.cookies.set(name, value, options);
         }
@@ -41,7 +63,7 @@ export async function middleware(request: NextRequest) {
 
   await supabase.auth.getUser();
 
-  return response;
+  return applyCsp(response);
 }
 
 export const config = {

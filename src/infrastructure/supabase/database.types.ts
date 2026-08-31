@@ -457,6 +457,19 @@ export type Database = {
         Args: { p_user_id: string; p_rows: ClassificationUpsertPayload[] };
         Returns: number;
       };
+      app_consume_rate_limit: {
+        Args: {
+          p_user_id: string;
+          p_bucket: string;
+          p_limit: number;
+          p_window_seconds: number;
+        };
+        Returns: boolean;
+      };
+      app_rate_limit_retry_after: {
+        Args: { p_user_id: string; p_bucket: string; p_window_seconds: number };
+        Returns: number;
+      };
       app_list_discovered_courses: {
         Args: { p_user_id: string };
         Returns: DiscoveredCourseRow[];

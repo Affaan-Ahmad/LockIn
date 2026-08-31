@@ -314,6 +314,27 @@ export interface SyncRunSummary {
   readonly counts: SyncCounts | null;
 }
 
+/**
+ * Rate limiting for operations that reach Google.
+ *
+ * A port rather than an inline check so the limit can be faked in tests without
+ * a database, and so a future Redis-backed implementation is a swap rather than
+ * a rewrite.
+ */
+export interface RateLimiter {
+  /**
+   * Consumes one unit. Returns whether the caller may proceed, and how long to
+   * wait if not -- so the API can answer with Retry-After instead of leaving a
+   * client to guess.
+   */
+  consume(
+    userId: string,
+    bucket: string,
+    limit: number,
+    windowSeconds: number,
+  ): Promise<{ readonly allowed: boolean; readonly retryAfterSeconds: number }>;
+}
+
 export interface SyncRunRepository {
   /**
    * Claims the single active-run slot for this user.

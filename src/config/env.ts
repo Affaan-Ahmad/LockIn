@@ -53,6 +53,13 @@ const serverEnvSchema = z.object({
   GOOGLE_MAX_RETRY_ATTEMPTS: intFromEnv(3, 0, 6),
   GOOGLE_REQUEST_TIMEOUT_MS: intFromEnv(20_000, 1_000, 120_000),
 
+  // Rate limits for the two operations that reach Google. Generous enough for
+  // real use, tight enough that a held-down button cannot burn the quota.
+  SYNC_RATE_LIMIT: intFromEnv(10, 1, 200),
+  SYNC_RATE_WINDOW_SECONDS: intFromEnv(600, 30, 86_400),
+  DISCOVERY_RATE_LIMIT: intFromEnv(20, 1, 500),
+  DISCOVERY_RATE_WINDOW_SECONDS: intFromEnv(600, 30, 86_400),
+
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
 });
 

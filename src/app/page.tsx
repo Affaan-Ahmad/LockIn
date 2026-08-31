@@ -38,6 +38,12 @@ export default function Page() {
         <li>
           <code>PUT /api/overrides</code> — mark an assignment relevant or not
         </li>
+        <li>
+          <code>DELETE /api/connection</code> — disconnect Google (keeps imported coursework)
+        </li>
+        <li>
+          <code>DELETE /api/account</code> — delete everything, irreversible
+        </li>
       </ul>
     </main>
   );

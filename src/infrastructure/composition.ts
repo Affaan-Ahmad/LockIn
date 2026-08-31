@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { ClassroomSyncService } from '@/application/services/classroom-sync.service';
+import { AccountService } from '@/application/services/account.service';
 import { CourseDiscoveryService } from '@/application/services/course-discovery.service';
 import { GoogleTokenService } from '@/application/services/google-token.service';
 import { getServerEnv } from '@/config/env';
@@ -21,6 +22,7 @@ import {
 import { SupabaseCourseRepository } from '@/infrastructure/supabase/repositories/course.repository';
 import { SupabaseCourseTrackingRepository } from '@/infrastructure/supabase/repositories/course-tracking.repository';
 import { SupabaseGoogleConnectionRepository } from '@/infrastructure/supabase/repositories/google-connection.repository';
+import { SupabaseRateLimiter } from '@/infrastructure/supabase/repositories/rate-limit.repository';
 import {
   SupabaseAcademicProfileRepository,
   SupabaseSyncRunRepository,
@@ -81,6 +83,13 @@ export interface BackendContext {
   readonly logger: Logger;
   readonly sync: ClassroomSyncService;
   readonly discovery: CourseDiscoveryService;
+  readonly account: AccountService;
+  readonly tokens: GoogleTokenService;
+  readonly rateLimiter: SupabaseRateLimiter;
+  readonly limits: {
+    readonly sync: { readonly limit: number; readonly windowSeconds: number };
+    readonly discovery: { readonly limit: number; readonly windowSeconds: number };
+  };
   readonly assignments: SupabaseAssignmentRepository;
   readonly overrides: SupabaseOverrideRepository;
   readonly syncRuns: SupabaseSyncRunRepository;
@@ -118,6 +127,25 @@ export async function createBackendContext(): Promise<BackendContext> {
   const tracking = new SupabaseCourseTrackingRepository(db);
   const syncRuns = new SupabaseSyncRunRepository(db, env.SYNC_LEASE_TTL_SECONDS);
   const connections = createGoogleConnectionRepository(logger);
+  const rateLimiter = new SupabaseRateLimiter(db, logger);
+
+  // Deleting an auth user requires the service role: it is the one operation
+  // a user cannot perform on themselves through the normal API.
+  const account = new AccountService({
+    google: tokens,
+    logger,
+    authUsers: {
+      deleteUser: async (id: string) => {
+        const admin = createServiceRoleClient() as unknown as {
+          auth: { admin: { deleteUser: (userId: string) => Promise<{ error: unknown }> } };
+        };
+        const { error } = await admin.auth.admin.deleteUser(id);
+        if (error !== null && error !== undefined) {
+          throw new Error(`auth user deletion failed: ${JSON.stringify(error)}`);
+        }
+      },
+    },
+  });
 
   const discovery = new CourseDiscoveryService({
     source,
@@ -146,5 +174,24 @@ export async function createBackendContext(): Promise<BackendContext> {
     },
   });
 
-  return { db, logger, sync, discovery, assignments, overrides, syncRuns, connections };
+  return {
+    db,
+    logger,
+    sync,
+    discovery,
+    account,
+    tokens,
+    rateLimiter,
+    assignments,
+    overrides,
+    syncRuns,
+    connections,
+    limits: {
+      sync: { limit: env.SYNC_RATE_LIMIT, windowSeconds: env.SYNC_RATE_WINDOW_SECONDS },
+      discovery: {
+        limit: env.DISCOVERY_RATE_LIMIT,
+        windowSeconds: env.DISCOVERY_RATE_WINDOW_SECONDS,
+      },
+    },
+  };
 }

@@ -38,3 +38,32 @@ export async function GET(): Promise<NextResponse> {
     });
   });
 }
+
+/**
+ * Disconnects Google.
+ *
+ * Revokes the grant at Google and clears the stored credentials, so no further
+ * synchronisation is possible until the student reconnects.
+ *
+ * Coursework already imported is deliberately kept. It is the student's record
+ * of their own work, and silently destroying it because they withdrew an API
+ * permission would be a surprise in the wrong direction. The response says so
+ * explicitly rather than leaving them to find out.
+ */
+export async function DELETE(): Promise<NextResponse> {
+  return handleRoute(async () => {
+    const user = await requireUser();
+    const context = await createBackendContext();
+
+    const result = await context.tokens.disconnect(user.id);
+
+    return jsonOk({
+      disconnected: true,
+      googleAccessRevoked: result.revokedAtGoogle,
+      dataRetained: true,
+      note: result.revokedAtGoogle
+        ? 'Google access revoked. Coursework already imported is kept; delete your account to remove it.'
+        : 'Local credentials cleared, but Google did not confirm revocation — remove it at myaccount.google.com/permissions.',
+    });
+  });
+}

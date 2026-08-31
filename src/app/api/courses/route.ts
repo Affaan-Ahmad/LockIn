@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { createBackendContext } from '@/infrastructure/composition';
 import { InvalidInputError } from '@/shared/errors';
 
-import { handleRoute, jsonOk, requireUser } from '../_lib/handler';
+import { enforceRateLimit, handleRoute, jsonOk, requireUser } from '../_lib/handler';
 
 /**
  * Course discovery and subject selection.
@@ -39,6 +39,18 @@ export async function GET(request: Request): Promise<NextResponse> {
     const context = await createBackendContext();
 
     const refresh = new URL(request.url).searchParams.get('refresh') === 'true';
+
+    // Only the refreshing path is limited. Reading the stored list is a plain
+    // database query, and throttling it would punish opening a screen.
+    if (refresh) {
+      await enforceRateLimit(
+        context.rateLimiter,
+        user.id,
+        'course_discovery',
+        context.limits.discovery.limit,
+        context.limits.discovery.windowSeconds,
+      );
+    }
 
     const courses = refresh
       ? (await context.discovery.discover(user.id, 'discovery-only')).courses

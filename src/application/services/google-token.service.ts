@@ -77,6 +77,51 @@ export class GoogleTokenService implements GoogleCredentialProvider {
     return pending;
   }
 
+  /**
+   * Withdraws our access to the student's Google account.
+   *
+   * Revokes at Google first, then clears locally. Order matters: clearing first
+   * would leave a live grant on Google's side that we can no longer address,
+   * because revocation needs the very token we just deleted.
+   *
+   * A failed revocation does not abort the local cleanup. The student asked to
+   * disconnect, and refusing because Google was briefly unreachable would leave
+   * them connected against their wishes. The failure is logged so the orphaned
+   * grant is discoverable, and the student can also revoke it from their Google
+   * account page.
+   *
+   * Idempotent: disconnecting an account that is already disconnected is a
+   * no-op, not an error.
+   */
+  async disconnect(userId: string): Promise<{ revokedAtGoogle: boolean }> {
+    const connection = await this.connections.findByUserId(userId);
+    if (connection === null) return { revokedAtGoogle: false };
+
+    let revokedAtGoogle = false;
+
+    // Prefer the refresh token: revoking it invalidates the whole grant,
+    // including every access token derived from it.
+    const token = connection.refreshToken ?? connection.accessToken;
+    if (token !== null) {
+      try {
+        await this.oauth.revoke(token);
+        revokedAtGoogle = true;
+      } catch (caught) {
+        this.logger.warn('google revocation failed; clearing local credentials anyway', {
+          userId,
+          errorCode: isAppError(caught) ? caught.code : 'UNKNOWN',
+        });
+      }
+    }
+
+    // markStatus('REVOKED') also nulls the stored ciphertexts, so nothing
+    // usable survives locally whether or not Google accepted the revocation.
+    await this.connections.markStatus(userId, 'REVOKED', 'USER_DISCONNECTED');
+
+    this.logger.info('google connection disconnected by user', { userId, revokedAtGoogle });
+    return { revokedAtGoogle };
+  }
+
   private async resolveAccessToken(userId: string): Promise<string> {
     const connection = await this.connections.findByUserId(userId);
 

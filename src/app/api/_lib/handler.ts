@@ -3,7 +3,13 @@ import 'server-only';
 import { NextResponse } from 'next/server';
 
 import { createUserScopedClient } from '@/infrastructure/supabase/clients';
-import { AuthenticationError, isAppError, toAppError, type ErrorCode } from '@/shared/errors';
+import {
+  AuthenticationError,
+  isAppError,
+  RateLimitError,
+  toAppError,
+  type ErrorCode,
+} from '@/shared/errors';
 import { createLogger } from '@/shared/logger';
 
 /**
@@ -73,6 +79,29 @@ export async function requireUser(): Promise<AuthenticatedUser> {
   return { id: data.user.id, email: data.user.email ?? null };
 }
 
+/**
+ * Enforces a rate limit, or throws with the wait time attached.
+ *
+ * Applied to the two endpoints that reach Google. The sync lease already stops
+ * two runs overlapping; this stops a hundred running one after another, which
+ * is what would actually burn the Google quota.
+ */
+export async function enforceRateLimit(
+  limiter: { consume: (u: string, b: string, l: number, w: number) => Promise<{ allowed: boolean; retryAfterSeconds: number }> },
+  userId: string,
+  bucket: string,
+  limit: number,
+  windowSeconds: number,
+): Promise<void> {
+  const result = await limiter.consume(userId, bucket, limit, windowSeconds);
+  if (result.allowed) return;
+
+  throw new RateLimitError(
+    `Too many ${bucket} requests. Try again in ${String(result.retryAfterSeconds)} seconds.`,
+    { retryAfterMs: result.retryAfterSeconds * 1000 },
+  );
+}
+
 export function jsonOk<T>(body: T, status = 200): NextResponse {
   return NextResponse.json(body, { status });
 }
@@ -88,6 +117,13 @@ export function jsonError(caught: unknown): NextResponse {
     ...error.toLogObject(),
   });
 
+  // Tell the client when to come back rather than leaving it to guess, which
+  // is how a rate-limited client turns into a retry storm.
+  const headers =
+    error instanceof RateLimitError && error.retryAfterMs !== null
+      ? { 'Retry-After': String(Math.ceil(error.retryAfterMs / 1000)) }
+      : undefined;
+
   return NextResponse.json(
     {
       error: {
@@ -96,7 +132,7 @@ export function jsonError(caught: unknown): NextResponse {
         retryable: error.retryable,
       },
     },
-    { status },
+    headers === undefined ? { status } : { status, headers },
   );
 }
 

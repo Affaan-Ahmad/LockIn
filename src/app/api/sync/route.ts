@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { createBackendContext } from '@/infrastructure/composition';
 import { InvalidInputError } from '@/shared/errors';
 
-import { handleRoute, jsonOk, requireUser } from '../_lib/handler';
+import { enforceRateLimit, handleRoute, jsonOk, requireUser } from '../_lib/handler';
 
 /**
  * Triggers a synchronisation run.
@@ -35,6 +35,17 @@ export async function POST(request: Request): Promise<NextResponse> {
     }
 
     const context = await createBackendContext();
+
+    // The lease already stops two syncs overlapping. This stops a hundred
+    // running back to back, which is what would actually burn the Google quota.
+    await enforceRateLimit(
+      context.rateLimiter,
+      user.id,
+      'sync',
+      context.limits.sync.limit,
+      context.limits.sync.windowSeconds,
+    );
+
     const connection = await context.connections.snapshot(user.id);
 
     const outcome = await context.sync.run({

@@ -62,10 +62,10 @@ verified against a live Postgres by 27 passing integration tests.
 
 | # | Gap | Severity | Notes |
 | --- | --- | --- | --- |
-| 1 | **No account deletion.** No endpoint, no cascade test, no documented procedure. | CRITICAL | Legally required in several plausible jurisdictions. Cannot publish a privacy policy promising deletion without it. |
-| 2 | **No Google disconnect.** `GoogleOAuthHttpClient.revoke()` is implemented and **never called** — dead code. | CRITICAL | Users must be able to withdraw access, and revocation must actually reach Google. |
-| 3 | **No inbound rate limiting.** `POST /api/sync` and `GET /api/courses?refresh=true` reach Google on every request. | HIGH | The sync lease bounds concurrency, not frequency. Risks our Google quota and our own infrastructure. |
-| 4 | **No security headers / CSP.** `next.config.mjs` sets none. | HIGH | Needed before any frontend exists, not after. |
+| 1 | ~~No account deletion.~~ **RESOLVED 2026-08-31.** `DELETE /api/account` revokes Google, then deletes the auth user; every user-owned table cascades from it. Requires a typed confirmation. | ~~CRITICAL~~ CLOSED | End-to-end deletion against a live database is still NOT VERIFIED — unit tested only, since the only real account is the operator's. |
+| 2 | ~~No Google disconnect.~~ **RESOLVED 2026-08-31.** `DELETE /api/connection` revokes at Google then clears local credentials. Imported coursework is deliberately kept, and the response says so. | ~~CRITICAL~~ CLOSED | `revoke()` is no longer dead code. |
+| 3 | ~~No inbound rate limiting.~~ **RESOLVED 2026-08-31.** Database-backed fixed-window limiter on both Google-facing endpoints, with `Retry-After` on the 429. | ~~HIGH~~ CLOSED | Verified against the live database. Fails open by design if the limiter itself is unreachable — it guards a quota, not authorisation. |
+| 4 | ~~No security headers / CSP.~~ **RESOLVED 2026-08-31.** Nonce-based CSP set per request in middleware; static headers in `next.config.mjs`. Verified on a live response. | ~~HIGH~~ CLOSED | One documented relaxation: `style-src 'unsafe-inline'`, because Next.js injects inline styles that cannot yet carry a nonce. Revisit once the UI exists. |
 | 5 | **No CI.** No typecheck/lint/test gate, no dependency scan, no secret scan. | HIGH | |
 | 6 | **OAuth callback `state` handling unverified.** `exchangeCodeForSession` is assumed to validate PKCE; not confirmed. | HIGH | Must be read and proven, not assumed. |
 | 7 | ~~The entire SQL layer has never been executed.~~ **RESOLVED 2026-08-31.** All four migrations applied to a live Postgres; 27/27 integration tests pass against it. | ~~HIGH~~ CLOSED | RLS isolation, the confidence floor, the ALL_SECTIONS guard, deadline coherence, two-strike reconciliation, single-active-sync and duplicate prevention are now measured rather than argued. |
@@ -162,6 +162,27 @@ Now verified end to end against real Postgres:
 - Single active sync per user, plus stale-lease reclaim as ABANDONED
 - Manual overrides surviving a full re-sync and winning in the read model
 - Untracked courses excluded from the feed; undated coursework preserved but excluded
+
+---
+
+### 2026-08-31 — pre-frontend security pass
+
+Four findings closed before starting UI work, each chosen because it is cheaper
+now than later:
+
+- **CSP first, deliberately.** A strict policy bans inline scripts and styles.
+  Introduced after a frontend exists, half of it breaks and the tempting fix is
+  `unsafe-inline`, which switches the protection off. Set first, the UI gets
+  built inside it at no cost.
+- **Deletion and disconnect before the UI**, because the UI has to expose both.
+  Building them afterwards means shipping a settings screen with dead buttons.
+- **Rate limiting before a visible Sync button**, which is precisely when an
+  unthrottled Google call becomes a problem.
+
+Still NOT VERIFIED: end-to-end account deletion against a live database. It is
+unit tested, and the cascade is exercised by the integration suite's user
+cleanup, but no full deletion has been run — the only real account belongs to
+the operator.
 
 ---
 
