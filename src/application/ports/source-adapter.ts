@@ -37,7 +37,7 @@ export interface AcademicSourceAdapter {
     context: SourceRequestContext,
     course: SourceCourseRef,
     options: FetchCourseContentOptions,
-  ): Promise<SourceCourseContent>;
+    ): Promise<SourceCourseContent>;
 }
 
 export interface SourceRequestContext {

@@ -147,7 +147,7 @@ export const googleErrorSchema = z.object({
     errors: z
       .array(z.object({ reason: z.string().optional(), message: z.string().optional() }))
       .optional(),
-  }),
+      }),
 });
 
 export const googleTokenResponseSchema = z.object({

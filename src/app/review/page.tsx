@@ -28,7 +28,7 @@ export default async function ReviewPage() {
   const [{ items, freshness }, decisions] = await Promise.all([
     loadReviewQueue(user.id),
     loadDecisions(user.id),
-  ]);
+    ]);
 
   const now = new Date();
 
@@ -57,7 +57,7 @@ export default async function ReviewPage() {
           }
         />
       ) : (
-        <ul className="flex flex-col gap-2.5">
+        <ul className="flex flex-col gap-3">
           {items.map((item) => (
             <li key={item.assignmentId}>
               <AssignmentCard
@@ -82,17 +82,17 @@ export default async function ReviewPage() {
       )}
 
       {decisions.length === 0 ? null : (
-        <section className="mt-9" aria-labelledby="decisions">
+        <section className="mt-8" aria-labelledby="decisions">
           <h2
             id="decisions"
-            className="mb-2.5 flex items-baseline gap-2 px-1 text-base font-bold tracking-[-0.01em] text-ink"
+            className="mb-3 flex items-baseline gap-2 px-0.5 text-sm font-semibold text-ink-soft"
           >
             Your answers
-            <span className="text-sm font-semibold tabular-nums text-ink-muted">
+            <span className="font-normal text-ink-muted">
               {decisions.length}
             </span>
           </h2>
-          <ul className="flex flex-col gap-2.5">
+          <ul className="flex flex-col gap-3">
             {decisions.map((item) => (
               <li key={item.assignmentId}>
                 <AssignmentCard item={item} now={now} timeZone={freshness.timeZone} />

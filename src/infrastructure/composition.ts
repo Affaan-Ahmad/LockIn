@@ -56,13 +56,13 @@ export function createGoogleTokenService(logger: Logger): GoogleTokenService {
     createServiceRoleClient(),
     env.GOOGLE_TOKEN_ENCRYPTION_KEY,
     logger,
-  );
+    );
 
   const oauth = new GoogleOAuthHttpClient({
     clientId: env.GOOGLE_OAUTH_CLIENT_ID,
     clientSecret: env.GOOGLE_OAUTH_CLIENT_SECRET,
     logger,
-  });
+    });
 
   return new GoogleTokenService({ connections, oauth, logger, clock: systemClock });
 }
@@ -75,7 +75,7 @@ export function createGoogleConnectionRepository(
     createServiceRoleClient(),
     env.GOOGLE_TOKEN_ENCRYPTION_KEY,
     logger,
-  );
+    );
 }
 
 export interface BackendContext {
@@ -117,7 +117,7 @@ export async function createBackendContext(): Promise<BackendContext> {
     logger,
     maxRetryAttempts: env.GOOGLE_MAX_RETRY_ATTEMPTS,
     requestTimeoutMs: env.GOOGLE_REQUEST_TIMEOUT_MS,
-  });
+    });
 
   const courses = new SupabaseCourseRepository(db);
   const assignments = new SupabaseAssignmentRepository(db);
@@ -146,7 +146,7 @@ export async function createBackendContext(): Promise<BackendContext> {
         }
       },
     },
-  });
+    });
 
   const discovery = new CourseDiscoveryService({
     source,
@@ -154,7 +154,7 @@ export async function createBackendContext(): Promise<BackendContext> {
     tracking,
     logger,
     clock: systemClock,
-  });
+    });
 
   const sync = new ClassroomSyncService({
     source,
@@ -173,7 +173,7 @@ export async function createBackendContext(): Promise<BackendContext> {
       courseConcurrency: env.SYNC_COURSE_CONCURRENCY,
       leaseTtlSeconds: env.SYNC_LEASE_TTL_SECONDS,
     },
-  });
+    });
 
   return {
     db,
@@ -195,5 +195,5 @@ export async function createBackendContext(): Promise<BackendContext> {
         windowSeconds: env.DISCOVERY_RATE_WINDOW_SECONDS,
       },
     },
-  };
+    };
 }

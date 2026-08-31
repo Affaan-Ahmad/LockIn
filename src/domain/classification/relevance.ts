@@ -148,7 +148,7 @@ export class RelevanceClassifier {
       source: RelevanceSource;
       reason: string;
     },
-  ): RelevanceDecision {
+    ): RelevanceDecision {
     return {
       ...verdict,
       scope: resolution.scope,
@@ -261,5 +261,5 @@ function evaluateGoogleTargeting(input: RelevanceInput): {
     reason: included
       ? 'Google Classroom assigns this coursework directly to the student'
       : 'Google Classroom assigns this coursework to specific students that do not include the student',
-  };
+      };
 }

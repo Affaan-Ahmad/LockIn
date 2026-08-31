@@ -80,7 +80,7 @@ export interface CourseRepository {
     source: AcademicSourceId,
     records: readonly CourseSourceRecord[],
     syncedAt: Date,
-  ): Promise<readonly StoredCourse[]>;
+    ): Promise<readonly StoredCourse[]>;
 
   listForUser(userId: string, source: AcademicSourceId): Promise<readonly StoredCourse[]>;
 
@@ -91,7 +91,7 @@ export interface CourseRepository {
     courseId: string,
     topics: readonly TopicSourceRecord[],
     syncedAt: Date,
-  ): Promise<void>;
+    ): Promise<void>;
 }
 
 /** Outcome of upserting one assignment, used for counting and for classification. */
@@ -125,7 +125,7 @@ export interface CourseTrackingRepository {
   setTracking(
     userId: string,
     decisions: readonly { courseId: string; decision: TrackingDecision }[],
-  ): Promise<number>;
+    ): Promise<number>;
 }
 
 export interface UndatedAssignment {
@@ -198,7 +198,7 @@ export interface AssignmentRepository {
     courseId: string,
     records: readonly AssignmentSourceRecord[],
     syncedAt: Date,
-  ): Promise<AssignmentUpsertResult>;
+    ): Promise<AssignmentUpsertResult>;
 
   /**
    * Reconciles items absent from a listing.
@@ -213,7 +213,7 @@ export interface AssignmentRepository {
     seenSourceItemIds: readonly string[],
     completeness: ListingCompleteness,
     at: Date,
-  ): Promise<{ readonly markedMissing: number }>;
+    ): Promise<{ readonly markedMissing: number }>;
 
   /**
    * The deadline feed.
@@ -255,7 +255,7 @@ export interface AssignmentRepository {
     assignmentId: string,
     ignored: boolean,
     note: string | null,
-  ): Promise<void>;
+    ): Promise<void>;
 
   /**
    * Tracked coursework Google gave no due date for.
@@ -274,7 +274,7 @@ export interface SubmissionRepository {
     courseId: string,
     records: readonly SubmissionSourceRecord[],
     syncedAt: Date,
-  ): Promise<{ readonly upserted: number }>;
+    ): Promise<{ readonly upserted: number }>;
 }
 
 export interface ClassificationRow {
@@ -305,7 +305,7 @@ export interface ClassificationRepository {
   loadFingerprints(
     userId: string,
     assignmentIds: readonly string[],
-  ): Promise<ReadonlyMap<string, string>>;
+    ): Promise<ReadonlyMap<string, string>>;
 
   upsertMany(userId: string, rows: readonly ClassificationRow[]): Promise<number>;
 
@@ -327,7 +327,7 @@ export interface ClassificationRepository {
   loadOverrides(
     userId: string,
     assignmentIds: readonly string[],
-  ): Promise<ReadonlyMap<string, ManualOverride>>;
+    ): Promise<ReadonlyMap<string, ManualOverride>>;
 }
 
 export interface OverrideRepository {
@@ -336,7 +336,7 @@ export interface OverrideRepository {
     assignmentId: string,
     relevance: 'RELEVANT' | 'NOT_RELEVANT',
     note: string | null,
-  ): Promise<ManualOverride>;
+    ): Promise<ManualOverride>;
 
   clear(userId: string, assignmentId: string): Promise<void>;
 
@@ -377,7 +377,7 @@ export interface RateLimiter {
     bucket: string,
     limit: number,
     windowSeconds: number,
-  ): Promise<{ readonly allowed: boolean; readonly retryAfterSeconds: number }>;
+    ): Promise<{ readonly allowed: boolean; readonly retryAfterSeconds: number }>;
 }
 
 export interface SyncRunRepository {
@@ -393,7 +393,7 @@ export interface SyncRunRepository {
     trigger: SyncTrigger,
     mode: SyncMode,
     leaseTtlSeconds: number,
-  ): Promise<SyncRunLease>;
+    ): Promise<SyncRunLease>;
 
   heartbeat(syncRunId: string): Promise<void>;
 
@@ -406,7 +406,7 @@ export interface SyncRunRepository {
     status: SyncRunStatus,
     counts: SyncCounts,
     finishedAt: Date,
-  ): Promise<void>;
+    ): Promise<void>;
 
   latestForUser(userId: string): Promise<SyncRunSummary | null>;
 

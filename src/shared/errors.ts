@@ -90,7 +90,7 @@ export class GoogleApiError extends AppError {
       cause?: unknown;
       context?: ErrorContext;
     } = {},
-  ) {
+    ) {
     super(message, options);
     this.status = options.status ?? null;
     this.retryable = options.retryable ?? false;
@@ -124,7 +124,7 @@ export class RateLimitError extends AppError {
   constructor(
     message: string,
     options: { retryAfterMs?: number | null; cause?: unknown; context?: ErrorContext } = {},
-  ) {
+    ) {
     super(message, options);
     this.retryAfterMs = options.retryAfterMs ?? null;
   }
@@ -150,7 +150,7 @@ export class PersistenceError extends AppError {
   constructor(
     message: string,
     options: { retryable?: boolean; cause?: unknown; context?: ErrorContext } = {},
-  ) {
+    ) {
     super(message, options);
     this.retryable = options.retryable ?? false;
   }

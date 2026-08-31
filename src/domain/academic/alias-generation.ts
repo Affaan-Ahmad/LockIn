@@ -87,7 +87,7 @@ export function buildStudentSectionProfile(
     aliasKeys,
     sectionKeys,
     aliasSetVersion: computeAliasSetVersion(aliasKeys),
-  };
+    };
 }
 
 function dedupeByKey(aliases: readonly SectionAlias[]): SectionAlias[] {

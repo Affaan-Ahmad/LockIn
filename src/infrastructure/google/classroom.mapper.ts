@@ -49,7 +49,7 @@ export function mapCourse(course: GoogleCourse): Result<CourseSourceRecord, Exte
     alternateLink: emptyToNull(course.alternateLink),
     sourceCreatedAt: parseInstant(course.creationTime),
     sourceUpdatedAt: parseInstant(course.updateTime),
-  });
+    });
 }
 
 export function mapTopic(topic: GoogleTopic): Result<TopicSourceRecord, ExternalValidationError> {
@@ -59,7 +59,7 @@ export function mapTopic(topic: GoogleTopic): Result<TopicSourceRecord, External
     sourceCourseId: topic.courseId,
     name: topic.name,
     sourceUpdatedAt: parseInstant(topic.updateTime),
-  });
+    });
 }
 
 export function mapCourseWork(
@@ -104,7 +104,7 @@ export function mapCourseWork(
     deadline: deadline.deadline,
     sourceCreatedAt: parseInstant(work.creationTime),
     sourceUpdatedAt: parseInstant(work.updateTime),
-  };
+    };
 
   return ok(record);
 }
@@ -124,7 +124,7 @@ export function mapStudentSubmission(
     alternateLink: emptyToNull(submission.alternateLink),
     sourceCreatedAt: parseInstant(submission.creationTime),
     sourceUpdatedAt: parseInstant(submission.updateTime),
-  });
+    });
 }
 
 /**
@@ -156,7 +156,7 @@ export function fingerprintAssignment(record: AssignmentSourceRecord): string {
       ? null
       : `${String(record.deadline.dueTime.hours)}:${String(record.deadline.dueTime.minutes)}:${String(record.deadline.dueTime.seconds)}`,
     record.sourceUpdatedAt === null ? null : record.sourceUpdatedAt.toISOString(),
-  ]);
+    ]);
 }
 
 // ---------------------------------------------------------------------------

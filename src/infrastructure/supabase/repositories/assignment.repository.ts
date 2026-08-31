@@ -57,7 +57,7 @@ export class SupabaseAssignmentRepository implements AssignmentRepository {
     courseId: string,
     records: readonly AssignmentSourceRecord[],
     syncedAt: Date,
-  ): Promise<AssignmentUpsertResult> {
+    ): Promise<AssignmentUpsertResult> {
     if (records.length === 0) {
       return { rows: [], created: 0, updated: 0, unchanged: 0 };
     }
@@ -109,7 +109,7 @@ export class SupabaseAssignmentRepository implements AssignmentRepository {
     seenSourceItemIds: readonly string[],
     completeness: ListingCompleteness,
     at: Date,
-  ): Promise<{ readonly markedMissing: number }> {
+    ): Promise<{ readonly markedMissing: number }> {
     if (completeness !== 'COMPLETE') {
       throw new PersistenceError(
         'Refusing to reconcile disappearances from an incomplete listing',
@@ -183,7 +183,7 @@ export class SupabaseAssignmentRepository implements AssignmentRepository {
     assignmentId: string,
     ignored: boolean,
     note: string | null,
-  ): Promise<void> {
+    ): Promise<void> {
     const { error } = await this.db.rpc('app_set_assignment_ignored', {
       p_user_id: userId,
       p_assignment_id: assignmentId,
@@ -250,7 +250,7 @@ function toPayload(record: AssignmentSourceRecord): AssignmentUpsertPayload {
     source_created_at: toDbTimestamp(record.sourceCreatedAt),
     source_updated_at: toDbTimestamp(record.sourceUpdatedAt),
     source_fingerprint: fingerprintAssignment(record),
-  };
+    };
 }
 
 function toUpcoming(row: UpcomingAssignmentRow): UpcomingAssignment {
@@ -268,7 +268,7 @@ function toUpcoming(row: UpcomingAssignmentRow): UpcomingAssignment {
     submissionState: row.submission_state,
     lastSyncedAt: new Date(row.last_synced_at),
     alternateLink: row.alternate_link,
-  };
+    };
 }
 
 /**
@@ -297,5 +297,5 @@ function toDeadline(row: UpcomingAssignmentRow): Deadline {
     dueDate,
     dueTime: { hours: hours ?? 0, minutes: minutes ?? 0, seconds: seconds ?? 0 },
     dueAt: new Date(row.due_at),
-  };
+    };
 }

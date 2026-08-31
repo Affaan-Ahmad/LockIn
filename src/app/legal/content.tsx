@@ -47,8 +47,8 @@ export const LEGAL_PAGES = [
 export function LegalTitle({ children }: { readonly children: string }) {
   return (
     <>
-      <h1 className="text-2xl font-bold text-balance text-ink">{children}</h1>
-      <p className="mt-1.5 text-sm text-ink-muted">Last updated {LAST_UPDATED}</p>
+      <h1 className="text-2xl font-semibold text-balance text-ink">{children}</h1>
+      <p className="mt-2 text-sm text-ink-muted">Last updated {LAST_UPDATED}</p>
     </>
   );
 }
@@ -62,7 +62,7 @@ export function Section({
 }) {
   return (
     <section className="mt-8">
-      <h2 className="text-lg font-bold text-ink">{heading}</h2>
+      <h2 className="text-lg font-semibold text-ink">{heading}</h2>
       <div className="measure mt-2 flex flex-col gap-3 text-base text-ink-soft">{children}</div>
     </section>
   );
@@ -70,7 +70,7 @@ export function Section({
 
 export function List({ items }: { readonly items: readonly string[] }) {
   return (
-    <ul className="measure flex list-disc flex-col gap-1.5 pl-5">
+    <ul className="measure flex list-disc flex-col gap-2 pl-5">
       {items.map((item) => (
         <li key={item}>{item}</li>
       ))}

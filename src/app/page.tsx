@@ -23,6 +23,36 @@ import Link from 'next/link';
  */
 export const dynamic = 'force-dynamic';
 
+function SecondaryLink({
+  href,
+  label,
+  hint,
+}: {
+  readonly href: string;
+  readonly label: string;
+  readonly hint?: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="press group flex items-center justify-between gap-3 rounded-control px-1 py-3.5 hover:bg-sunken "
+    >
+      <span className="min-w-0">
+        <span className="block text-sm font-medium text-ink">{label}</span>
+        {hint === undefined ? null : (
+          <span className="mt-1 block text-xs text-ink-muted">{hint}</span>
+        )}
+      </span>
+      <span
+        aria-hidden="true"
+        className="shrink-0 text-ink-muted transition-transform duration-[120ms] group-hover:translate-x-0.5"
+      >
+        &rarr;
+      </span>
+    </Link>
+  );
+}
+
 export default async function TodayPage() {
   const user = await requireSessionUser();
 
@@ -49,11 +79,11 @@ export default async function TodayPage() {
 
   const todayCount = data.upcoming.filter(
     (item) => urgencyBand(item.deadline, now, timeZone) === 'today',
-  ).length;
+    ).length;
 
   const hour = Number(
     new Intl.DateTimeFormat('en-GB', { timeZone, hour: 'numeric', hour12: false }).format(now),
-  );
+    );
 
   // Overdue first, deliberately. It is the most urgent thing a student has, and
   // burying it under future work is how it gets missed twice.
@@ -89,38 +119,26 @@ export default async function TodayPage() {
         <DeadlineGroups items={items} now={now} timeZone={timeZone} allowHideOverdue />
       )}
 
-      {data.ignoredCount > 0 ? (
-        <Link
-          href="/ignored"
-          className="press mt-6 flex items-center justify-between gap-3 rounded-card px-4 py-3 text-sm text-ink-soft active:scale-[0.99] hover:text-ink"
-        >
-          <span>
-            {data.ignoredCount} hidden {data.ignoredCount === 1 ? 'item' : 'items'}
-          </span>
-          <span aria-hidden="true" className="shrink-0">
-            &rarr;
-          </span>
-        </Link>
-      ) : null}
-
-      {data.reviewCount > 0 ? (
-        <Link
-          href="/review"
-          className="clay press mt-6 flex items-center justify-between gap-3 p-4 active:scale-[0.99]"
-        >
-          <span className="min-w-0">
-            <span className="block text-base font-semibold text-ink">
-              {data.reviewCount} {data.reviewCount === 1 ? 'item needs' : 'items need'} your
-              attention
-            </span>
-            <span className="mt-0.5 block text-sm text-ink-soft">
-              LockIn wasn&rsquo;t sure whether these are for your section.
-            </span>
-          </span>
-          <span aria-hidden="true" className="shrink-0 text-review">
-            &rarr;
-          </span>
-        </Link>
+      {/* Secondary destinations, below the work and quieter than it. These
+          were two clay panels competing with the assignment cards above; as
+          rows on the ground they read as what they are, which is a way out of
+          this screen rather than more of it. */}
+      {data.reviewCount > 0 || data.ignoredCount > 0 ? (
+        <div className="mt-8 flex flex-col divide-y divide-line border-t border-line">
+          {data.reviewCount > 0 ? (
+            <SecondaryLink
+              href="/review"
+              label={`${String(data.reviewCount)} ${data.reviewCount === 1 ? 'item needs' : 'items need'} a decision`}
+              hint="LockIn wasn't sure whether these are for your section."
+            />
+          ) : null}
+          {data.ignoredCount > 0 ? (
+            <SecondaryLink
+              href="/ignored"
+              label={`${String(data.ignoredCount)} hidden ${data.ignoredCount === 1 ? 'item' : 'items'}`}
+            />
+          ) : null}
+        </div>
       ) : null}
     </AppShell>
   );

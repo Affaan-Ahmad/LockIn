@@ -52,12 +52,12 @@ function localParts(date: Date, timeZone: string): { y: number; m: number; d: nu
     })
       .formatToParts(date)
       .map((part) => [part.type as string, part.value]),
-  );
+      );
   return {
     y: Number(parts.get('year') ?? '0'),
     m: Number(parts.get('month') ?? '0'),
     d: Number(parts.get('day') ?? '0'),
-  };
+    };
 }
 
 function daysBetween(from: Date, to: Date, timeZone: string): number {
@@ -65,7 +65,7 @@ function daysBetween(from: Date, to: Date, timeZone: string): number {
   const b = localParts(to, timeZone);
   return Math.round(
     (Date.UTC(b.y, b.m - 1, b.d) - Date.UTC(a.y, a.m - 1, a.d)) / MS_DAY,
-  );
+    );
 }
 
 /**
@@ -98,7 +98,7 @@ export function urgencyBand(
   const today = localParts(now, timeZone);
   const offset = Math.round(
     (Date.UTC(y ?? 0, (m ?? 1) - 1, d ?? 1) - Date.UTC(today.y, today.m - 1, today.d)) / MS_DAY,
-  );
+    );
 
   if (offset < 0) return 'overdue';
   if (offset === 0) return 'today';
@@ -171,7 +171,7 @@ export function formatDeadline(
     relative: instant === null ? null : relativeTime(instant, now),
     band,
     machine: instant?.toISOString() ?? deadline.dueDateUtc,
-  };
+    };
 }
 
 /** "in 3 hours", "2 days ago". Uses Intl so it is localisable and free. */

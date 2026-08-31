@@ -761,7 +761,7 @@ function buildMention(input: BuildMentionInput): SectionMention {
     end,
     unresolved: input.unresolved,
     keywordScoped: input.keywordScoped ?? false,
-  };
+    };
 }
 
 function tokenize(lower: string): Token[] {

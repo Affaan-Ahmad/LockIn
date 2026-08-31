@@ -47,7 +47,7 @@ export function assessFreshness(input: FreshnessInput): FreshnessReport {
     lastSuccessfulSyncAt: input.lastSuccessfulSyncAt,
     lastAttemptedSyncAt: input.lastAttemptedSyncAt,
     lastRunStatus: input.lastRunStatus,
-  };
+    };
 
   if (!input.connectionUsable) {
     return {
@@ -91,5 +91,5 @@ export function assessFreshness(input: FreshnessInput): FreshnessReport {
     level: 'STALE',
     ageMs,
     reason: 'Last successful synchronisation is more than 6 hours old',
-  };
+    };
 }

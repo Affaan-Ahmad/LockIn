@@ -37,8 +37,8 @@ export const viewport = {
     // Re-measured against the deepened ground. Left at the old value the
     // browser chrome sat visibly lighter than the page below it.
     { media: '(prefers-color-scheme: dark)', color: '#1c1d23' },
-  ],
-  // Zoom stays enabled. Locking it is an accessibility failure that mostly
+    ],
+    // Zoom stays enabled. Locking it is an accessibility failure that mostly
   // hurts people who need to magnify text.
   viewportFit: 'cover' as const,
 };

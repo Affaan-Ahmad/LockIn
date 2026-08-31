@@ -25,7 +25,7 @@ export default async function SettingsPage() {
     loadSetupState(user.id),
     loadDashboard(user.id),
     loadProfile(user.id),
-  ]);
+    ]);
 
   return (
     <AppShell title="Settings" reviewCount={data.reviewCount}>
@@ -33,12 +33,12 @@ export default async function SettingsPage() {
           comes to find out why nothing is updating. */}
       <SyncStatus freshness={data.freshness} variant="banner" />
 
-      <div className="flex flex-col gap-9">
+      <div className="flex flex-col gap-8">
         <section aria-labelledby="account">
           <SectionHeading id="account">Account</SectionHeading>
           <div className="surface-raised p-4">
             <p className="text-sm text-ink-muted">Signed in as</p>
-            <p className="mt-0.5 text-base font-semibold break-all text-ink">
+            <p className="mt-1 text-base font-semibold break-all text-ink">
               {user.email ?? 'your Google account'}
             </p>
           </div>
@@ -46,7 +46,7 @@ export default async function SettingsPage() {
 
         <section aria-labelledby="section">
           <SectionHeading id="section">Your section</SectionHeading>
-          <p className="measure mb-4 text-sm leading-relaxed text-ink-soft">
+          <p className="measure mb-3 text-sm leading-relaxed text-ink-soft">
             Changing this re-checks every assignment on the next sync, so verdicts you see now may
             change.
           </p>
@@ -76,7 +76,7 @@ export default async function SettingsPage() {
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <SyncButton mode="FULL" label="Re-check everything" />
             </div>
-            <ul className="mt-4 flex flex-col gap-1.5 text-sm">
+            <ul className="mt-3 flex flex-col gap-2 text-sm">
               <li>
                 <Link href="/courses" className="font-semibold text-brand hover:underline">
                   Manage tracked courses
@@ -116,7 +116,7 @@ export default async function SettingsPage() {
 
 function SectionHeading({ id, children }: { readonly id: string; readonly children: string }) {
   return (
-    <h2 id={id} className="mb-2.5 px-1 text-base font-bold tracking-[-0.01em] text-ink">
+    <h2 id={id} className="mb-3 px-0.5 text-sm font-semibold text-ink-soft">
       {children}
     </h2>
   );

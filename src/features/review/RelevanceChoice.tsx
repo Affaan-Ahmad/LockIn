@@ -78,7 +78,7 @@ export function RelevanceChoice({ assignmentId, current, title }: RelevanceChoic
           aria-busy={pending || undefined}
           aria-label={`Undo your answer for ${title}`}
           onClick={() => void choose(null)}
-          className="press min-h-9 rounded-pill px-3 text-xs font-semibold text-ink-muted hover:bg-sunken hover:text-ink disabled:opacity-55"
+          className="press min-h-9 rounded-control px-3 text-xs font-medium text-ink-muted hover:bg-sunken hover:text-ink  disabled:opacity-50"
         >
           {pending ? '…' : 'Undo'}
         </button>
@@ -139,8 +139,8 @@ function Choice({
       disabled={disabled}
       aria-label={`${label}: ${describedBy}`}
       className={cx(
-        'press min-h-11 rounded-pill px-4 text-sm font-semibold active:scale-[0.97]',
-        'transition-colors duration-[120ms] disabled:opacity-55',
+        'press min-h-11 rounded-control px-4 text-sm font-medium active:translate-y-px',
+        ' disabled:opacity-50',
         tone === 'brand'
           ? 'bg-brand text-on-brand shadow-clay hover:bg-brand-hover'
           : 'surface-raised text-ink hover:bg-overlay',

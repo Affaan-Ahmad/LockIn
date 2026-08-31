@@ -538,7 +538,7 @@ export class ClassroomSyncService {
     userId: string,
     runIssues: SyncIssue[],
     logger: Logger,
-  ): Promise<StudentSectionProfile | null> {
+    ): Promise<StudentSectionProfile | null> {
     const profile = await this.deps.profiles.findByUserId(userId);
     if (profile === null) {
       logger.warn('no academic profile; coursework will be synced but not classified', {

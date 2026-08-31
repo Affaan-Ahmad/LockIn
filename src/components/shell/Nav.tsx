@@ -46,16 +46,19 @@ export function Nav({ reviewCount = 0 }: NavProps) {
       aria-label="Primary"
       className={cx(
         // Fixed bottom bar on phones; a rail on wider screens.
-        'fixed inset-x-0 bottom-0 z-40 border-t border-line bg-raised/95 backdrop-blur-[2px]',
-        'md:inset-y-0 md:right-auto md:left-0 md:w-56 md:border-t-0 md:border-r md:backdrop-blur-none',
+        // Opaque, not translucent. A blurred bar costs a compositor pass on
+        // every scroll frame, and over a plain ground it buys nothing you can
+        // see. Removing it is faster and looks identical.
+        'fixed inset-x-0 bottom-0 z-40 border-t border-line bg-raised',
+        'md:inset-y-0 md:right-auto md:left-0 md:w-60 md:border-t-0 md:border-r',
         // Home-screen install: the bar must clear the gesture area, or the last
         // item sits under the system indicator and cannot be tapped.
         'pb-[env(safe-area-inset-bottom)]',
       )}
     >
       <div className="mx-auto flex max-w-lg items-stretch justify-around md:h-full md:max-w-none md:flex-col md:justify-start md:gap-1 md:p-3">
-        <div className="hidden md:mb-4 md:flex md:items-center md:gap-2 md:px-3 md:pt-2">
-          <span className="text-lg font-bold tracking-[-0.03em] text-ink">LockIn</span>
+        <div className="hidden md:mb-6 md:flex md:items-center md:px-3 md:pt-3">
+          <span className="text-lg font-semibold tracking-[-0.03em] text-ink">LockIn</span>
         </div>
 
         {ITEMS.map(({ href, label, Icon }) => {
@@ -72,11 +75,14 @@ export function Nav({ reviewCount = 0 }: NavProps) {
               className={cx(
                 // 44px minimum on every axis.
                 'group relative flex min-h-[3.25rem] flex-1 flex-col items-center justify-center gap-1',
-                'rounded-control px-2 py-2 text-2xs font-semibold',
-                'md:min-h-11 md:flex-none md:flex-row md:justify-start md:gap-3 md:px-3 md:text-base',
-                'press active:scale-[0.97]',
+                'rounded-control px-2 py-2 text-2xs font-medium',
+                'md:min-h-10 md:flex-none md:flex-row md:justify-start md:gap-3 md:px-3 md:text-base',
+                'press',
+                // Weight, not just colour, marks the active item. Colour alone
+                // disappears in greyscale and for a red-green colour-blind
+                // reader; the tint is a reinforcement, not the signal.
                 active
-                  ? 'text-brand md:bg-brand-soft'
+                  ? 'font-semibold text-brand md:bg-brand-soft'
                   : 'text-ink-muted hover:text-ink md:hover:bg-sunken',
               )}
             >
@@ -86,7 +92,7 @@ export function Nav({ reviewCount = 0 }: NavProps) {
                   <span
                     className={cx(
                       'absolute -top-1.5 -right-2 min-w-[1.05rem] rounded-pill px-1',
-                      'bg-review text-center text-2xs leading-[1.05rem] font-bold tabular-nums text-white',
+                      'bg-review text-center text-2xs leading-[1.05rem] font-semibold text-white',
                     )}
                   >
                     {badge > 9 ? '9+' : badge}
@@ -99,7 +105,7 @@ export function Nav({ reviewCount = 0 }: NavProps) {
               {active ? (
                 <span
                   aria-hidden="true"
-                  className="absolute inset-x-3 top-0 h-0.5 rounded-pill bg-brand md:inset-x-auto md:top-2 md:bottom-2 md:left-0 md:h-auto md:w-0.5"
+                  className="absolute top-0 left-1/2 h-0.5 w-8 -translate-x-1/2 rounded-pill bg-brand md:top-2 md:bottom-2 md:left-0 md:h-auto md:w-0.5 md:translate-x-0"
                 />
               ) : null}
             </Link>

@@ -1,13 +1,21 @@
-import { Surface } from '@/components/ui/Surface';
 import { cx } from '@/lib/cx';
 
 /**
  * The one-line answer to "what do I need to do?".
  *
+ * Not a card any more, and that is the change that matters. It used to be a
+ * clay panel sitting above a list of clay cards, so the summary and the
+ * assignments carried identical weight and the eye had nowhere to land first.
+ * Set directly on the ground it reads as the page speaking, and the cards below
+ * are the only raised objects on the screen.
+ *
+ * The counts sit inline in a sentence rather than in a row of statistic tiles.
+ * A student with three assignments does not need an analytics dashboard, and
+ * three big numbers on a phone is the most generic thing an app can do.
+ *
  * Deliberately restrained with the slang. "Cooked" is funny once and unhelpful
  * when you are actually behind, so the workload states stay legible and the
- * personality lives in the greeting instead. Deadlines are serious even when
- * the brand is not.
+ * personality lives in the greeting instead.
  */
 
 export interface WorkloadHeaderProps {
@@ -40,50 +48,30 @@ export function WorkloadHeader({
         : `${String(upcomingCount)} coming up`;
 
   const tone = nothing
-    ? 'text-success'
+    ? 'text-ink'
     : overdueCount > 0
       ? 'text-danger'
       : todayCount > 0
         ? 'text-warning'
         : 'text-ink';
 
-  return (
-    <Surface variant="clay" pad="lg" className="mb-6">
-      <p className="text-sm font-medium text-ink-soft">{greeting(hour)}</p>
-      <p className={cx('mt-1 text-2xl font-bold tabular-nums', tone)}>
-        {headline}
-      </p>
+  // Whatever the headline already said is not repeated underneath it.
+  const rest = [
+    overdueCount > 0 && todayCount > 0 ? `${String(todayCount)} due today` : null,
+    upcomingCount > 0 && (overdueCount > 0 || todayCount > 0)
+      ? `${String(upcomingCount)} coming up`
+      : null,
+      ].filter((part): part is string => part !== null);
 
+  return (
+    <div className="mb-8">
+      <p className="text-sm text-ink-muted">{greeting(hour)}</p>
+      <p className={cx('mt-1 text-2xl font-semibold tracking-[-0.02em]', tone)}>{headline}</p>
       {nothing ? (
-        <p className="mt-1.5 text-base text-pretty text-ink-soft">
-          Nothing needs your attention right now.
-        </p>
-      ) : (
-        <dl className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm">
-          {overdueCount > 0 ? <Stat label="Overdue" value={overdueCount} tone="text-danger" /> : null}
-          {todayCount > 0 ? <Stat label="Today" value={todayCount} tone="text-warning" /> : null}
-          <Stat label="Coming up" value={upcomingCount} tone="text-ink" />
-        </dl>
-      )}
-    </Surface>
-  );
-}
-
-function Stat({
-  label,
-  value,
-  tone,
-}: {
-  readonly label: string;
-  readonly value: number;
-  readonly tone: string;
-}) {
-  return (
-    <div className="flex items-baseline gap-1.5">
-      {/* Value before label in the DOM, reordered visually. A screen reader
-          reads "Overdue, 2"; the eye scans the number first. */}
-      <dt className="order-2 text-ink-soft">{label}</dt>
-      <dd className={cx('order-1 text-lg font-bold tabular-nums', tone)}>{value}</dd>
+        <p className="mt-2 text-sm text-ink-soft">Nothing needs your attention right now.</p>
+      ) : rest.length > 0 ? (
+        <p className="mt-2 text-sm text-ink-soft">{rest.join(', ')}.</p>
+      ) : null}
     </div>
   );
 }

@@ -108,7 +108,7 @@ export class GoogleOAuthHttpClient implements GoogleOAuthClient {
     url: string,
     body: URLSearchParams,
     operation: string,
-  ): Promise<Response> {
+    ): Promise<Response> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.timeoutMs);
     try {

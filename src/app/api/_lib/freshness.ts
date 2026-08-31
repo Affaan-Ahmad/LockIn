@@ -42,7 +42,7 @@ export async function loadFreshness(
     context.syncRuns.latestForUser(userId),
     context.connections.snapshot(userId),
     context.profiles.findByUserId(userId),
-  ]);
+    ]);
 
   const report = assessFreshness({
     lastSuccessfulSyncAt,
@@ -50,7 +50,7 @@ export async function loadFreshness(
     lastRunStatus: latestRun?.status ?? null,
     connectionUsable: connection !== null && connection.status === 'ACTIVE',
     now,
-  });
+    });
 
   return {
     level: report.level,
@@ -63,5 +63,5 @@ export async function loadFreshness(
     // back to the server's zone would make deadline boundaries depend on where
     // the app happens to be deployed.
     timeZone: profile?.timeZone ?? 'UTC',
-  };
+    };
 }

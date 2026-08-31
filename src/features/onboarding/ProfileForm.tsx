@@ -129,7 +129,7 @@ export function ProfileForm({ initial, nextHref, submitLabel }: ProfileFormProps
         event.preventDefault();
         void save();
       }}
-      className="flex flex-col gap-5"
+      className="flex flex-col gap-6"
     >
       <Field
         label="Your section"
@@ -141,7 +141,7 @@ export function ProfileForm({ initial, nextHref, submitLabel }: ProfileFormProps
         autoCapitalize="characters"
       />
 
-      <div className="grid gap-5 sm:grid-cols-2">
+      <div className="grid gap-6 sm:grid-cols-2">
         <Field
           label="Programme code"
           hint="Optional. BSCS, BSSE, and so on."
@@ -178,22 +178,22 @@ export function ProfileForm({ initial, nextHref, submitLabel }: ProfileFormProps
           What LockIn will look for in a post
         </p>
         {aliases.length === 0 ? (
-          <p className="mt-1.5 text-sm text-ink-muted">
+          <p className="mt-2 text-sm text-ink-muted">
             Enter your section to see this.
           </p>
         ) : (
-          <ul className="mt-2 flex flex-wrap gap-1.5">
+          <ul className="mt-2 flex flex-wrap gap-2">
             {aliases.map((alias) => (
               <li
                 key={alias}
-                className="rounded-pill bg-raised px-2.5 py-1 text-xs font-semibold text-ink"
+                className="rounded-sm border border-line bg-raised px-2 py-0.5 text-xs font-medium text-ink"
               >
                 {alias}
               </li>
             ))}
           </ul>
         )}
-        <p className="measure mt-2.5 text-xs leading-relaxed text-ink-muted">
+        <p className="measure mt-3 text-xs leading-relaxed text-ink-muted">
           A post that mentions none of these is treated as being for everyone. Anything LockIn
           cannot read confidently goes to Review for you to decide. It is never guessed
           at.
@@ -252,8 +252,8 @@ function Field({
         autoComplete="off"
         aria-describedby={`${id}-hint`}
         className={cx(
-          'surface-sunken mt-1.5 min-h-11 w-full rounded-control px-3.5 text-base text-ink',
-          'outline-none placeholder:text-ink-muted focus-visible:ring-2 focus-visible:ring-brand',
+          'surface-sunken mt-2 min-h-11 w-full rounded-control px-3.5 text-base text-ink',
+          'placeholder:text-ink-muted ',
         )}
       />
       <p id={`${id}-hint`} className="mt-1 text-xs text-ink-muted">

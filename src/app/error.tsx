@@ -28,10 +28,10 @@ export default function Error({
 }) {
   return (
     <main className="mx-auto flex min-h-dvh max-w-[30rem] flex-col justify-center px-5 py-12">
-      <span className="surface-sunken flex size-14 items-center justify-center rounded-pill text-danger">
-        <AlertIcon className="size-6" />
+      <span className="flex size-9 items-center justify-center rounded-pill bg-danger-soft text-danger">
+        <AlertIcon className="size-4.5" />
       </span>
-      <h1 className="mt-5 text-xl font-bold text-balance text-ink">
+      <h1 className="mt-6 text-xl font-semibold text-balance text-ink">
         This screen didn&rsquo;t load
       </h1>
       <p className="measure mt-2 text-base leading-relaxed text-ink-soft">

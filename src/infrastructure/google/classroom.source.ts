@@ -94,7 +94,7 @@ export class GoogleClassroomSource implements AcademicSourceAdapter {
     context: SourceRequestContext,
     course: SourceCourseRef,
     options: FetchCourseContentOptions,
-  ): Promise<SourceCourseContent> {
+    ): Promise<SourceCourseContent> {
     const client = await this.clientFor(context);
     const logger = this.contextLogger(context).child({ sourceCourseId: course.sourceCourseId });
 
@@ -230,5 +230,5 @@ function issueFromError(
     scope,
     sourceCourseId,
     sourceItemId,
-  };
+    };
 }

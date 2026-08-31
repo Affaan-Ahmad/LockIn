@@ -102,7 +102,7 @@ export function addCounts(a: SyncCounts, b: Partial<SyncCounts>): SyncCounts {
     uncertainCount: a.uncertainCount + (b.uncertainCount ?? 0),
     itemsRejectedByValidation:
       a.itemsRejectedByValidation + (b.itemsRejectedByValidation ?? 0),
-  };
+      };
 }
 
 /**

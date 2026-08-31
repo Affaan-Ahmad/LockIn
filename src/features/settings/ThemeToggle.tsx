@@ -81,12 +81,12 @@ export function ThemeToggle() {
             key={option.value}
             className={cx(
               'relative flex min-h-9 cursor-pointer items-center rounded-pill px-3.5',
-              'text-sm font-semibold transition-colors duration-[120ms]',
+              'text-sm font-medium transition-colors duration-[120ms]',
               // Focus is drawn on the label because the input itself is
               // visually hidden; :has keeps that tied to the real focus state
               // rather than a manually tracked one.
               'has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-brand',
-              active ? 'bg-raised text-ink shadow-raised' : 'text-ink-muted hover:text-ink',
+              active ? 'bg-raised font-semibold text-ink shadow-raised' : 'text-ink-muted hover:text-ink',
             )}
           >
             <input

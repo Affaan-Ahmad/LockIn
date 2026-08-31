@@ -32,7 +32,7 @@ export class SupabaseClassificationRepository implements ClassificationRepositor
   async loadFingerprints(
     userId: string,
     assignmentIds: readonly string[],
-  ): Promise<ReadonlyMap<string, string>> {
+    ): Promise<ReadonlyMap<string, string>> {
     if (assignmentIds.length === 0) return new Map();
 
     const out = new Map<string, string>();
@@ -117,7 +117,7 @@ export class SupabaseClassificationRepository implements ClassificationRepositor
   async loadOverrides(
     userId: string,
     assignmentIds: readonly string[],
-  ): Promise<ReadonlyMap<string, ManualOverride>> {
+    ): Promise<ReadonlyMap<string, ManualOverride>> {
     if (assignmentIds.length === 0) return new Map();
 
     const out = new Map<string, ManualOverride>();
@@ -153,7 +153,7 @@ export class SupabaseOverrideRepository implements OverrideRepository {
     assignmentId: string,
     relevance: 'RELEVANT' | 'NOT_RELEVANT',
     note: string | null,
-  ): Promise<ManualOverride> {
+    ): Promise<ManualOverride> {
     const { data, error } = await this.db
       .from('classification_overrides')
       .upsert(
@@ -210,7 +210,7 @@ export class SupabaseSubmissionRepository implements SubmissionRepository {
     courseId: string,
     records: readonly SubmissionSourceRecord[],
     syncedAt: Date,
-  ): Promise<{ readonly upserted: number }> {
+    ): Promise<{ readonly upserted: number }> {
     if (records.length === 0) return { upserted: 0 };
 
     let upserted = 0;

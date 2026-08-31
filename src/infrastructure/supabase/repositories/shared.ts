@@ -46,7 +46,7 @@ export function translatePostgrestError(error: PostgrestError, operation: string
   return new PersistenceError(`${operation} failed: ${error.message}`, {
     retryable,
     context: { operation, code: code ?? 'unknown', details: error.details ?? '' },
-  });
+    });
 }
 
 export function toDbTimestamp(value: Date | null): string | null {

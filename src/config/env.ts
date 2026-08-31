@@ -26,7 +26,7 @@ const base64Key32 = z
       }
     },
     { message: 'must be exactly 32 bytes, base64-encoded (AES-256 key)' },
-  );
+    );
 
 const intFromEnv = (fallback: number, min: number, max: number) =>
   z

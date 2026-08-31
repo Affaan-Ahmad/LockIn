@@ -42,7 +42,7 @@ export interface DangerZoneProps {
 
 export function DangerZone({ connected }: DangerZoneProps) {
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-3">
       <DisconnectCard connected={connected} />
       <DeleteCard />
     </div>
@@ -82,7 +82,7 @@ function DisconnectCard({ connected }: { readonly connected: boolean }) {
         body.revokedAtGoogle === true
           ? 'Disconnected, and access was revoked at Google.'
           : (body.note ??
-              'Disconnected here. Google may still list LockIn. Remove it in your Google account.'),
+          'Disconnected here. Google may still list LockIn. Remove it in your Google account.'),
       );
       setConfirming(false);
       router.refresh();
@@ -229,7 +229,7 @@ function DeleteCard() {
                 setTyped(event.target.value);
               }}
               autoComplete="off"
-              className="surface-sunken mt-1.5 min-h-11 w-full rounded-control px-3.5 text-base text-ink outline-none focus-visible:ring-2 focus-visible:ring-danger"
+              className="surface-sunken mt-2 min-h-11 w-full rounded-control px-3.5 text-base text-ink"
             />
           </div>
 

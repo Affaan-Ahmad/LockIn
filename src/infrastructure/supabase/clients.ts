@@ -49,7 +49,7 @@ export async function createUserScopedClient(): Promise<AppSupabaseClient> {
         },
       },
     },
-  );
+    );
 }
 
 /**
@@ -74,5 +74,5 @@ export function createServiceRoleClient(): AppSupabaseClient {
       persistSession: false,
       detectSessionInUrl: false,
     },
-  });
+    });
 }

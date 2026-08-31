@@ -151,13 +151,13 @@ function localCalendarDate(
     })
       .formatToParts(now)
       .map((part) => [part.type as string, part.value]),
-  );
+      );
 
   return {
     year: Number(parts.get('year') ?? '0'),
     month: Number(parts.get('month') ?? '0'),
     day: Number(parts.get('day') ?? '0'),
-  };
+    };
 }
 
 /** Re-exported for callers that render an exact deadline locally. */

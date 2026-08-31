@@ -68,7 +68,7 @@ export function buildContentSecurityPolicy(options: CspOptions): string {
     'object-src': ["'none'"],
     'base-uri': ["'self'"],
     'form-action': ["'self'"],
-  };
+    };
 
   const policy = Object.entries(directives)
     .map(([directive, values]) => `${directive} ${values.join(' ')}`)
@@ -103,9 +103,9 @@ export const STATIC_SECURITY_HEADERS: ReadonlyArray<{ key: string; value: string
   {
     key: 'Permissions-Policy',
     value: 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()',
-  },
+    },
 
-  // Isolate the browsing context so cross-origin pages cannot get a handle on
+    // Isolate the browsing context so cross-origin pages cannot get a handle on
   // ours, which blunts several side-channel and popup-based attacks.
   { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
   { key: 'Cross-Origin-Resource-Policy', value: 'same-origin' },

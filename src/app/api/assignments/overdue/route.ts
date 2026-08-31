@@ -35,11 +35,11 @@ const querySchema = z.object({
       value === undefined || value === '' ? ['RELEVANT', 'UNCERTAIN'] : value.split(','),
     )
     .pipe(z.array(z.enum(['RELEVANT', 'NOT_RELEVANT', 'UNCERTAIN'])).min(1)),
-  includeSubmitted: z
+    includeSubmitted: z
     .string()
     .optional()
     .transform((value) => value === 'true'),
-  limit: z.coerce.number().int().min(1).max(500).default(100),
+    limit: z.coerce.number().int().min(1).max(500).default(100),
 });
 
 export async function GET(request: Request): Promise<NextResponse> {

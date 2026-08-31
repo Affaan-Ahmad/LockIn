@@ -45,7 +45,7 @@ export function DeadlineGroups({
   }
 
   return (
-    <div className="flex flex-col gap-7">
+    <div className="flex flex-col gap-8">
       {GROUP_ORDER.map((band) => {
         const group = grouped.get(band);
         if (group === undefined || group.length === 0) return null;
@@ -59,14 +59,15 @@ export function DeadlineGroups({
                 instead, and the count sits in a quieter tone beside it. */}
             <h2
               id={`group-${band}`}
-              className="mb-2.5 flex items-baseline gap-2 px-1 text-base font-bold tracking-[-0.01em] text-ink"
+              className="mb-3 flex items-baseline gap-2 px-0.5 text-sm font-semibold text-ink-soft"
             >
               {GROUP_LABEL[band]}
-              <span className="text-sm font-semibold tabular-nums text-ink-muted">
-                {group.length}
-              </span>
+              {/* The count is information, not emphasis, so it sits back a
+                  tone. A bold number beside a bold label made the heading
+                  heavier than the cards it introduces. */}
+              <span className="font-normal text-ink-muted">{group.length}</span>
             </h2>
-            <ul className="flex flex-col gap-2.5">
+            <ul className="flex flex-col gap-3">
               {group.map((item) => (
                 <li key={item.assignmentId}>
                   <AssignmentCard

@@ -108,5 +108,5 @@ export function scopeIncludesStudent(
 ): boolean {
   return sections.some(
     (section) => student.sectionKeys.has(section) || student.aliasKeys.has(section),
-  );
+    );
 }

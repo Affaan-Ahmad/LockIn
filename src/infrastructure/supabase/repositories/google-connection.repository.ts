@@ -33,7 +33,7 @@ export class SupabaseGoogleConnectionRepository implements GoogleConnectionRepos
     private readonly db: AppSupabaseClient,
     encryptionKeyBase64: string,
     private readonly logger: Logger,
-  ) {
+    ) {
     this.key = decodeKey(encryptionKeyBase64);
   }
 
@@ -105,7 +105,7 @@ export class SupabaseGoogleConnectionRepository implements GoogleConnectionRepos
     accessToken: string,
     expiresAt: Date,
     rotatedRefreshToken: string | null,
-  ): Promise<void> {
+    ): Promise<void> {
     const base = {
       access_token_ct: bufferToPgHex(this.encrypt(accessToken, userId)),
       access_token_expires_at: expiresAt.toISOString(),
@@ -134,7 +134,7 @@ export class SupabaseGoogleConnectionRepository implements GoogleConnectionRepos
     userId: string,
     status: GoogleConnectionStatus,
     errorCode: string | null,
-  ): Promise<void> {
+    ): Promise<void> {
     const { error } = await this.db
       .from('google_connections')
       .update({
@@ -203,7 +203,7 @@ export class SupabaseGoogleConnectionRepository implements GoogleConnectionRepos
     hex: string | null,
     userId: string,
     label: 'access' | 'refresh',
-  ): string | null {
+    ): string | null {
     const buffer = pgHexToBuffer(hex);
     if (buffer === null) return null;
 

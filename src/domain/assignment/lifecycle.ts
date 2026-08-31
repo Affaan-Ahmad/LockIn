@@ -66,7 +66,7 @@ export function onItemMissing(
   return {
     status: nextStreak >= MISSING_STREAK_THRESHOLD ? 'SOURCE_REMOVED' : 'SOURCE_MISSING',
     missingStreak: nextStreak,
-  };
+    };
 }
 
 /** Statuses that belong in a student's working list of coursework. */

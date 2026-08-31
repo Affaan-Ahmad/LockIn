@@ -64,7 +64,7 @@ export class SupabaseCourseTrackingRepository implements CourseTrackingRepositor
   async setTracking(
     userId: string,
     decisions: readonly { courseId: string; decision: TrackingDecision }[],
-  ): Promise<number> {
+    ): Promise<number> {
     if (decisions.length === 0) return 0;
 
     const { data, error } = await this.db.rpc('app_set_course_tracking', {

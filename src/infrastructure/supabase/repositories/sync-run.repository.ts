@@ -27,7 +27,7 @@ export class SupabaseSyncRunRepository implements SyncRunRepository {
   constructor(
     private readonly db: AppSupabaseClient,
     private readonly leaseTtlSeconds: number,
-  ) {}
+    ) {}
 
   /**
    * Claims the single active-run slot.
@@ -42,7 +42,7 @@ export class SupabaseSyncRunRepository implements SyncRunRepository {
     trigger: SyncTrigger,
     mode: SyncMode,
     leaseTtlSeconds: number,
-  ): Promise<SyncRunLease> {
+    ): Promise<SyncRunLease> {
     const { data, error } = await this.db.rpc('app_acquire_sync_run', {
       p_user_id: userId,
       p_trigger: trigger,
@@ -115,7 +115,7 @@ export class SupabaseSyncRunRepository implements SyncRunRepository {
     status: SyncRunStatus,
     counts: SyncCounts,
     _finishedAt: Date,
-  ): Promise<void> {
+    ): Promise<void> {
     if (status === 'RUNNING') {
       throw new PersistenceError('A sync run cannot be finalised to RUNNING');
     }

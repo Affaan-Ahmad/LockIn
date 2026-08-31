@@ -28,7 +28,7 @@ export class SupabaseCourseRepository implements CourseRepository {
     source: AcademicSourceId,
     records: readonly CourseSourceRecord[],
     syncedAt: Date,
-  ): Promise<readonly StoredCourse[]> {
+    ): Promise<readonly StoredCourse[]> {
     if (source !== 'GOOGLE_CLASSROOM') {
       throw new PersistenceError(`Course upsert is not implemented for source ${source}`);
     }
@@ -59,7 +59,7 @@ export class SupabaseCourseRepository implements CourseRepository {
   async listForUser(
     userId: string,
     source: AcademicSourceId,
-  ): Promise<readonly StoredCourse[]> {
+    ): Promise<readonly StoredCourse[]> {
     const { data, error } = await this.db
       .from('courses')
       // Explicit column list: `select('*')` would drag description and room
@@ -88,7 +88,7 @@ export class SupabaseCourseRepository implements CourseRepository {
     userId: string,
     courseId: string,
     watermark: Date | null,
-  ): Promise<void> {
+    ): Promise<void> {
     const { error } = await this.db
       .from('courses')
       .update({ coursework_watermark: toDbTimestamp(watermark) })
@@ -103,7 +103,7 @@ export class SupabaseCourseRepository implements CourseRepository {
     courseId: string,
     topics: readonly TopicSourceRecord[],
     syncedAt: Date,
-  ): Promise<void> {
+    ): Promise<void> {
     if (topics.length === 0) return;
 
     const payload: TopicUpsertPayload[] = topics.map((topic) => ({
@@ -132,5 +132,5 @@ function toStoredCourse(row: CourseRow): StoredCourse {
     courseworkWatermark:
       row.coursework_watermark === null ? null : new Date(row.coursework_watermark),
     lifecycleStatus: row.lifecycle_status,
-  };
+    };
 }

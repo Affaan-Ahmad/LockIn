@@ -149,7 +149,7 @@ export async function loadDashboard(userId: string): Promise<DashboardData> {
     backend.assignments.findIgnored(userId, 200),
     cachedCourses(userId),
     loadFreshnessView(userId, now),
-  ]);
+    ]);
 
   return {
     upcoming: upcoming.map(toView),
@@ -158,7 +158,7 @@ export async function loadDashboard(userId: string): Promise<DashboardData> {
     ignoredCount: ignored.length,
     freshness,
     trackedCourseCount: courses.filter((course) => course.decision === 'TRACKED').length,
-  };
+    };
 }
 
 /** Items the backend could not confidently place. Never hidden, always askable. */
@@ -186,7 +186,7 @@ export async function loadReviewQueue(userId: string): Promise<{
     }),
     backend.assignments.findUndated({ userId, relevance: ['UNCERTAIN'], limit: 100 }),
     loadFreshnessView(userId, now),
-  ]);
+    ]);
 
   return {
     items: [
@@ -195,7 +195,7 @@ export async function loadReviewQueue(userId: string): Promise<{
       ...undated.map(toUndatedView),
     ],
     freshness,
-  };
+    };
 }
 
 /**
@@ -230,13 +230,13 @@ export async function loadDecisions(userId: string): Promise<readonly Assignment
       limit: 200,
     }),
     backend.assignments.findUndated({ userId, relevance, limit: 200 }),
-  ]);
+    ]);
 
   return [
     ...overdue.map(toView),
     ...upcoming.map(toView),
     ...undated.map(toUndatedView),
-  ].filter((item) => item.hasManualOverride);
+    ].filter((item) => item.hasManualOverride);
 }
 
 /** What the student has hidden. Reachable, reversible, never a void. */
@@ -248,7 +248,7 @@ export async function loadIgnored(userId: string): Promise<{
   const [items, freshness] = await Promise.all([
     backend.assignments.findIgnored(userId, 200),
     loadFreshnessView(userId, new Date()),
-  ]);
+    ]);
   return { items: items.map(toView), freshness };
 }
 
@@ -267,7 +267,7 @@ export const loadReviewCount = cache(async (userId: string): Promise<number> => 
     relevance: ['UNCERTAIN'],
     includeSubmitted: false,
     limit: 100,
-  });
+    });
   return items.length;
 });
 
@@ -288,7 +288,7 @@ export async function loadCourses(userId: string): Promise<{
   const [courses, freshness] = await Promise.all([
     cachedCourses(userId),
     loadFreshnessView(userId, new Date()),
-  ]);
+    ]);
 
   return {
     courses: courses.map((course) => ({
@@ -300,7 +300,7 @@ export async function loadCourses(userId: string): Promise<{
       decidedAt: course.decidedAt?.toISOString() ?? null,
     })),
     freshness,
-  };
+    };
 }
 
 export interface ProfileView {
@@ -331,7 +331,7 @@ export const loadProfile = cache(async (userId: string): Promise<ProfileView | n
     extraAliases: profile.aliases
       .filter((alias) => alias.source === 'USER')
       .map((alias) => alias.raw),
-  };
+      };
 });
 
 export interface SetupState {
@@ -357,7 +357,7 @@ export const loadSetupState = cache(async (userId: string): Promise<SetupState> 
     cachedConnection(userId),
     cachedProfile(userId),
     cachedCourses(userId),
-  ]);
+    ]);
 
   const aliases =
     profile === null
@@ -372,7 +372,7 @@ export const loadSetupState = cache(async (userId: string): Promise<SetupState> 
     matchedAliases: aliases,
     hasTrackedCourses: courses.some((course) => course.decision === 'TRACKED'),
     discoveredCourseCount: courses.length,
-  };
+    };
 });
 
 // ---------------------------------------------------------------------------
@@ -386,7 +386,7 @@ async function loadFreshnessView(userId: string, now: Date): Promise<FreshnessVi
     backend.syncRuns.latestForUser(userId),
     cachedConnection(userId),
     cachedProfile(userId),
-  ]);
+    ]);
 
   const report = assessFreshness({
     lastSuccessfulSyncAt,
@@ -394,7 +394,7 @@ async function loadFreshnessView(userId: string, now: Date): Promise<FreshnessVi
     lastRunStatus: latestRun?.status ?? null,
     connectionUsable: connection !== null && connection.status === 'ACTIVE',
     now,
-  });
+    });
 
   return {
     level: report.level,
@@ -404,7 +404,7 @@ async function loadFreshnessView(userId: string, now: Date): Promise<FreshnessVi
     // UTC rather than the server's zone when unset: falling back to the
     // server's would make date boundaries depend on where this is deployed.
     timeZone: profile?.timeZone ?? 'UTC',
-  };
+    };
 }
 
 type RepoAssignment = Awaited<
@@ -432,7 +432,7 @@ function toView(item: RepoAssignment): AssignmentView {
     scopeSections: item.scopeSections,
     submissionState: item.submissionState,
     link: item.alternateLink,
-  };
+    };
 }
 
 type RepoUndated = Awaited<ReturnType<BackendContext['assignments']['findUndated']>>[number];
@@ -453,7 +453,7 @@ function toUndatedView(item: RepoUndated): AssignmentView {
     scopeSections: [],
     submissionState: item.submissionState,
     link: item.alternateLink,
-  };
+    };
 }
 
 function pad(value: number, width: number): string {

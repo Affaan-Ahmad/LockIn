@@ -37,12 +37,12 @@ export function CourseTracker({ courses, setupMode = false }: CourseTrackerProps
   const initial = useMemo(
     () => new Map(courses.map((course) => [course.courseId, course.isTracked])),
     [courses],
-  );
+    );
   const [tracked, setTracked] = useState<ReadonlyMap<string, boolean>>(initial);
 
   const changed = courses.filter(
     (course) => (tracked.get(course.courseId) ?? false) !== course.isTracked,
-  );
+    );
   const selectedCount = courses.filter((course) => tracked.get(course.courseId) === true).length;
 
   function toggle(courseId: string) {
@@ -100,7 +100,7 @@ export function CourseTracker({ courses, setupMode = false }: CourseTrackerProps
 
   return (
     <div>
-      <ul className="flex flex-col gap-2.5">
+      <ul className="flex flex-col gap-2">
         {courses.map((course) => {
           const on = tracked.get(course.courseId) === true;
           const dirty = on !== course.isTracked;
@@ -109,8 +109,14 @@ export function CourseTracker({ courses, setupMode = false }: CourseTrackerProps
             <li key={course.courseId}>
               <label
                 className={cx(
-                  'clay press flex cursor-pointer items-start gap-3 p-4 active:scale-[0.995]',
-                  on ? 'ring-1 ring-brand/35' : '',
+                  'press flex cursor-pointer items-start gap-3 rounded-control border p-3.5',
+                  'has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-brand',
+                  // Tracked courses are raised; untracked ones sit flat on the
+                  // ground. The state is the elevation, so the list can be read
+                  // at a glance without inspecting twenty checkboxes.
+                  on
+                    ? 'surface-raised border-brand/30'
+                    : 'border-line bg-transparent hover:bg-sunken',
                 )}
               >
                 <input
@@ -122,13 +128,13 @@ export function CourseTracker({ courses, setupMode = false }: CourseTrackerProps
                   // A real checkbox, styled. A div with role="checkbox" would
                   // have to reimplement focus, space-to-toggle and the forced
                   // colours mode that a native input gets for free.
-                  className="mt-0.5 size-5 shrink-0 accent-[var(--color-brand)]"
+                  className="mt-1 size-5 shrink-0 accent-[var(--color-brand)]"
                 />
                 <span className="min-w-0 flex-1">
-                  <span className="block text-base leading-snug font-semibold text-ink">
+                  <span className="block text-base leading-snug font-medium text-ink">
                     {course.name}
                   </span>
-                  <span className="mt-0.5 block text-sm text-ink-soft">
+                  <span className="mt-1 block text-sm text-ink-muted">
                     {/* Google's own course-level section field, shown as-is.
                         It is frequently useless ("A,B,C,D,E,F,G", "Fall 2026"),
                         which is exactly why LockIn classifies per assignment
@@ -154,8 +160,8 @@ export function CourseTracker({ courses, setupMode = false }: CourseTrackerProps
         className={cx(
           // Sticks to the bottom so the action is reachable without scrolling
           // back up a list of twenty courses.
-          'sticky bottom-[calc(var(--nav-h)+env(safe-area-inset-bottom))] z-10 mt-5',
-          'surface-raised flex flex-wrap items-center justify-between gap-3 p-3.5',
+          'sticky bottom-[calc(var(--nav-h)+env(safe-area-inset-bottom))] z-10 mt-6',
+          'surface-raised flex flex-wrap items-center justify-between gap-3 px-4 py-3',
           'md:bottom-4',
         )}
       >

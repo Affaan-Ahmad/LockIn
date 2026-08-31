@@ -20,13 +20,13 @@ export interface PageSkeletonProps {
 
 export function PageSkeleton({ rows = 3, groups = 2 }: PageSkeletonProps) {
   return (
-    <div aria-hidden="true" className="flex flex-col gap-7">
+    <div aria-hidden="true" className="flex flex-col gap-8">
       {Array.from({ length: groups }, (_, group) => (
         <div key={group}>
-          <div className="mb-2.5 px-1">
+          <div className="mb-3 px-0.5">
             <Skeleton variant="line" width="5.5rem" />
           </div>
-          <div className="flex flex-col gap-2.5">
+          <div className="flex flex-col gap-3">
             <Skeleton variant="card" count={group === 0 ? rows : Math.max(1, rows - 1)} />
           </div>
         </div>

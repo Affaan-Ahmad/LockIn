@@ -28,7 +28,7 @@ export default async function IgnoredPage() {
   const [{ items, freshness }, reviewCount] = await Promise.all([
     loadIgnored(user.id),
     loadReviewCount(user.id),
-  ]);
+    ]);
 
   const now = new Date();
 
@@ -55,7 +55,7 @@ export default async function IgnoredPage() {
           }
         />
       ) : (
-        <ul className="flex flex-col gap-2.5">
+        <ul className="flex flex-col gap-3">
           {items.map((item) => (
             <li key={item.assignmentId}>
               <AssignmentCard

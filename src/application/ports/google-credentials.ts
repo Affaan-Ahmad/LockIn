@@ -70,13 +70,13 @@ export interface GoogleConnectionRepository {
     accessToken: string,
     expiresAt: Date,
     rotatedRefreshToken: string | null,
-  ): Promise<void>;
+    ): Promise<void>;
 
   markStatus(
     userId: string,
     status: GoogleConnectionStatus,
     errorCode: string | null,
-  ): Promise<void>;
+    ): Promise<void>;
 
   /** Recorded once, when a Classroom response first reveals it. */
   setGoogleUserId(userId: string, googleUserId: string): Promise<void>;

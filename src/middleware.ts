@@ -38,7 +38,7 @@ const PUBLIC_PATHS = ['/welcome', '/auth', '/api', '/legal'];
 function isPublic(pathname: string): boolean {
   return PUBLIC_PATHS.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
-  );
+    );
 }
 export async function middleware(request: NextRequest) {
   // A fresh nonce per request. Reusing one across requests would let an
@@ -85,7 +85,7 @@ export async function middleware(request: NextRequest) {
         }
       },
     },
-  });
+    });
 
   const { data, error } = await supabase.auth.getUser();
 
@@ -108,5 +108,5 @@ export const config = {
   matcher: [
     // Everything except static assets and image optimisation output.
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
-  ],
+    ],
 };

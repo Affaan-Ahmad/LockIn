@@ -85,33 +85,95 @@
      what keeps a surface looking like tinted material instead of something
      floating over a void.
      -------------------------------------------------------------------- */
+  /* ----------------------------------------------------------------------
+     Elevation, in four tiers with four jobs.
+
+     Every card previously carried the same clay shadow, so nothing on a screen
+     could be more important than anything else. These are ordered, and a
+     component picks the tier that matches its rank rather than inventing a
+     value.
+
+       flat        no lift. Grouping, not elevation.
+       raised      chrome that sits on the page: controls, chips, the rail.
+       card        content the student came to read.
+       floating    the one thing asking to be dealt with, and dialogs.
+
+     Blur is deliberately short. A wide soft shadow reads as fog rather than
+     as material, and it is the most expensive part of a list of fifty cards.
+     The dark half is a desaturated ground tint rather than black, which is
+     what keeps a surface looking like tinted ceramic instead of a cutout
+     floating over a void.
+     -------------------------------------------------------------------- */
   --elev-raised:
-    2px 2px 5px oklch(72% 0.020 85 / 0.30),
-    -2px -2px 5px oklch(100% 0 0 / 0.85);
+    0 1px 1px oklch(70% 0.020 85 / 0.16),
+    0 2px 4px -2px oklch(70% 0.020 85 / 0.20),
+    inset 0 1px 0 oklch(100% 0 0 / 0.70);
 
   --elev-raised-lg:
-    4px 4px 10px oklch(70% 0.022 85 / 0.28),
-    -3px -3px 8px oklch(100% 0 0 / 0.9);
+    0 2px 3px -1px oklch(68% 0.022 85 / 0.18),
+    0 8px 16px -8px oklch(64% 0.024 85 / 0.24),
+    inset 0 1px 0 oklch(100% 0 0 / 0.80);
 
+  /* The signature well. Metadata sits in this, one step below the card face,
+     which is what groups it instead of leaving it scattered across a row. */
   --elev-inset:
-    inset 2px 2px 4px oklch(72% 0.020 85 / 0.28),
-    inset -2px -2px 4px oklch(100% 0 0 / 0.75);
+    inset 0 1px 2px oklch(70% 0.020 85 / 0.20),
+    inset 0 -1px 0 oklch(100% 0 0 / 0.55);
 
   /* Clay: one directional drop plus an inner top highlight. The highlight is
      what reads as inflated; without it a clay card is just a rounded box. */
+  /* Clay: one directional drop plus an inner top highlight. The highlight is
+     what reads as inflated; without it a clay card is just a rounded box. It
+     is kept subtle here -- a strong one is what makes claymorphism look like
+     a plastic toy. */
   --elev-clay:
-    0 6px 16px -6px oklch(52% 0.030 85 / 0.24),
-    inset 0 1.5px 0 oklch(100% 0 0 / 0.9);
+    0 1px 1px oklch(66% 0.026 85 / 0.14),
+    0 4px 10px -6px oklch(58% 0.030 85 / 0.22),
+    inset 0 1px 0 oklch(100% 0 0 / 0.85);
 
   --elev-clay-lifted:
-    0 12px 24px -8px oklch(52% 0.030 85 / 0.28),
-    inset 0 1.5px 0 oklch(100% 0 0 / 0.9);
+    0 2px 4px -1px oklch(64% 0.028 85 / 0.16),
+    0 12px 22px -10px oklch(56% 0.032 85 / 0.26),
+    inset 0 1px 0 oklch(100% 0 0 / 0.9);
 
+  /* ----------------------------------------------------------------------
+     Radius hierarchy.
+
+     Previously everything was either a pill or one of two card radii, which
+     reads as undifferentiated: a badge as round as a button as round as the
+     navigation. Size now tracks the element's weight in the layout, so a
+     feature card and a chip are visibly different classes of object.
+
+     The pill is reserved for genuinely pill-shaped things -- chips, and
+     circular icon buttons. Buttons are not pills any more; a fully round
+     button at 44px tall reads as a toy, and the softened rectangle sits
+     better against the card corners it lives inside.
+     -------------------------------------------------------------------- */
+  --r-xs: 0.375rem;
   --r-sm: 0.5rem;
-  --r-md: 0.875rem;
-  --r-lg: 1.25rem;
-  --r-xl: 1.75rem;
+  --r-md: 0.75rem;
+  --r-lg: 1rem;
+  --r-xl: 1.375rem;
   --r-full: 999px;
+
+  /* ----------------------------------------------------------------------
+     Spacing scale.
+
+     The interface used eleven different vertical margins and seven gaps, none
+     of them related. These six steps cover everything, and the constraint is
+     the point: a value that is not on the scale is a decision that has not
+     been made.
+
+     The ratio widens as it climbs. Small steps separate lines within a block,
+     where a 2px difference is legible; large steps separate sections, where it
+     is not, so they jump.
+     -------------------------------------------------------------------- */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1.125rem;
+  --space-5: 1.75rem;
+  --space-6: 2.75rem;
 
   --dur-fast: 120ms;
   --dur-base: 200ms;
@@ -181,25 +243,32 @@
   --dark-review: oklch(72% 0.14 330);
   --dark-review-soft: oklch(26% 0.058 330);
 
+  /* Same four tiers, re-derived rather than dimmed. In the dark the drop
+     shadow does almost no work -- black on near-black is invisible -- so the
+     lit top rim carries the elevation instead, and the shadow only anchors
+     the element to the surface below it. */
   --dark-elev-raised:
-    2px 2px 6px oklch(4% 0.006 268 / 0.62),
-    -1px -1px 3px oklch(52% 0.020 268 / 0.26);
+    0 1px 2px oklch(4% 0.006 268 / 0.55),
+    inset 0 1px 0 oklch(72% 0.020 268 / 0.10);
 
   --dark-elev-raised-lg:
-    5px 5px 12px oklch(4% 0.006 268 / 0.68),
-    -2px -2px 6px oklch(52% 0.020 268 / 0.24);
+    0 2px 4px -1px oklch(4% 0.006 268 / 0.60),
+    0 10px 20px -10px oklch(3% 0.005 268 / 0.65),
+    inset 0 1px 0 oklch(74% 0.020 268 / 0.13);
 
   --dark-elev-inset:
-    inset 2px 2px 5px oklch(4% 0.006 268 / 0.58),
-    inset -1px -1px 3px oklch(52% 0.020 268 / 0.20);
+    inset 0 1px 3px oklch(2% 0.004 268 / 0.70),
+    inset 0 -1px 0 oklch(70% 0.018 268 / 0.07);
 
   --dark-elev-clay:
-    0 8px 20px -8px oklch(3% 0.005 268 / 0.72),
-    inset 0 1px 0 oklch(74% 0.020 268 / 0.20);
+    0 1px 2px oklch(4% 0.006 268 / 0.55),
+    0 6px 14px -8px oklch(3% 0.005 268 / 0.60),
+    inset 0 1px 0 oklch(74% 0.020 268 / 0.12);
 
   --dark-elev-clay-lifted:
-    0 16px 30px -10px oklch(3% 0.005 268 / 0.78),
-    inset 0 1px 0 oklch(74% 0.020 268 / 0.20);
+    0 2px 4px -1px oklch(4% 0.006 268 / 0.60),
+    0 14px 26px -12px oklch(3% 0.005 268 / 0.70),
+    inset 0 1px 0 oklch(76% 0.020 268 / 0.16);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -468,14 +537,73 @@
   box-shadow: var(--elev-clay);
 }
 
-/* Press feedback. Transform only — animating a shadow repaints the blurred
-   area every frame, which a list of fifty cards makes measurable. */
-@utility press {
-  transition: transform var(--dur-fast) var(--curve-out);
+/* The tier above clay, for the single element on a screen that is asking to be
+   dealt with. Used sparingly on purpose: if two things float, neither does. */
+@utility clay-lifted {
+  background: var(--surface-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--r-xl);
+  box-shadow: var(--elev-clay-lifted);
 }
 
+/* ---------------------------------------------------------------------------
+   The well.
+
+   A shallow recess at the foot of a card holding its metadata. This is the one
+   consistent structural detail in LockIn, and it does real work: the deadline,
+   submission state and controls used to sit in a wrapping row at the same
+   visual level as each other and as the title, so a card read as five unrelated
+   facts rather than one object.
+
+   Recessing them groups them, and it is claymorphism used structurally rather
+   than as decoration -- the card face is the material, the well is pressed into
+   it. It carries the card's bottom corners so the recess follows the shell
+   instead of floating inside it.
+
+   Deliberately not a border. A hairline would separate the rows just as well
+   and look like every other card on the internet.
+   ------------------------------------------------------------------------- */
+@utility well {
+  background: var(--surface-sunken);
+  border-top: 1px solid var(--line);
+  border-radius: 0 0 calc(var(--r-lg) - 1px) calc(var(--r-lg) - 1px);
+  box-shadow: var(--elev-inset);
+}
+
+/* Press feedback. Transform only -- animating a shadow repaints the blurred
+   area every frame, which a list of fifty cards makes measurable. */
+@utility press {
+  transition:
+    transform var(--dur-fast) var(--curve-out),
+    background-color var(--dur-fast) var(--curve-out);
+}
+
+/* Hover lift for pointer devices only. On a touch screen :hover sticks after a
+   tap, so the card stays raised until something else is touched. */
 @utility lift {
-  transition: transform var(--dur-fast) var(--curve-out);
+  transition:
+    transform var(--dur-base) var(--curve-out),
+    box-shadow var(--dur-base) var(--curve-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .lift:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--elev-clay-lifted);
+  }
+}
+
+/* Reduced motion keeps the state change and drops the movement: the hover
+   still reads, because the shadow still changes. */
+@media (prefers-reduced-motion: reduce) {
+  .press,
+  .lift {
+    transition: none;
+  }
+
+  .lift:hover {
+    transform: none;
+  }
 }
 
 /* ========================================================================== */
@@ -505,7 +633,11 @@ body {
 
 h1, h2, h3, h4 {
   margin: 0;
-  font-weight: 650;
+  /* Weight is set per component now. It used to be forced to 650 here and
+     overridden at every call site, so the rule did nothing except disagree
+     with the components. Inheriting means a heading that specifies nothing
+     gets body weight, which is the honest default. */
+  font-weight: inherit;
   letter-spacing: -0.02em;
   /* Always upright. An italicised heading is the most reliable generated-UI
      tell there is. */

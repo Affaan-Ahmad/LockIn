@@ -41,7 +41,7 @@ export function AppShell({
   children,
 }: AppShellProps) {
   return (
-    <div className="min-h-dvh md:pl-56">
+    <div className="min-h-dvh md:pl-60">
       {/* Skip link. The first tab stop on every page, so a keyboard user is not
           forced through the whole nav to reach the list they came for. */}
       <a
@@ -51,12 +51,15 @@ export function AppShell({
         Skip to content
       </a>
 
-      <header className="px-4 pt-6 pb-2 md:px-8 md:pt-10">
-        <div className="mx-auto flex max-w-[var(--content-max)] items-start justify-between gap-4">
+      <header className="px-4 pt-6 pb-4 md:px-8 md:pt-10">
+        <div className="mx-auto flex max-w-[var(--content-max)] items-start justify-between gap-3">
           <div className="min-w-0">
-            <h1 className="truncate text-2xl font-bold text-ink">{title}</h1>
+            {/* Semibold, not bold. The page title is the largest text on the
+                screen and does not need weight as well as scale; bold here is
+                what made every heading below it escalate to match. */}
+            <h1 className="truncate text-2xl font-semibold text-ink">{title}</h1>
             {subtitle === undefined ? null : (
-              <p className="mt-1 text-base text-ink-soft">{subtitle}</p>
+              <p className="measure mt-2 text-sm text-ink-soft">{subtitle}</p>
             )}
           </div>
 
@@ -65,7 +68,7 @@ export function AppShell({
             <Link
               href="/settings"
               aria-label="Settings"
-              className="surface-raised press flex size-11 items-center justify-center rounded-pill text-ink-soft active:scale-95 hover:text-ink"
+              className="surface-raised press flex size-11 items-center justify-center rounded-pill text-ink-soft hover:text-ink  active:translate-y-px"
             >
               <SettingsIcon />
             </Link>

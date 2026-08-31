@@ -17,17 +17,20 @@ export interface EmptyStateProps {
 
 export function EmptyState({ icon, title, body, action }: EmptyStateProps) {
   return (
-    <div className="flex flex-col items-center gap-3 px-6 py-14 text-center">
+    <div className="flex flex-col items-center gap-3 px-6 py-16 text-center">
       {icon === undefined ? null : (
-        <span className="surface-sunken flex size-14 items-center justify-center rounded-pill text-ink-muted">
+        // Smaller and quieter than before. A large tinted medallion above two
+        // lines of text is the shape of a placeholder; at this size it reads
+        // as punctuation for the sentence below it.
+        <span className="flex size-9 items-center justify-center rounded-pill bg-sunken text-ink-muted">
           {icon}
         </span>
       )}
-      <h2 className="text-lg font-semibold text-ink">{title}</h2>
+      <h2 className="text-base font-medium text-ink">{title}</h2>
       {body === undefined ? null : (
-        <p className="max-w-[26rem] text-base text-ink-soft">{body}</p>
+        <p className="max-w-[30ch] text-sm text-pretty text-ink-muted">{body}</p>
       )}
-      {action === undefined ? null : <div className="mt-1">{action}</div>}
+      {action === undefined ? null : <div className="mt-2">{action}</div>}
     </div>
   );
 }

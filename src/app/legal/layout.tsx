@@ -14,8 +14,8 @@ export default function LegalLayout({ children }: { readonly children: ReactNode
   return (
     <div className="min-h-dvh">
       <header className="border-b border-line px-5 py-4">
-        <div className="mx-auto flex max-w-[52rem] items-center justify-between gap-4">
-          <Link href="/" className="text-lg font-bold tracking-[-0.02em] text-ink">
+        <div className="mx-auto flex max-w-[52rem] items-center justify-between gap-3">
+          <Link href="/" className="text-lg font-semibold tracking-[-0.02em] text-ink">
             LockIn
           </Link>
           <nav aria-label="Legal" className="flex flex-wrap gap-x-4 gap-y-1 text-sm">

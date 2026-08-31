@@ -99,7 +99,7 @@ export async function enforceRateLimit(
   throw new RateLimitError(
     `Too many ${bucket} requests. Try again in ${String(result.retryAfterSeconds)} seconds.`,
     { retryAfterMs: result.retryAfterSeconds * 1000 },
-  );
+    );
 }
 
 export function jsonOk<T>(body: T, status = 200): NextResponse {
@@ -115,7 +115,7 @@ export function jsonError(caught: unknown): NextResponse {
   // a curated message go to the caller.
   createLogger({ base: { component: 'api' } }).error('request failed', {
     ...error.toLogObject(),
-  });
+    });
 
   // Tell the client when to come back rather than leaving it to guess, which
   // is how a rate-limited client turns into a retry storm.
@@ -133,7 +133,7 @@ export function jsonError(caught: unknown): NextResponse {
       },
     },
     headers === undefined ? { status } : { status, headers },
-  );
+    );
 }
 
 export async function handleRoute(fn: () => Promise<NextResponse>): Promise<NextResponse> {

@@ -67,8 +67,8 @@ export function IgnoreButton({ assignmentId, ignored, title }: IgnoreButtonProps
         aria-busy={busy || undefined}
         aria-label={ignored ? `Restore ${title}` : `Hide ${title}`}
         className={cx(
-          'press min-h-9 rounded-pill px-3 text-xs font-semibold active:scale-95',
-          'transition-colors duration-[120ms] disabled:opacity-55',
+          'press min-h-9 rounded-control px-3 text-xs font-medium active:translate-y-px',
+          ' disabled:opacity-50',
           ignored
             ? 'bg-brand-soft text-brand hover:brightness-95'
             : 'text-ink-muted hover:bg-sunken hover:text-ink',

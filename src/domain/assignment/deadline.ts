@@ -109,7 +109,7 @@ export function resolveGoogleDeadline(
 
   const instant = new Date(
     Date.UTC(date.year, date.month - 1, date.day, time.hours, time.minutes, time.seconds, 0),
-  );
+    );
   if (Number.isNaN(instant.getTime())) {
     return { ok: false, issue: 'dueDate and dueTime did not combine into a valid instant' };
   }
@@ -163,11 +163,11 @@ export function deadlineInTimeZone(
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
-  });
+    });
 
   const parts = new Map<string, string>(
     formatter.formatToParts(deadline.dueAt).map((part) => [part.type as string, part.value]),
-  );
+    );
 
   const read = (key: string): number => Number(parts.get(key) ?? '0');
   // Intl renders midnight as hour 24 in some locales/zones; normalise it.
@@ -180,7 +180,7 @@ export function deadlineInTimeZone(
     hour,
     minute: read('minute'),
     timeZone,
-  };
+    };
 }
 
 /** The UTC calendar date, as an ISO `YYYY-MM-DD` string, for persistence. */

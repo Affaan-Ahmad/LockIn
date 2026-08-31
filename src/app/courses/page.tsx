@@ -29,7 +29,7 @@ export default async function CoursesPage({
   const [{ courses, freshness }, reviewCount] = await Promise.all([
     loadCourses(user.id),
     loadReviewCount(user.id),
-  ]);
+    ]);
 
   return (
     <AppShell
@@ -59,7 +59,7 @@ export default async function CoursesPage({
       )}
 
       {courses.length === 0 || setupMode ? null : (
-        <div className="mt-7 border-t border-line pt-5">
+        <div className="mt-8 border-t border-line pt-5">
           <p className="measure text-sm leading-relaxed text-ink-soft">
             Turning a course on does not fetch its coursework straight away. Its assignments
             appear after the next sync.

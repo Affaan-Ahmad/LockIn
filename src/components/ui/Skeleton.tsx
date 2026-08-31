@@ -29,7 +29,9 @@ export function Skeleton({ variant = 'line', width, count = 1 }: SkeletonProps) 
           style={width === undefined ? undefined : { width }}
           className={cx(
             'animate-pulse bg-sunken',
-            variant === 'card' ? 'h-22 rounded-card' : 'h-[0.8em] rounded-sm',
+            // Matches the real card: face plus well. A placeholder of the
+            // wrong height causes exactly the shift it exists to prevent.
+            variant === 'card' ? 'h-[6.5rem] rounded-card' : 'h-[0.8em] rounded-xs',
           )}
         />
       ))}

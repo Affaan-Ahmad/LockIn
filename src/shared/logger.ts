@@ -124,7 +124,7 @@ export function createLogger(options: LoggerOptions = {}): Logger {
         base: { ...base, ...fields },
         ...(options.sink === undefined ? {} : { sink: options.sink }),
       }),
-  };
+      };
 }
 
 function defaultSink(line: string): void {

@@ -18,14 +18,14 @@ export class SupabaseRateLimiter implements RateLimiter {
   constructor(
     private readonly db: AppSupabaseClient,
     private readonly logger: Logger,
-  ) {}
+    ) {}
 
   async consume(
     userId: string,
     bucket: string,
     limit: number,
     windowSeconds: number,
-  ): Promise<{ allowed: boolean; retryAfterSeconds: number }> {
+    ): Promise<{ allowed: boolean; retryAfterSeconds: number }> {
     const { data, error } = await this.db.rpc('app_consume_rate_limit', {
       p_user_id: userId,
       p_bucket: bucket,
@@ -58,7 +58,7 @@ export class SupabaseRateLimiter implements RateLimiter {
     userId: string,
     bucket: string,
     windowSeconds: number,
-  ): Promise<number> {
+    ): Promise<number> {
     const { data, error } = await this.db.rpc('app_rate_limit_retry_after', {
       p_user_id: userId,
       p_bucket: bucket,

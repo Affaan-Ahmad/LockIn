@@ -62,7 +62,7 @@ function buildNamingRule(spec: NamingRuleSpec): SectionScopeRule {
         evidence: matches.map((entry) => toEvidence(entry, spec.detail)),
       };
     },
-  };
+    };
 }
 
 function toEvidence(entry: LocatedMention, detail: string) {

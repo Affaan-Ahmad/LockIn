@@ -110,7 +110,7 @@ export class GoogleClassroomClient {
   async listCourseWork(
     courseId: string,
     options: ListCourseWorkOptions = { updatedSince: null },
-  ): Promise<PagedResult<GoogleCourseWork>> {
+    ): Promise<PagedResult<GoogleCourseWork>> {
     const cutoff = options.updatedSince?.getTime() ?? null;
 
     return this.paginate({
@@ -215,7 +215,7 @@ export class GoogleClassroomClient {
     schema: z.ZodType<T, z.ZodTypeDef, unknown>,
     query: Record<string, string>,
     operation: string,
-  ): Promise<T> {
+    ): Promise<T> {
     const url = new URL(`${CLASSROOM_BASE}${path}`);
     for (const [key, value] of Object.entries(query)) url.searchParams.set(key, value);
 
@@ -370,7 +370,7 @@ function translateHttpError(response: Response, body: string, operation: string)
     status,
     retryable: false,
     context,
-  });
+    });
 }
 
 function parseRetryAfter(response: Response): number | null {

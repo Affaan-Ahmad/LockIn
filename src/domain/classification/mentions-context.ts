@@ -40,7 +40,7 @@ export function buildItemMentions(input: {
       ...topic.map((mention) => ({ field: 'TOPIC' as const, mention })),
       ...description.map((mention) => ({ field: 'DESCRIPTION' as const, mention })),
     ],
-  };
+    };
 }
 
 /**
@@ -60,5 +60,5 @@ export function buildItemMentions(input: {
 export function hasSectionEvidence(mentions: ItemMentions): boolean {
   return mentions.all.some(
     (entry) => entry.mention.strength === 'STRONG' || entry.mention.keywordScoped,
-  );
+    );
 }

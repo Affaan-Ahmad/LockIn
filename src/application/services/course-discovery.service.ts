@@ -88,7 +88,7 @@ export class CourseDiscoveryService {
   async setTracking(
     userId: string,
     decisions: readonly { courseId: string; decision: TrackingDecision }[],
-  ): Promise<number> {
+    ): Promise<number> {
     if (decisions.length === 0) {
       throw new InvalidInputError('At least one course decision is required');
     }

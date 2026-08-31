@@ -24,11 +24,11 @@ export function Footer({ inShell = false }: FooterProps) {
     <footer
       className={cx(
         'border-t border-line px-1 pt-6',
-        inShell ? 'mt-10' : 'mt-12 px-5 pb-8',
+        inShell ? 'mt-8' : 'mt-8 px-5 pb-8',
       )}
     >
-      <h2 className="text-sm font-bold text-ink">Legal</h2>
-      <ul className="mt-2.5 flex flex-col gap-1.5">
+      <h2 className="text-sm font-semibold text-ink">Legal</h2>
+      <ul className="mt-3 flex flex-col gap-2">
         {LEGAL_PAGES.map((page) => (
           <li key={page.href}>
             <Link
@@ -40,7 +40,7 @@ export function Footer({ inShell = false }: FooterProps) {
           </li>
         ))}
       </ul>
-      <p className="mt-4 text-xs text-ink-muted">
+      <p className="mt-3 text-xs text-ink-muted">
         LockIn is an independent project and is not affiliated with Google or any university.
       </p>
     </footer>

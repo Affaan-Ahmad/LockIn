@@ -74,12 +74,12 @@ export async function GET(request: Request): Promise<NextResponse> {
     // Null means "keep what is stored". Google omits the refresh token on
     // repeat consents, and overwriting with null would break the connection.
     refreshToken: providerRefreshToken,
-  });
+    });
 
   logger.info('google classroom connection stored', {
     userId: session.user.id,
     hasRefreshToken: providerRefreshToken !== null,
-  });
+    });
 
   return NextResponse.redirect(new URL('/?connection=ok', env.NEXT_PUBLIC_SITE_URL));
 }
