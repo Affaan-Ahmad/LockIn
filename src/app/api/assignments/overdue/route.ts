@@ -1,31 +1,32 @@
 import type { NextResponse } from 'next/server';
 import { z } from 'zod';
 
-import { assessFreshness } from '@/domain/sync/freshness';
 import { createBackendContext } from '@/infrastructure/composition';
 import { InvalidInputError } from '@/shared/errors';
 
 import { handleRoute, jsonOk, requireUser } from '../../_lib/handler';
 
 /**
- * Reads upcoming coursework.
+ * Coursework whose deadline has passed and that is not submitted.
  *
- * Every response carries a freshness block. That is not decoration: without it
- * a future frontend cannot tell three-day-old data from data fetched a minute
- * ago, and academic deadlines are precisely the case where that difference
- * matters. The API refuses to hand back a list without also handing back how
- * much it should be trusted.
+ * Its own tab rather than merged into the upcoming feed. They answer different
+ * questions -- "what is coming" versus "what did I miss" -- and merging them
+ * would bury a deadline three days away under work from six weeks ago.
  *
- * The default relevance filter is RELEVANT plus UNCERTAIN. Ambiguous coursework
- * stays visible by default; hiding it would defeat the point of having a third
- * value at all.
+ * It exists at all because the upcoming feed used to start at "now", so
+ * anything already past due silently vanished. For a deadline tracker that is
+ * backwards: unsubmitted overdue work is the most urgent thing a student has.
+ *
+ * Sorted most-recently-missed first, which is how triage actually works.
  */
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const querySchema = z.object({
-  withinDays: z.coerce.number().int().min(1).max(365).default(30),
+  // Optional floor, so returning after a long break does not bury the student
+  // under a year of missed work. 0 means no floor at all.
+  withinDays: z.coerce.number().int().min(0).max(365).default(60),
   relevance: z
     .string()
     .optional()
@@ -52,55 +53,40 @@ export async function GET(request: Request): Promise<NextResponse> {
 
     const context = await createBackendContext();
     const now = new Date();
-    const to = new Date(now.getTime() + parsed.data.withinDays * 24 * 60 * 60 * 1000);
+    const since =
+      parsed.data.withinDays === 0
+        ? null
+        : new Date(now.getTime() - parsed.data.withinDays * 24 * 60 * 60 * 1000);
 
-    const [items, lastSuccessfulSyncAt, latestRun, connection] = await Promise.all([
-      context.assignments.findUpcoming({
-        userId: user.id,
-        to,
-        relevance: parsed.data.relevance,
-        includeSubmitted: parsed.data.includeSubmitted,
-        limit: parsed.data.limit,
-      }),
-      context.syncRuns.lastSuccessfulAt(user.id),
-      context.syncRuns.latestForUser(user.id),
-      context.connections.snapshot(user.id),
-    ]);
-
-    const freshness = assessFreshness({
-      lastSuccessfulSyncAt,
-      lastAttemptedSyncAt: latestRun?.startedAt ?? null,
-      lastRunStatus: latestRun?.status ?? null,
-      connectionUsable: connection !== null && connection.status === 'ACTIVE',
-      now,
+    const items = await context.assignments.findOverdue({
+      userId: user.id,
+      since,
+      relevance: parsed.data.relevance,
+      includeSubmitted: parsed.data.includeSubmitted,
+      limit: parsed.data.limit,
     });
 
     return jsonOk({
-      freshness: {
-        level: freshness.level,
-        reason: freshness.reason,
-        ageMs: freshness.ageMs,
-        lastSuccessfulSyncAt: freshness.lastSuccessfulSyncAt?.toISOString() ?? null,
-        lastAttemptedSyncAt: freshness.lastAttemptedSyncAt?.toISOString() ?? null,
-        lastRunStatus: freshness.lastRunStatus,
-      },
       items: items.map((item) => ({
         assignmentId: item.assignmentId,
         courseId: item.courseId,
         courseName: item.courseName,
         title: item.title,
-        // Precision travels with the deadline so a consumer physically cannot
-        // render a time for an item that never had one.
         deadline: {
           precision: item.deadline.precision,
           dueAtUtc: item.deadline.dueAt?.toISOString() ?? null,
           dueDateUtc: formatCalendarDate(item.deadline.dueDate),
         },
+        // How late, in whole days. Computed here rather than in a client so
+        // every consumer agrees, and only for EXACT deadlines -- a date-only
+        // item has no instant to measure from without inventing one.
+        overdueByDays:
+          item.deadline.dueAt === null
+            ? null
+            : Math.floor((now.getTime() - item.deadline.dueAt.getTime()) / 86_400_000),
         relevance: item.relevance,
         confidence: item.confidence,
         hasManualOverride: item.hasManualOverride,
-        // The assignment's own scope travels beside the per-student verdict so
-        // a client can explain "why am I seeing this?" without a second call.
         scope: { type: item.scopeType, sections: item.scopeSections },
         submissionState: item.submissionState,
         lastSyncedAt: item.lastSyncedAt.toISOString(),

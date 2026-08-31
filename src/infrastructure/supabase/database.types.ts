@@ -472,8 +472,17 @@ export type Database = {
       app_upcoming_assignments: {
         Args: {
           p_user_id: string;
-          p_from: string;
           p_to: string | null;
+          p_relevance: Relevance[];
+          p_include_submitted: boolean;
+          p_limit: number;
+        };
+        Returns: UpcomingAssignmentRow[];
+      };
+      app_overdue_assignments: {
+        Args: {
+          p_user_id: string;
+          p_since: string | null;
           p_relevance: Relevance[];
           p_include_submitted: boolean;
           p_limit: number;

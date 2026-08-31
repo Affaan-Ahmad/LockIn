@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { CourseDiscoveryService } from '@/application/services/course-discovery.service';
 import type { Deadline } from '@/domain/assignment/deadline';
-import { evaluateFeedEligibility, isUndatedCandidate } from '@/domain/assignment/feed';
+import { deadlineBucket, evaluateVisibility, isPastDue } from '@/domain/assignment/feed';
 import { reconcileWithSourceState } from '@/domain/course/tracking';
 import { fixedClock } from '@/shared/clock';
 import { silentLogger } from '@/shared/logger';
@@ -37,6 +37,13 @@ const DATE_ONLY: Deadline = {
   dueAt: null,
 };
 
+const FUTURE: Deadline = {
+  precision: 'EXACT',
+  dueDate: { year: 2026, month: 9, day: 30 },
+  dueTime: { hours: 18, minutes: 59, seconds: 0 },
+  dueAt: new Date('2026-09-30T18:59:00Z'),
+};
+
 const NO_DEADLINE: Deadline = {
   precision: 'NONE',
   dueDate: null,
@@ -44,7 +51,7 @@ const NO_DEADLINE: Deadline = {
   dueAt: null,
 };
 
-function candidate(overrides: Partial<Parameters<typeof evaluateFeedEligibility>[0]> = {}) {
+function candidate(overrides: Partial<Parameters<typeof evaluateVisibility>[0]> = {}) {
   return {
     tracking: 'TRACKED' as const,
     deadline: EXACT,
@@ -56,129 +63,123 @@ function candidate(overrides: Partial<Parameters<typeof evaluateFeedEligibility>
   };
 }
 
-describe('deadline feed eligibility', () => {
-  it('includes tracked, dated, relevant coursework', () => {
-    expect(evaluateFeedEligibility(candidate())).toEqual({ eligible: true });
+describe('visibility', () => {
+  it('shows tracked, relevant coursework', () => {
+    expect(evaluateVisibility(candidate())).toEqual({ visible: true });
   });
 
-  it('excludes coursework from an untracked course', () => {
-    // Last semester's Programming Fundamentals is still ACTIVE in Classroom and
-    // still enrolled. Google's state is not the student's intent.
-    expect(evaluateFeedEligibility(candidate({ tracking: 'NOT_TRACKED' }))).toEqual({
-      eligible: false,
+  it('hides coursework from an untracked course', () => {
+    // Last semester's course is still ACTIVE in Classroom and still enrolled.
+    // Google's state is not the student's intent.
+    expect(evaluateVisibility(candidate({ tracking: 'NOT_TRACKED' }))).toEqual({
+      visible: false,
       reason: 'COURSE_NOT_TRACKED',
     });
   });
 
-  it('excludes coursework with no due date', () => {
-    // Preserved elsewhere, but a deadline feed cannot order what has no
-    // deadline, and inventing one is the fabrication this backend refuses.
-    expect(evaluateFeedEligibility(candidate({ deadline: NO_DEADLINE }))).toEqual({
-      eligible: false,
-      reason: 'NO_DUE_DATE',
-    });
+  it('does NOT hide coursework merely for having no due date', () => {
+    // Regression against the earlier model, which treated "no deadline" as a
+    // reason to hide. It decides the bucket, not visibility -- otherwise
+    // undated work is silently dropped rather than filed.
+    expect(evaluateVisibility(candidate({ deadline: NO_DEADLINE }))).toEqual({ visible: true });
   });
 
-  it('includes a date-only deadline', () => {
-    // The student was given a day, just not a time. That is still a deadline.
-    expect(evaluateFeedEligibility(candidate({ deadline: DATE_ONLY }))).toEqual({
-      eligible: true,
-    });
-  });
-
-  it('excludes coursework that targets another section', () => {
-    expect(evaluateFeedEligibility(candidate({ relevance: 'NOT_RELEVANT' }))).toEqual({
-      eligible: false,
+  it('hides coursework that targets another section', () => {
+    expect(evaluateVisibility(candidate({ relevance: 'NOT_RELEVANT' }))).toEqual({
+      visible: false,
       reason: 'NOT_RELEVANT_TO_STUDENT',
     });
   });
 
-  it('includes UNCERTAIN coursework by default', () => {
-    // Review items must stay visible; hiding them defeats the point of having
-    // a third value at all.
-    expect(evaluateFeedEligibility(candidate({ relevance: 'UNCERTAIN' }))).toEqual({
-      eligible: true,
-    });
+  it('shows UNCERTAIN coursework by default', () => {
+    expect(evaluateVisibility(candidate({ relevance: 'UNCERTAIN' }))).toEqual({ visible: true });
   });
 
-  it('can be asked to leave UNCERTAIN out', () => {
-    expect(
-      evaluateFeedEligibility(candidate({ relevance: 'UNCERTAIN' }), { includeUncertain: false }),
-    ).toEqual({ eligible: false, reason: 'NOT_RELEVANT_TO_STUDENT' });
-  });
-
-  it('excludes draft coursework', () => {
-    expect(evaluateFeedEligibility(candidate({ sourceState: 'DRAFT' }))).toMatchObject({
-      eligible: false,
+  it('hides drafts and removed items', () => {
+    expect(evaluateVisibility(candidate({ sourceState: 'DRAFT' }))).toMatchObject({
       reason: 'NOT_PUBLISHED',
+    });
+    expect(evaluateVisibility(candidate({ lifecycleStatus: 'SOURCE_REMOVED' }))).toMatchObject({
+      reason: 'LIFECYCLE_HIDDEN',
     });
   });
 
   it('keeps showing an item that merely went missing from one listing', () => {
-    expect(evaluateFeedEligibility(candidate({ lifecycleStatus: 'SOURCE_MISSING' }))).toEqual({
-      eligible: true,
+    expect(evaluateVisibility(candidate({ lifecycleStatus: 'SOURCE_MISSING' }))).toEqual({
+      visible: true,
     });
-  });
-
-  it('drops an item confirmed removed at source', () => {
-    expect(evaluateFeedEligibility(candidate({ lifecycleStatus: 'SOURCE_REMOVED' }))).toMatchObject(
-      { eligible: false, reason: 'LIFECYCLE_HIDDEN' },
-    );
   });
 
   it('hides submitted work unless asked for it', () => {
-    expect(evaluateFeedEligibility(candidate({ submissionState: 'TURNED_IN' }))).toMatchObject({
-      eligible: false,
+    expect(evaluateVisibility(candidate({ submissionState: 'TURNED_IN' }))).toMatchObject({
       reason: 'ALREADY_SUBMITTED',
     });
     expect(
-      evaluateFeedEligibility(candidate({ submissionState: 'TURNED_IN' }), {
-        includeSubmitted: true,
-      }),
-    ).toEqual({ eligible: true });
-  });
-
-  it('reports the most useful reason when several apply', () => {
-    // "You are not tracking this subject" is more actionable than "it has no
-    // due date", and both are true here.
-    expect(
-      evaluateFeedEligibility(
-        candidate({ tracking: 'NOT_TRACKED', deadline: NO_DEADLINE, relevance: 'NOT_RELEVANT' }),
-      ),
-    ).toEqual({ eligible: false, reason: 'COURSE_NOT_TRACKED' });
+      evaluateVisibility(candidate({ submissionState: 'TURNED_IN' }), { includeSubmitted: true }),
+    ).toEqual({ visible: true });
   });
 });
 
-describe('the undated companion query', () => {
-  it('accepts exactly what the deadline feed rejects for having no date', () => {
-    expect(isUndatedCandidate(candidate({ deadline: NO_DEADLINE }))).toBe(true);
-    expect(isUndatedCandidate(candidate({ deadline: EXACT }))).toBe(false);
-    expect(isUndatedCandidate(candidate({ deadline: DATE_ONLY }))).toBe(false);
+describe('which tab: upcoming, overdue, or undated', () => {
+  const KARACHI = 'Asia/Karachi';
+  const NOW = new Date('2026-08-31T09:00:00Z');
+
+  it('partitions every deadline into exactly one bucket', () => {
+    expect(deadlineBucket(EXACT, NOW, KARACHI)).toBe('OVERDUE');
+    expect(deadlineBucket(FUTURE, NOW, KARACHI)).toBe('UPCOMING');
+    expect(deadlineBucket(NO_DEADLINE, NOW, KARACHI)).toBe('UNDATED');
+    // A date with no time is still a deadline -- it belongs in a dated bucket,
+    // never in UNDATED.
+    expect(deadlineBucket(DATE_ONLY, NOW, KARACHI)).not.toBe('UNDATED');
   });
 
-  it('still respects tracking and relevance', () => {
-    expect(
-      isUndatedCandidate(candidate({ deadline: NO_DEADLINE, tracking: 'NOT_TRACKED' })),
-    ).toBe(false);
-    expect(
-      isUndatedCandidate(candidate({ deadline: NO_DEADLINE, relevance: 'NOT_RELEVANT' })),
-    ).toBe(false);
+  it('does not mark a date-only deadline overdue until that day has ended locally', () => {
+    // The bug this guards: due_sort_at puts a date-only item at 00:00 UTC, so a
+    // naive comparison calls it overdue at 05:00 local for a student in UTC+5 --
+    // five hours before their day begins, and a day before the actual deadline.
+    const dueToday = {
+      precision: 'DATE_ONLY' as const,
+      dueDate: { year: 2026, month: 8, day: 31 },
+      dueTime: null,
+      dueAt: null,
+    };
+    // 09:00Z is 14:00 in Karachi on the 31st -- the day is not over.
+    expect(isPastDue(dueToday, NOW, KARACHI)).toBe(false);
+    expect(deadlineBucket(dueToday, NOW, KARACHI)).toBe('UPCOMING');
   });
 
-  it('keeps uncertain undated work reachable', () => {
-    expect(
-      isUndatedCandidate(candidate({ deadline: NO_DEADLINE, relevance: 'UNCERTAIN' })),
-    ).toBe(true);
+  it('marks a date-only deadline overdue once the local day has rolled over', () => {
+    const dueYesterday = {
+      precision: 'DATE_ONLY' as const,
+      dueDate: { year: 2026, month: 8, day: 30 },
+      dueTime: null,
+      dueAt: null,
+    };
+    expect(deadlineBucket(dueYesterday, NOW, KARACHI)).toBe('OVERDUE');
   });
 
-  it('partitions cleanly: nothing is in both lists, nothing falls between them', () => {
-    for (const deadline of [EXACT, DATE_ONLY, NO_DEADLINE]) {
-      const item = candidate({ deadline });
-      const inFeed = evaluateFeedEligibility(item).eligible;
-      const inUndated = isUndatedCandidate(item);
-      expect(inFeed && inUndated).toBe(false);
-      expect(inFeed || inUndated).toBe(true);
-    }
+  it('respects the student timezone at the day boundary', () => {
+    const dueOn31st = {
+      precision: 'DATE_ONLY' as const,
+      dueDate: { year: 2026, month: 8, day: 31 },
+      dueTime: null,
+      dueAt: null,
+    };
+    // 20:00Z on the 31st is already 01:00 on 1 Sept in Karachi -- so the day
+    // has ended there, but not in UTC.
+    const late = new Date('2026-08-31T20:00:00Z');
+    expect(deadlineBucket(dueOn31st, late, KARACHI)).toBe('OVERDUE');
+    expect(deadlineBucket(dueOn31st, late, 'UTC')).toBe('UPCOMING');
+  });
+
+  it('uses the exact instant when there is one', () => {
+    const justPast = {
+      precision: 'EXACT' as const,
+      dueDate: { year: 2026, month: 8, day: 31 },
+      dueTime: { hours: 8, minutes: 59, seconds: 0 },
+      dueAt: new Date('2026-08-31T08:59:00Z'),
+    };
+    expect(deadlineBucket(justPast, NOW, KARACHI)).toBe('OVERDUE');
   });
 });
 

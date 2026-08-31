@@ -25,6 +25,10 @@ export default function Page() {
           <a href="/api/assignments/upcoming">GET /api/assignments/upcoming</a> — deadline feed
         </li>
         <li>
+          <a href="/api/assignments/overdue">GET /api/assignments/overdue</a> — past due, not
+          submitted
+        </li>
+        <li>
           <a href="/api/assignments/undated">GET /api/assignments/undated</a> — tracked coursework
           with no due date
         </li>

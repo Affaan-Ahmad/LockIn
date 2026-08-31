@@ -144,8 +144,20 @@ export interface UpcomingAssignment {
 
 export interface UpcomingQuery {
   readonly userId: string;
-  readonly from: Date;
+  /** Upper bound of the window. Null means "everything still ahead". */
   readonly to: Date | null;
+  readonly relevance: readonly StudentRelevance[];
+  readonly limit: number;
+  readonly includeSubmitted: boolean;
+}
+
+export interface OverdueQuery {
+  readonly userId: string;
+  /**
+   * Optional floor, so a student returning after a long break is not buried
+   * under a year of missed work. Null means everything.
+   */
+  readonly since: Date | null;
   readonly relevance: readonly StudentRelevance[];
   readonly limit: number;
   readonly includeSubmitted: boolean;
@@ -189,6 +201,16 @@ export interface AssignmentRepository {
    * every consumer sees the same feed.
    */
   findUpcoming(query: UpcomingQuery): Promise<readonly UpcomingAssignment[]>;
+
+  /**
+   * Coursework whose deadline has passed and that is not submitted.
+   *
+   * Its own query rather than a widened window on findUpcoming: the two are
+   * different lists, sorted differently, answering different questions. The
+   * boundary between them lives in SQL (app_is_past_due) so they partition
+   * exactly -- nothing appears in both, nothing falls between.
+   */
+  findOverdue(query: OverdueQuery): Promise<readonly UpcomingAssignment[]>;
 
   /**
    * Tracked coursework Google gave no due date for.

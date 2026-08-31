@@ -142,9 +142,12 @@ export function assignmentPayload(
     source_topic_id: null,
     assignee_mode: null,
     individual_student_ids: null,
-    due_date_raw: '2026-03-14',
+    // Far future on purpose: these fixtures exercise tracking, overrides and
+    // constraints, not the passage of time. A past date would silently move
+    // them into the overdue bucket and make unrelated tests fail every day.
+    due_date_raw: '2099-03-14',
     due_time_raw: '18:59:00',
-    due_at: '2026-03-14T18:59:00.000Z',
+    due_at: '2099-03-14T18:59:00.000Z',
     due_precision: 'EXACT' as const,
     source_created_at: null,
     source_updated_at: '2026-02-01T00:00:00.000Z',

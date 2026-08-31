@@ -215,6 +215,10 @@ export class FakeAssignmentRepository implements AssignmentRepository {
   findUndated(): Promise<readonly UndatedAssignment[]> {
     return Promise.resolve([]);
   }
+
+  findOverdue(): Promise<readonly UpcomingAssignment[]> {
+    return Promise.resolve([]);
+  }
 }
 
 /**

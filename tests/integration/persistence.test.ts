@@ -1,5 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
+import type { Relevance } from '@/infrastructure/supabase/database.types';
+
 import {
   assignmentPayload,
   IntegrationHarness,
@@ -254,7 +256,7 @@ describeIntegration('persistence invariants', () => {
 
       const value = row.data as unknown as { due_sort_at: string; due_at: string | null };
       // Sorts at the start of its UTC day, and still carries no instant.
-      expect(new Date(value.due_sort_at).toISOString()).toBe('2026-03-14T00:00:00.000Z');
+      expect(new Date(value.due_sort_at).toISOString()).toBe('2099-03-14T00:00:00.000Z');
       expect(value.due_at).toBeNull();
     });
   });
@@ -346,8 +348,7 @@ describeIntegration('persistence invariants', () => {
 
       const upcoming = await alice.db.rpc('app_upcoming_assignments', {
         p_user_id: alice.id,
-        p_from: '2026-01-01T00:00:00Z',
-        p_to: '2027-01-01T00:00:00Z',
+        p_to: '2100-01-01T00:00:00Z',
         p_relevance: ['RELEVANT', 'NOT_RELEVANT', 'UNCERTAIN'],
         p_include_submitted: true,
         p_limit: 100,
@@ -553,8 +554,7 @@ describeIntegration('persistence invariants', () => {
     it('keeps untracked coursework out of the deadline feed', async () => {
       const { data } = await alice.db.rpc('app_upcoming_assignments', {
         p_user_id: alice.id,
-        p_from: '2026-01-01T00:00:00Z',
-        p_to: '2027-01-01T00:00:00Z',
+        p_to: '2100-01-01T00:00:00Z',
         p_relevance: ['RELEVANT', 'NOT_RELEVANT', 'UNCERTAIN'],
         p_include_submitted: true,
         p_limit: 100,
@@ -571,8 +571,7 @@ describeIntegration('persistence invariants', () => {
 
       const { data } = await alice.db.rpc('app_upcoming_assignments', {
         p_user_id: alice.id,
-        p_from: '2026-01-01T00:00:00Z',
-        p_to: '2027-01-01T00:00:00Z',
+        p_to: '2100-01-01T00:00:00Z',
         p_relevance: ['RELEVANT', 'NOT_RELEVANT', 'UNCERTAIN'],
         p_include_submitted: true,
         p_limit: 100,
@@ -637,7 +636,6 @@ describeIntegration('persistence invariants', () => {
     it('keeps it out of the deadline feed', async () => {
       const { data } = await alice.db.rpc('app_upcoming_assignments', {
         p_user_id: alice.id,
-        p_from: '2000-01-01T00:00:00Z',
         p_to: null,
         p_relevance: ['RELEVANT', 'NOT_RELEVANT', 'UNCERTAIN'],
         p_include_submitted: true,
@@ -656,6 +654,120 @@ describeIntegration('persistence invariants', () => {
 
       expect(error).toBeNull();
       expect((data ?? []).map((row) => row.assignment_id)).toContain(undatedId);
+    });
+  });
+
+  describe('upcoming / overdue / undated partition', () => {
+    it('places every visible assignment in exactly one bucket', async () => {
+      const args = {
+        p_user_id: alice.id,
+        p_relevance: ['RELEVANT', 'NOT_RELEVANT', 'UNCERTAIN'] as Relevance[],
+        p_include_submitted: true,
+        p_limit: 500,
+      };
+
+      const upcoming = await alice.db.rpc('app_upcoming_assignments', { ...args, p_to: null });
+      const overdue = await alice.db.rpc('app_overdue_assignments', { ...args, p_since: null });
+      const undated = await alice.db.rpc('app_undated_assignments', {
+        p_user_id: alice.id,
+        p_relevance: ['RELEVANT', 'NOT_RELEVANT', 'UNCERTAIN'],
+        p_limit: 500,
+      });
+
+      expect(upcoming.error).toBeNull();
+      expect(overdue.error).toBeNull();
+      expect(undated.error).toBeNull();
+
+      const ids = [
+        ...(upcoming.data ?? []).map((r) => r.assignment_id),
+        ...(overdue.data ?? []).map((r) => r.assignment_id),
+        ...(undated.data ?? []).map((r) => r.assignment_id),
+      ];
+
+      // The partition is the point: an assignment in two tabs is a duplicate,
+      // and one in none has silently vanished.
+      expect(new Set(ids).size).toBe(ids.length);
+    });
+
+    it('puts a past deadline in overdue and a future one in upcoming', async () => {
+      const past = await alice.db.rpc('app_upsert_assignments', {
+        p_user_id: alice.id,
+        p_course_id: aliceCourseId,
+        p_items: [
+          assignmentPayload({
+            source_item_id: 'overdue-1',
+            title: 'Missed lab',
+            due_date_raw: '2020-01-01',
+            due_time_raw: '18:59:00',
+            due_at: '2020-01-01T18:59:00.000Z',
+          }),
+        ],
+        p_synced_at: new Date().toISOString(),
+      });
+      expect(past.error).toBeNull();
+      const pastId = past.data![0]!.assignment_id;
+
+      const future = await alice.db.rpc('app_upsert_assignments', {
+        p_user_id: alice.id,
+        p_course_id: aliceCourseId,
+        p_items: [
+          assignmentPayload({
+            source_item_id: 'future-1',
+            title: 'Upcoming lab',
+            due_date_raw: '2099-01-01',
+            due_time_raw: '18:59:00',
+            due_at: '2099-01-01T18:59:00.000Z',
+          }),
+        ],
+        p_synced_at: new Date().toISOString(),
+      });
+      const futureId = future.data![0]!.assignment_id;
+
+      const args = {
+        p_user_id: alice.id,
+        p_relevance: ['RELEVANT', 'NOT_RELEVANT', 'UNCERTAIN'] as Relevance[],
+        p_include_submitted: true,
+        p_limit: 500,
+      };
+      const overdue = await alice.db.rpc('app_overdue_assignments', { ...args, p_since: null });
+      const upcoming = await alice.db.rpc('app_upcoming_assignments', { ...args, p_to: null });
+
+      expect((overdue.data ?? []).map((r) => r.assignment_id)).toContain(pastId);
+      expect((overdue.data ?? []).map((r) => r.assignment_id)).not.toContain(futureId);
+      expect((upcoming.data ?? []).map((r) => r.assignment_id)).toContain(futureId);
+      expect((upcoming.data ?? []).map((r) => r.assignment_id)).not.toContain(pastId);
+    });
+
+    it('does not call a date-only deadline overdue on the day it is due', async () => {
+      // due_sort_at puts a date-only item at 00:00 UTC, so a naive comparison
+      // marks it overdue while the student still has the whole day.
+      const today = new Date().toISOString().slice(0, 10);
+      const created = await alice.db.rpc('app_upsert_assignments', {
+        p_user_id: alice.id,
+        p_course_id: aliceCourseId,
+        p_items: [
+          assignmentPayload({
+            source_item_id: 'dateonly-today',
+            title: 'Due today, no time given',
+            due_precision: 'DATE_ONLY',
+            due_date_raw: today,
+            due_time_raw: null,
+            due_at: null,
+          }),
+        ],
+        p_synced_at: new Date().toISOString(),
+      });
+      const id = created.data![0]!.assignment_id;
+
+      const overdue = await alice.db.rpc('app_overdue_assignments', {
+        p_user_id: alice.id,
+        p_since: null,
+        p_relevance: ['RELEVANT', 'NOT_RELEVANT', 'UNCERTAIN'],
+        p_include_submitted: true,
+        p_limit: 500,
+      });
+
+      expect((overdue.data ?? []).map((r) => r.assignment_id)).not.toContain(id);
     });
   });
 

@@ -3,6 +3,7 @@ import 'server-only';
 import type {
   AssignmentRepository,
   AssignmentUpsertResult,
+  OverdueQuery,
   UndatedAssignment,
   UndatedQuery,
   UpcomingAssignment,
@@ -139,7 +140,6 @@ export class SupabaseAssignmentRepository implements AssignmentRepository {
   async findUpcoming(query: UpcomingQuery): Promise<readonly UpcomingAssignment[]> {
     const { data, error } = await this.db.rpc('app_upcoming_assignments', {
       p_user_id: query.userId,
-      p_from: query.from.toISOString(),
       p_to: query.to === null ? null : query.to.toISOString(),
       p_relevance: [...query.relevance],
       p_include_submitted: query.includeSubmitted,
@@ -147,6 +147,24 @@ export class SupabaseAssignmentRepository implements AssignmentRepository {
     });
 
     if (error !== null) throw translatePostgrestError(error, 'assignments.findUpcoming');
+    return (data ?? []).map(toUpcoming);
+  }
+
+  /**
+   * Missed work. Same shape as upcoming, opposite side of the same boundary
+   * function, ordered most-recently-missed first -- which is how a student
+   * triages, rather than oldest-first.
+   */
+  async findOverdue(query: OverdueQuery): Promise<readonly UpcomingAssignment[]> {
+    const { data, error } = await this.db.rpc('app_overdue_assignments', {
+      p_user_id: query.userId,
+      p_since: query.since === null ? null : query.since.toISOString(),
+      p_relevance: [...query.relevance],
+      p_include_submitted: query.includeSubmitted,
+      p_limit: query.limit,
+    });
+
+    if (error !== null) throw translatePostgrestError(error, 'assignments.findOverdue');
     return (data ?? []).map(toUpcoming);
   }
 
