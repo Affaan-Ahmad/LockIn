@@ -121,8 +121,6 @@ export function mapStudentSubmission(
     // Google omits `late` when it is false *and* when it is unknown. We cannot
     // distinguish those, so absence stays null rather than becoming "on time".
     late: submission.late ?? null,
-    assignedGrade: submission.assignedGrade ?? null,
-    draftGrade: submission.draftGrade ?? null,
     alternateLink: emptyToNull(submission.alternateLink),
     sourceCreatedAt: parseInstant(submission.creationTime),
     sourceUpdatedAt: parseInstant(submission.updateTime),

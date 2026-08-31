@@ -111,6 +111,10 @@ export const googleStudentSubmissionSchema = z.object({
   updateTime: rfc3339.optional(),
   state: z.string().optional(),
   late: z.boolean().optional(),
+  // Parsed and then dropped. Google sends these in the submission payload and
+  // LockIn deliberately does not store them; accepting them here keeps the
+  // schema an accurate description of what Google sends, and the mapper is
+  // where they stop.
   draftGrade: looseNumber.optional(),
   assignedGrade: looseNumber.optional(),
   alternateLink: z.string().optional(),

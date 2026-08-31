@@ -221,8 +221,6 @@ export class SupabaseSubmissionRepository implements SubmissionRepository {
         source_item_id: record.sourceItemId,
         state: record.state,
         late: record.late,
-        assigned_grade: record.assignedGrade,
-        draft_grade: record.draftGrade,
         alternate_link: record.alternateLink,
         source_created_at: toDbTimestamp(record.sourceCreatedAt),
         source_updated_at: toDbTimestamp(record.sourceUpdatedAt),

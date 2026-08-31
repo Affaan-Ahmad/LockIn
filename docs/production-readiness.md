@@ -74,7 +74,7 @@ verified against a live Postgres by 27 passing integration tests.
 | 10 | **No monitoring or alerting.** | MEDIUM | Nobody would know sync had been failing for a week. |
 | 11 | **No backup restore test.** | MEDIUM | Supabase takes backups; an untested restore is not a proven restore. |
 | 12 | **No threat model document.** | MEDIUM | |
-| 13 | **No legal documents.** No privacy policy, terms, or security contact. | CRITICAL for launch | Drafting is in scope; legal sufficiency is not. |
+| 13 | **No legal documents.** ~~None existed.~~ **PARTIALLY ADDRESSED 2026-08-31.** Privacy policy, terms, cookie policy and disclaimer drafted from the schema and scope list, published at `/legal/*`, public in middleware, linked from a footer on both the app shell and the signed-out screen. **STILL OPEN:** never reviewed by a lawyer; controller legal name and the privacy/security contact addresses are unfilled placeholders. | CRITICAL for launch | Drafting is in scope; legal sufficiency is not. |
 | 14 | **Google OAuth app is in Testing mode**, unverified. | CRITICAL for launch | See below. |
 | 15 | ~~Dev `service_role` credentials exposed.~~ **RESOLVED 2026-08-30.** Both exposed credentials are dead: the `sb_secret_` key was replaced, and legacy JWT-based API keys were disabled project-wide. | ~~HIGH~~ CLOSED | See the incident log below. |
 
@@ -238,17 +238,26 @@ To be completed and verified before launch. Populated from the schema as it stan
 | Time zone | Student input | Render deadlines correctly | `academic_profiles` | TBD | TBD |
 | Course names, sections, state | Classroom | Course selection and display | `courses`, `topics` | TBD | TBD |
 | Coursework titles, descriptions, due dates | Classroom | The product | `assignments` | TBD | TBD |
-| Submission state, lateness, grades | Classroom | Filter completed work | `submissions` | TBD | TBD |
+| Submission state, lateness | Classroom | Filter completed work | `submissions` | Until deletion | Cascade |
 | Classification verdicts, scope, evidence | Derived | Explainability, audit | `assignment_classifications` | TBD | TBD |
 | Manual overrides, course tracking | Student decisions | Product behaviour | `classification_overrides`, `course_tracking` | TBD | TBD |
 | Google access + refresh tokens | OAuth | Call Classroom on the student's behalf | `google_connections`, **encrypted** | Until disconnect/deletion | Revoke + delete |
 | Sync history and errors | Internal | Debugging, freshness | `sync_runs`, `sync_errors`, `sync_course_results` | **TBD — currently unbounded** | TBD |
 
-Note that **grades** are stored (`assigned_grade`, `draft_grade`). That raises the sensitivity of
-this database and belongs in the privacy policy explicitly. Whether the product needs them at all is
-worth revisiting — minimal collection is the standing rule, and nothing currently reads them.
+~~Note that **grades** are stored (`assigned_grade`, `draft_grade`).~~ **RESOLVED 2026-08-31.**
+Grades are no longer stored. Migration `0009_drop_grades.sql` drops both columns and replaces
+`app_upsert_submissions`; the mapper discards the fields on arrival, and a unit test asserts they
+never survive it. The `student-submissions.me.readonly` scope is unchanged because submission
+*state* is what hides completed work, so Google still sends grades and LockIn now throws them away.
+
+Deleting the data was preferred to disclosing it: nothing read those columns, they were the most
+sensitive fields in the database, and minimal collection is the standing rule.
 
 ## Subprocessors
+
+**Data controller:** an individual based in Pakistan. Legal name and contact addresses are
+placeholders in `src/app/legal/content.tsx` and must be filled before launch; grep for
+`TO BE CONFIRMED`.
 
 | Provider | Data | Region | Status |
 | --- | --- | --- | --- |

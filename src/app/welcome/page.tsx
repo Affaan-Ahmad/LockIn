@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { redirect } from 'next/navigation';
 
+import { Footer } from '@/components/shell/Footer';
 import { Button } from '@/components/ui/Button';
 import { ProfileForm } from '@/features/onboarding/ProfileForm';
 import { getSessionUser, loadSetupState } from '@/lib/queries';
@@ -76,6 +77,8 @@ function SignInScreen() {
             Read-only access to your Classroom courses and coursework. LockIn never posts, submits
             or changes anything.
           </p>
+
+          <Footer />
         </div>
       </div>
 
@@ -119,6 +122,7 @@ function StepFrame({
       </h1>
       <p className="mt-3 text-base leading-relaxed text-ink-soft">{intro}</p>
       <div className="mt-7">{children}</div>
+      <Footer />
     </main>
   );
 }

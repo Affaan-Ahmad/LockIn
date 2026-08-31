@@ -191,21 +191,40 @@ describe('mapStudentSubmission', () => {
     expect(result.ok && result.value.late).toBeNull();
   });
 
-  it('maps grades and state', () => {
+  it('keeps state and lateness', () => {
     const parsed = googleStudentSubmissionSchema.parse({
       id: 's1',
       courseId: 'c1',
       courseWorkId: 'w1',
       state: 'TURNED_IN',
       late: true,
-      assignedGrade: 42,
     });
     const result = mapStudentSubmission(parsed);
-    expect(result.ok && result.value).toMatchObject({
-      state: 'TURNED_IN',
-      late: true,
+    expect(result.ok && result.value).toMatchObject({ state: 'TURNED_IN', late: true });
+  });
+
+  it('drops the grades Google sends', () => {
+    // A privacy guarantee, not an implementation detail. Grades are the most
+    // sensitive field in the Classroom payload and no feature reads them, so
+    // they must not survive the mapper into anything that gets persisted.
+    // Asserted on the way in, because by the time it reaches the database the
+    // column is gone and the failure would be silent.
+    const parsed = googleStudentSubmissionSchema.parse({
+      id: 's1',
+      courseId: 'c1',
+      courseWorkId: 'w1',
+      state: 'RETURNED',
       assignedGrade: 42,
+      draftGrade: 38,
     });
+    const result = mapStudentSubmission(parsed);
+
+    expect(result.ok).toBe(true);
+    const mapped: Record<string, unknown> = result.ok ? { ...result.value } : {};
+    expect(Object.keys(mapped)).not.toContain('assignedGrade');
+    expect(Object.keys(mapped)).not.toContain('draftGrade');
+    expect(Object.values(mapped)).not.toContain(42);
+    expect(Object.values(mapped)).not.toContain(38);
   });
 });
 

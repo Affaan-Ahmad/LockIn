@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import Link from 'next/link';
 
 import { SettingsIcon } from '@/components/icons';
+import { Footer } from './Footer';
 import { Nav } from './Nav';
 
 /**
@@ -79,6 +80,7 @@ export function AppShell({
         className="mx-auto max-w-[var(--content-max)] px-4 pb-[calc(var(--nav-h)+env(safe-area-inset-bottom)+1.5rem)] md:px-8 md:pb-12"
       >
         {children}
+        <Footer inShell />
       </main>
 
       <Nav reviewCount={reviewCount} />

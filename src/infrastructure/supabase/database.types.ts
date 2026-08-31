@@ -269,8 +269,6 @@ export type SubmissionRow = {
   source_submission_id: string;
   state: SubmissionStateDb;
   late: boolean | null;
-  assigned_grade: number | null;
-  draft_grade: number | null;
   alternate_link: string | null;
   source_created_at: string | null;
   source_updated_at: string | null;
@@ -331,8 +329,6 @@ export type SubmissionUpsertPayload = {
   source_item_id: string;
   state: SubmissionStateDb;
   late: boolean | null;
-  assigned_grade: number | null;
-  draft_grade: number | null;
   alternate_link: string | null;
   source_created_at: string | null;
   source_updated_at: string | null;

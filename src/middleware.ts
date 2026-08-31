@@ -25,8 +25,15 @@ import { buildContentSecurityPolicy } from '@/shared/security-headers';
  * a misconfigured matcher must not be able to expose a screen.
  */
 
-/** Reachable without a session. Everything else redirects to sign-in. */
-const PUBLIC_PATHS = ['/welcome', '/auth', '/api'];
+/**
+ * Reachable without a session. Everything else redirects to sign-in.
+ *
+ * `/legal` is public and has to stay that way. The people who most need the
+ * privacy policy are the ones deciding whether to sign in at all, and Google's
+ * OAuth reviewers never will; a privacy policy behind a login is not a
+ * published privacy policy.
+ */
+const PUBLIC_PATHS = ['/welcome', '/auth', '/api', '/legal'];
 
 function isPublic(pathname: string): boolean {
   return PUBLIC_PATHS.some(

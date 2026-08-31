@@ -71,8 +71,6 @@ export interface SubmissionSourceRecord {
   readonly state: SubmissionState;
   /** Null when the source did not tell us, which is not the same as "on time". */
   readonly late: boolean | null;
-  readonly assignedGrade: number | null;
-  readonly draftGrade: number | null;
   readonly alternateLink: string | null;
   readonly sourceCreatedAt: Date | null;
   readonly sourceUpdatedAt: Date | null;
