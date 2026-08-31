@@ -1,42 +1,48 @@
 import type { ReactNode } from 'react';
 
-import { cx, s } from '@/lib/cx';
-
-import styles from './Surface.module.css';
+import { cx } from '@/lib/cx';
 
 /**
- * The two surface families, as one component.
+ * The two surface families.
  *
- * Neomorphic variants (`raised`, `sunken`) are for structural chrome:
- * navigation, segmented controls, settings rows. Clay is for content the
- * student should want to touch: assignment cards, course cards, summaries.
+ * Neomorphic variants (`raised`, `sunken`) are structural chrome: navigation,
+ * segmented controls, settings rows. Clay is for content the student should
+ * want to touch: assignment cards, course cards, summaries.
  *
- * It exists so shadow values live in exactly one place. Scattering
- * `box-shadow: 2px 2px 5px ...` through components is how a design system turns
- * into forty slightly different shadows nobody can retune.
+ * The composed treatments live as `@utility` rules in globals.css rather than
+ * as utility strings here, because a clay card is a background, a border, a
+ * radius and two shadow layers — spelling that out on every element is how a
+ * design system turns into forty slightly different shadows nobody can retune.
  *
- * A Server Component: it renders markup and never needs the browser.
+ * A Server Component. It renders markup and never needs the browser.
  */
 
-export type SurfaceVariant = 'raised' | 'raisedLg' | 'sunken' | 'clay' | 'flat';
+export type SurfaceVariant = 'raised' | 'sunken' | 'clay' | 'flat';
 export type SurfacePad = 'none' | 'sm' | 'md' | 'lg';
+
+const VARIANT: Record<SurfaceVariant, string> = {
+  raised: 'surface-raised',
+  sunken: 'surface-sunken',
+  clay: 'clay',
+  flat: 'surface-flat',
+};
+
+const PAD: Record<SurfacePad, string> = {
+  none: '',
+  sm: 'p-3',
+  md: 'p-4',
+  lg: 'p-5',
+};
 
 export interface SurfaceProps {
   readonly variant?: SurfaceVariant;
   readonly pad?: SurfacePad;
-  /** Adds press/hover feedback. Only for surfaces that actually do something. */
+  /** Adds hover lift and press feedback. Only for surfaces that do something. */
   readonly interactive?: boolean;
   readonly as?: 'div' | 'section' | 'article' | 'li' | 'aside' | 'header' | 'nav';
   readonly className?: string;
   readonly children: ReactNode;
 }
-
-const PAD: Record<SurfacePad, string> = {
-  none: '',
-  sm: 'padSm',
-  md: 'padMd',
-  lg: 'padLg',
-};
 
 export function Surface({
   variant = 'raised',
@@ -46,15 +52,12 @@ export function Surface({
   className,
   children,
 }: SurfaceProps) {
-  const isClay = variant === 'clay';
-
   return (
     <Tag
       className={cx(
-        s(styles, isClay ? 'clay' : 'surface'),
-        isClay ? '' : s(styles, variant),
-        s(styles, PAD[pad]),
-        interactive ? s(styles, 'interactive') : '',
+        VARIANT[variant],
+        PAD[pad],
+        interactive ? 'lift active:translate-y-px hover:-translate-y-px' : '',
         className,
       )}
     >

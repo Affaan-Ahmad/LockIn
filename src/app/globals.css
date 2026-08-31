@@ -1,13 +1,24 @@
+@import 'tailwindcss';
+
 /* ==========================================================================
-   LockIn design tokens
+   LockIn design system
 
-   One place where every colour, shadow, radius, spacing step and duration is
-   defined. Components reference tokens by name and never hardcode a value, so
-   the whole surface treatment can be retuned here without touching a component.
+   Tailwind v4, configured in CSS rather than a JS file, so the utilities and
+   the raw values they map sit next to each other.
 
-   Colours are OKLCH. Unlike hex or HSL, equal lightness numbers look equally
-   light across hues, which is what makes a palette of six semantic colours read
-   as one system rather than six unrelated choices.
+   Two layers, deliberately:
+
+     1. RAW TOKENS on :root. Plain custom properties that swap for dark mode.
+        Single source of truth.
+     2. `@theme inline` maps them onto Tailwind names. `inline` is load-bearing:
+        it makes `bg-raised` emit `var(--surface-raised)` rather than a resolved
+        colour frozen at build time. Without it, switching theme would not move
+        a single utility.
+
+   Raw tokens are deliberately named outside Tailwind's namespaces. `--text-*`
+   is Tailwind's font-size namespace, so a raw `--text-primary` would silently
+   create a font-size utility called `text-primary`; `--shadow-*` and `--ease-*`
+   would be self-referential. Hence `--ink-*`, `--elev-*`, `--curve-*`.
    ========================================================================== */
 
 :root {
@@ -17,13 +28,12 @@
      Surfaces.
 
      Warm porcelain, not grey. This single choice is what separates the look
-     from 2020-era neumorphism, which was uniformly grey and looked dead. A
-     trace of warmth (hue 85, tiny chroma) makes the same shadow technique read
-     as ceramic instead of plastic.
+     from 2020-era neumorphism, where a uniformly grey ground made the same
+     shadow technique look dead. A trace of warmth (hue 85, tiny chroma) reads
+     as ceramic rather than plastic.
 
-     Raised is *lighter* than ground and sunken is darker, so depth survives
-     even when shadows are suppressed -- which they are for anyone using a
-     high-contrast or forced-colours mode.
+     Raised is lighter than ground and sunken is darker, so depth survives even
+     when shadows are stripped — which they are in forced-colours mode.
      -------------------------------------------------------------------- */
   --surface-ground: oklch(96.5% 0.008 85);
   --surface-raised: oklch(98.4% 0.006 85);
@@ -31,25 +41,25 @@
   --surface-pressed: oklch(94.6% 0.010 85);
   --surface-overlay: oklch(99.2% 0.004 85);
 
-  /* Text. Slightly cool against the warm ground: the tiny hue opposition adds
-     perceived contrast without darkening the text further. */
-  --text-primary: oklch(24% 0.021 265);
-  --text-secondary: oklch(47% 0.019 265);
-  --text-muted: oklch(60% 0.016 265);
-  --text-on-brand: oklch(99% 0.004 272);
+  /* Slightly cool against the warm ground: the small hue opposition adds
+     perceived contrast without having to darken the text further. */
+  --ink: oklch(24% 0.021 265);
+  --ink-soft: oklch(47% 0.019 265);
+  --ink-muted: oklch(60% 0.016 265);
+  --ink-on-brand: oklch(99% 0.004 272);
 
-  --border-subtle: oklch(88% 0.010 85);
-  --border-strong: oklch(78% 0.014 85);
+  --line: oklch(88% 0.010 85);
+  --line-strong: oklch(78% 0.014 85);
 
   /* ----------------------------------------------------------------------
      Brand and semantics.
 
-     Iris rather than a corporate blue or a Material purple. Semantic hues stay
-     conventional on purpose: a student reading a deadline should not have to
+     Iris, not a corporate blue or a Material purple. Semantic hues stay
+     conventional on purpose — a student reading a deadline should not have to
      learn what our red means.
 
-     Review is orchid, ~58 degrees from brand, because "we are not sure" needs
-     its own voice and must never read as an error. Uncertainty is not failure.
+     Review is orchid, well away from both brand and danger: "we are not sure"
+     needs its own voice, and uncertainty must never look like failure.
      -------------------------------------------------------------------- */
   --brand: oklch(55% 0.19 272);
   --brand-hover: oklch(50% 0.19 272);
@@ -66,89 +76,68 @@
   --review-soft: oklch(95% 0.038 330);
 
   /* ----------------------------------------------------------------------
-     Shadows.
+     Elevation. Two layers maximum, modest blur.
 
-     Two layers maximum, modest blur. Neumorphism's usual mistake is four
-     stacked shadows at 40px blur on every element, which is both ugly and
-     genuinely expensive once a list has fifty cards.
+     Neumorphism's usual mistake is four stacked shadows at 40px blur on every
+     element — ugly, and genuinely expensive once a list holds fifty cards.
 
-     The light layer is pure white; the dark layer is a desaturated version of
-     the ground rather than black, which is what keeps the surface looking like
-     tinted material rather than something floating over a void.
+     The dark layer is a desaturated ground colour rather than black, which is
+     what keeps a surface looking like tinted material instead of something
+     floating over a void.
      -------------------------------------------------------------------- */
-  --shadow-raised:
+  --elev-raised:
     2px 2px 5px oklch(72% 0.020 85 / 0.30),
     -2px -2px 5px oklch(100% 0 0 / 0.85);
 
-  --shadow-raised-lg:
+  --elev-raised-lg:
     4px 4px 10px oklch(70% 0.022 85 / 0.28),
     -3px -3px 8px oklch(100% 0 0 / 0.9);
 
-  --shadow-inset:
+  --elev-inset:
     inset 2px 2px 4px oklch(72% 0.020 85 / 0.28),
     inset -2px -2px 4px oklch(100% 0 0 / 0.75);
 
   /* Clay: one directional drop plus an inner top highlight. The highlight is
-     what reads as "inflated"; without it the card is just a rounded box. */
-  --shadow-clay:
+     what reads as inflated; without it a clay card is just a rounded box. */
+  --elev-clay:
     0 6px 16px -6px oklch(52% 0.030 85 / 0.24),
     inset 0 1.5px 0 oklch(100% 0 0 / 0.9);
 
-  --shadow-clay-lifted:
+  --elev-clay-lifted:
     0 12px 24px -8px oklch(52% 0.030 85 / 0.28),
     inset 0 1.5px 0 oklch(100% 0 0 / 0.9);
 
-  /* --------------------------------------------------------------------- */
-  --radius-sm: 0.5rem;
-  --radius-md: 0.875rem;
-  --radius-lg: 1.25rem;
-  --radius-xl: 1.75rem;
-  --radius-full: 999px;
-
-  /* 4pt scale. */
-  --space-1: 0.25rem;
-  --space-2: 0.5rem;
-  --space-3: 0.75rem;
-  --space-4: 1rem;
-  --space-5: 1.5rem;
-  --space-6: 2rem;
-  --space-7: 3rem;
-  --space-8: 4rem;
-
-  --text-xs: 0.75rem;
-  --text-sm: 0.8125rem;
-  --text-base: 0.9375rem;
-  --text-md: 1.0625rem;
-  --text-lg: 1.375rem;
-  --text-xl: 1.75rem;
-  --text-2xl: 2.25rem;
+  --r-sm: 0.5rem;
+  --r-md: 0.875rem;
+  --r-lg: 1.25rem;
+  --r-xl: 1.75rem;
+  --r-full: 999px;
 
   --dur-fast: 120ms;
   --dur-base: 200ms;
-  --ease-out: cubic-bezier(0.22, 0.61, 0.36, 1);
-  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --curve-out: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --curve-in-out: cubic-bezier(0.65, 0, 0.35, 1);
 
-  /* Content width. Cards stretched across a 27" monitor are unreadable; this
-     keeps line length sane without wasting the space entirely. */
+  /* Cards stretched across a 27" monitor are unreadable. */
   --content-max: 44rem;
-  --nav-height: 4.25rem;
+  --nav-h: 4.25rem;
 }
 
 /* ==========================================================================
-   Dark mode.
+   Dark mode — rebuilt, not inverted.
 
-   Rebuilt, not inverted. Inverting produces grey-on-grey mud, because the
-   optical rules change: in the dark a raised surface is lighter than its
-   ground, the "light" shadow becomes a faint rim rather than white, and the
-   dark shadow has to be much stronger to register at all.
+   Inverting produces grey-on-grey mud, because the optical rules change: in the
+   dark a raised surface is lighter than its ground, the light shadow becomes a
+   faint rim rather than white, and the dark shadow must be far stronger to
+   register at all.
 
-   Chroma also drops on the semantic colours -- fully saturated red on a dark
-   ground vibrates and is genuinely harder to read at 2am, which is when a
-   student is most likely to be looking at a deadline.
+   Chroma drops on every semantic colour. Fully saturated red on a dark ground
+   vibrates and is measurably harder to read — at 2am, which is exactly when a
+   student is looking at a deadline.
    ========================================================================== */
-:root[data-theme='dark'],
-:root:not([data-theme='light']) {
-  @media (prefers-color-scheme: dark) {
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
     color-scheme: dark;
 
     --surface-ground: oklch(21% 0.014 268);
@@ -157,13 +146,12 @@
     --surface-pressed: oklch(19% 0.014 268);
     --surface-overlay: oklch(28% 0.017 268);
 
-    --text-primary: oklch(96% 0.008 268);
-    --text-secondary: oklch(76% 0.014 268);
-    --text-muted: oklch(62% 0.014 268);
-    --text-on-brand: oklch(99% 0.004 272);
+    --ink: oklch(96% 0.008 268);
+    --ink-soft: oklch(76% 0.014 268);
+    --ink-muted: oklch(62% 0.014 268);
 
-    --border-subtle: oklch(32% 0.018 268);
-    --border-strong: oklch(42% 0.022 268);
+    --line: oklch(32% 0.018 268);
+    --line-strong: oklch(42% 0.022 268);
 
     --brand: oklch(70% 0.15 272);
     --brand-hover: oklch(76% 0.15 272);
@@ -179,30 +167,30 @@
     --review: oklch(72% 0.14 330);
     --review-soft: oklch(31% 0.065 330);
 
-    --shadow-raised:
+    --elev-raised:
       2px 2px 6px oklch(10% 0.01 268 / 0.55),
       -1px -1px 3px oklch(48% 0.02 268 / 0.22);
 
-    --shadow-raised-lg:
+    --elev-raised-lg:
       5px 5px 12px oklch(10% 0.01 268 / 0.6),
       -2px -2px 6px oklch(48% 0.02 268 / 0.20);
 
-    --shadow-inset:
+    --elev-inset:
       inset 2px 2px 5px oklch(10% 0.01 268 / 0.5),
       inset -1px -1px 3px oklch(48% 0.02 268 / 0.16);
 
-    --shadow-clay:
+    --elev-clay:
       0 8px 20px -8px oklch(8% 0.01 268 / 0.65),
       inset 0 1px 0 oklch(70% 0.02 268 / 0.16);
 
-    --shadow-clay-lifted:
+    --elev-clay-lifted:
       0 16px 30px -10px oklch(8% 0.01 268 / 0.7),
       inset 0 1px 0 oklch(70% 0.02 268 / 0.16);
   }
 }
 
-/* An explicit choice must win over the system preference in both directions,
-   so the dark tokens are repeated for the stamped attribute. */
+/* An explicit choice must beat the system preference in both directions, so the
+   dark values are repeated for the stamped attribute. */
 :root[data-theme='dark'] {
   color-scheme: dark;
 
@@ -212,12 +200,12 @@
   --surface-pressed: oklch(19% 0.014 268);
   --surface-overlay: oklch(28% 0.017 268);
 
-  --text-primary: oklch(96% 0.008 268);
-  --text-secondary: oklch(76% 0.014 268);
-  --text-muted: oklch(62% 0.014 268);
+  --ink: oklch(96% 0.008 268);
+  --ink-soft: oklch(76% 0.014 268);
+  --ink-muted: oklch(62% 0.014 268);
 
-  --border-subtle: oklch(32% 0.018 268);
-  --border-strong: oklch(42% 0.022 268);
+  --line: oklch(32% 0.018 268);
+  --line-strong: oklch(42% 0.022 268);
 
   --brand: oklch(70% 0.15 272);
   --brand-hover: oklch(76% 0.15 272);
@@ -233,25 +221,120 @@
   --review: oklch(72% 0.14 330);
   --review-soft: oklch(31% 0.065 330);
 
-  --shadow-raised:
+  --elev-raised:
     2px 2px 6px oklch(10% 0.01 268 / 0.55),
     -1px -1px 3px oklch(48% 0.02 268 / 0.22);
 
-  --shadow-raised-lg:
+  --elev-raised-lg:
     5px 5px 12px oklch(10% 0.01 268 / 0.6),
     -2px -2px 6px oklch(48% 0.02 268 / 0.20);
 
-  --shadow-inset:
+  --elev-inset:
     inset 2px 2px 5px oklch(10% 0.01 268 / 0.5),
     inset -1px -1px 3px oklch(48% 0.02 268 / 0.16);
 
-  --shadow-clay:
+  --elev-clay:
     0 8px 20px -8px oklch(8% 0.01 268 / 0.65),
     inset 0 1px 0 oklch(70% 0.02 268 / 0.16);
 
-  --shadow-clay-lifted:
+  --elev-clay-lifted:
     0 16px 30px -10px oklch(8% 0.01 268 / 0.7),
     inset 0 1px 0 oklch(70% 0.02 268 / 0.16);
+}
+
+/* ==========================================================================
+   Tailwind theme mapping.
+   ========================================================================== */
+
+@theme inline {
+  --color-ground: var(--surface-ground);
+  --color-raised: var(--surface-raised);
+  --color-sunken: var(--surface-sunken);
+  --color-pressed: var(--surface-pressed);
+  --color-overlay: var(--surface-overlay);
+
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-ink-muted: var(--ink-muted);
+  --color-on-brand: var(--ink-on-brand);
+
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-soft: var(--brand-soft);
+
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-review: var(--review);
+  --color-review-soft: var(--review-soft);
+
+  --shadow-raised: var(--elev-raised);
+  --shadow-raised-lg: var(--elev-raised-lg);
+  --shadow-inset: var(--elev-inset);
+  --shadow-clay: var(--elev-clay);
+  --shadow-clay-lifted: var(--elev-clay-lifted);
+
+  /* Named for their job, not their size, so `rounded-card` stays correct if the
+     radius is retuned later. */
+  --radius-control: var(--r-md);
+  --radius-card: var(--r-lg);
+  --radius-sheet: var(--r-xl);
+  --radius-pill: var(--r-full);
+
+  --ease-out: var(--curve-out);
+  --ease-in-out: var(--curve-in-out);
+}
+
+/* ==========================================================================
+   Composed surfaces.
+
+   Written once so a card is `class="clay"` rather than five arbitrary values.
+   Every variant changes background lightness and carries a border as well as a
+   shadow, so depth survives forced-colours mode — where shadows are stripped
+   and a shadow-only design collapses into an unreadable flat page.
+   ========================================================================== */
+
+@utility surface-raised {
+  background: var(--surface-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  box-shadow: var(--elev-raised);
+}
+
+@utility surface-sunken {
+  background: var(--surface-sunken);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  box-shadow: var(--elev-inset);
+}
+
+@utility surface-flat {
+  background: var(--surface-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+}
+
+@utility clay {
+  background: var(--surface-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--elev-clay);
+}
+
+/* Press feedback. Transform only — animating a shadow repaints the blurred
+   area every frame, which a list of fifty cards makes measurable. */
+@utility press {
+  transition: transform var(--dur-fast) var(--curve-out);
+}
+
+@utility lift {
+  transition: transform var(--dur-fast) var(--curve-out);
 }
 
 /* ========================================================================== */
@@ -269,53 +352,44 @@ html {
 body {
   margin: 0;
   background: var(--surface-ground);
-  color: var(--text-primary);
+  color: var(--ink);
   font-family: var(--font-sans), ui-sans-serif, system-ui, -apple-system, sans-serif;
-  font-size: var(--text-base);
   line-height: 1.5;
-  /* Deadlines are read as numbers. Tabular figures keep "11:59" and "9:00"
-     the same width so a column of times scans as a column. */
+  /* Deadlines are read as numbers. Tabular figures keep 11:59 and 9:00 the same
+     width, so a column of times scans as a column. */
   font-variant-numeric: tabular-nums;
   -webkit-font-smoothing: antialiased;
   min-height: 100dvh;
-  /* Home-screen install: content must not slide under the notch or the bar. */
-  padding-bottom: env(safe-area-inset-bottom);
 }
 
 h1, h2, h3, h4 {
   margin: 0;
   font-weight: 650;
-  /* Tight tracking on large text; the default is too loose above ~24px. */
   letter-spacing: -0.02em;
-  /* Upright always. An italic heading is the most reliable generated-UI tell. */
+  /* Always upright. An italicised heading is the most reliable generated-UI
+     tell there is. */
   font-style: normal;
 }
 
 p { margin: 0; }
 ul, ol { margin: 0; padding: 0; list-style: none; }
-
-button, input, select, textarea {
-  font: inherit;
-  color: inherit;
-}
-
+button, input, select, textarea { font: inherit; color: inherit; }
 a { color: inherit; text-decoration: none; }
 
-/* One focus treatment everywhere. Depth alone never communicates focus -- that
-   is the accessibility failure neumorphism is known for. */
+/* One focus treatment everywhere. Depth alone never signals focus — that is the
+   accessibility failure neumorphism is known for. */
 :focus-visible {
   outline: 2.5px solid var(--brand-ring);
   outline-offset: 2px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--r-sm);
 }
 
 ::selection {
   background: var(--brand-soft);
-  color: var(--text-primary);
+  color: var(--ink);
 }
 
-/* Every transition in the app collapses to a short fade. Vestibular triggers
-   are not a style preference. */
+/* Vestibular triggers are not a style preference. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -328,22 +402,10 @@ a { color: inherit; text-decoration: none; }
   }
 }
 
-/* Forced-colours users get no shadows at all, which is why raised and sunken
-   also differ in background lightness and carry real borders. */
+/* Forced-colours users get no shadows, which is why raised and sunken also
+   differ in background lightness and carry real borders. */
 @media (forced-colors: active) {
   * {
     box-shadow: none !important;
   }
-}
-
-.srOnly {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-  border: 0;
 }

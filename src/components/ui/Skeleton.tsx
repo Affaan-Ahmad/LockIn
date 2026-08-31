@@ -1,12 +1,14 @@
-import { cx, s } from '@/lib/cx';
-
-import styles from './Skeleton.module.css';
+import { cx } from '@/lib/cx';
 
 /**
  * A loading placeholder sized like the thing it replaces.
  *
- * Matching the real height is the point: a skeleton that is the wrong size
- * causes exactly the layout shift it was meant to prevent.
+ * Matching the real height is the point: a skeleton of the wrong size causes
+ * exactly the layout shift it exists to prevent.
+ *
+ * A single opacity pulse, not a gradient sweep. Animating a wide gradient
+ * across the page repaints a large area continuously, which is the cost a
+ * loading state is meant to avoid.
  */
 
 export interface SkeletonProps {
@@ -21,11 +23,14 @@ export function Skeleton({ variant = 'line', width, count = 1 }: SkeletonProps) 
       {Array.from({ length: count }, (_, index) => (
         <div
           key={index}
-          className={cx(s(styles, 'skeleton'), s(styles, variant))}
-          style={width === undefined ? undefined : { width }}
           // One label for the group, not one per bar, or a screen reader
           // announces "loading" five times.
           aria-hidden="true"
+          style={width === undefined ? undefined : { width }}
+          className={cx(
+            'animate-pulse bg-sunken',
+            variant === 'card' ? 'h-22 rounded-card' : 'h-[0.8em] rounded-sm',
+          )}
         />
       ))}
     </>
