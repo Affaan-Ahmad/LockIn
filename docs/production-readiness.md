@@ -37,7 +37,8 @@ Verified against the codebase on 2026-08-30. This is a development snapshot, not
 ### Controls already built in
 
 These were designed in rather than retrofitted, and are the reason a later launch is feasible at
-all. Each is implemented and unit-tested; none is verified against a live database yet.
+all. Every one is implemented and unit-tested, and as of 2026-08-31 the database-enforced ones are
+verified against a live Postgres by 27 passing integration tests.
 
 | Control | Where |
 | --- | --- |
@@ -67,7 +68,7 @@ all. Each is implemented and unit-tested; none is verified against a live databa
 | 4 | **No security headers / CSP.** `next.config.mjs` sets none. | HIGH | Needed before any frontend exists, not after. |
 | 5 | **No CI.** No typecheck/lint/test gate, no dependency scan, no secret scan. | HIGH | |
 | 6 | **OAuth callback `state` handling unverified.** `exchangeCodeForSession` is assumed to validate PKCE; not confirmed. | HIGH | Must be read and proven, not assumed. |
-| 7 | **The entire SQL layer has never been executed.** ~1,100 lines of DDL and plpgsql. | HIGH | Every RLS and constraint claim above is currently an argument from reading code. 27 integration tests exist to settle it. |
+| 7 | ~~The entire SQL layer has never been executed.~~ **RESOLVED 2026-08-31.** All four migrations applied to a live Postgres; 27/27 integration tests pass against it. | ~~HIGH~~ CLOSED | RLS isolation, the confidence floor, the ALL_SECTIONS guard, deadline coherence, two-strike reconciliation, single-active-sync and duplicate prevention are now measured rather than argued. |
 | 8 | **No data export.** | MEDIUM | Required if GDPR/UK GDPR applies. |
 | 9 | **No retention policy implemented.** `sync_runs`, `sync_errors`, `sync_course_results` grow without bound. | MEDIUM | |
 | 10 | **No monitoring or alerting.** | MEDIUM | Nobody would know sync had been failing for a week. |
@@ -125,6 +126,42 @@ Nothing was exposed for longer than it took to replace it, and no user data exis
 
 **Lesson.** A credential does not need to be sent to be used. Secrets go into `.env.local` directly
 and are never pasted into a chat, a ticket, or a commit.
+
+---
+
+## Verification log
+
+### 2026-08-31 — first execution of the SQL layer
+
+All four migrations applied to the live development project; 27/27 integration tests pass. Two bugs
+surfaced that no amount of code review had caught, both of which only a real Postgres could reveal:
+
+**1. Enum literals in `INSERT ... SELECT`.** `column "lifecycle_status" is of type lifecycle_status
+but expression is of type text`. Unlike `INSERT ... VALUES`, a SELECT list does not infer the target
+column's type, so a bare `'ACTIVE'` stayed text. Affected five functions and three `CASE`
+expressions.
+
+**2. `RETURNS TABLE` output columns shadow real columns.** `column reference "source_item_id" is
+ambiguous` (42702) in `app_upsert_assignments`: the declared output columns are plpgsql variables
+inside the body, so the `ON CONFLICT (user_id, source, source_item_id)` target could not be resolved.
+Fixed with `#variable_conflict use_column`.
+
+Both were fixed in the original migrations rather than in follow-ups, since neither definition had
+ever run successfully anywhere and there was no history to preserve. The database was reset and the
+migrations reapplied from scratch.
+
+Now verified end to end against real Postgres:
+
+- RLS isolation between two genuine signed-in users, across coursework, classifications, overrides,
+  sync errors and subject selection
+- `google_connections` unreachable by any client role
+- Cross-user writes rejected by `app_assert_self`
+- Duplicate prevention under repeated sync
+- Deadline coherence, the NOT_RELEVANT confidence floor, and the ALL_SECTIONS-cannot-be-hidden guard
+- Two-strike disappearance reconciliation
+- Single active sync per user, plus stale-lease reclaim as ABANDONED
+- Manual overrides surviving a full re-sync and winning in the read model
+- Untracked courses excluded from the feed; undated coursework preserved but excluded
 
 ---
 

@@ -160,6 +160,12 @@ returns table (
 )
 language plpgsql
 as $$
+-- RETURNS TABLE output columns are plpgsql variables inside the body, so an
+-- unqualified `source_item_id` -- notably in the ON CONFLICT target below --
+-- is ambiguous between the variable and the column, and Postgres raises 42702.
+-- Resolving in favour of the column is correct here: every reference in this
+-- function means the column.
+#variable_conflict use_column
 begin
   perform app_assert_self(p_user_id);
 

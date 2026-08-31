@@ -18,6 +18,18 @@ import {
  * Requires the migrations in supabase/migrations to have been applied.
  */
 
+/**
+ * app_acquire_sync_run returns a single `sync_runs` composite rather than a set,
+ * so PostgREST sends a bare object where the batch functions send an array.
+ * Normalising here keeps the tests honest about which shape they get.
+ */
+function firstRow<T>(data: T[] | T | null): T {
+  if (data === null) throw new Error('expected a row, got null');
+  const row = Array.isArray(data) ? data[0] : data;
+  if (row === undefined) throw new Error('expected a row, got an empty set');
+  return row;
+}
+
 const config = readIntegrationConfig();
 const describeIntegration = config === null ? describe.skip : describe;
 
@@ -429,7 +441,7 @@ describeIntegration('persistence invariants', () => {
       expect(second.error!.message).toMatch(/already running/i);
 
       await alice.db.rpc('app_finalize_sync_run', {
-        p_sync_run_id: first.data![0]!.id,
+        p_sync_run_id: firstRow(first.data).id,
         p_status: 'SUCCESS',
         p_counts: {},
         p_error_summary: null,
@@ -448,7 +460,7 @@ describeIntegration('persistence invariants', () => {
       await harness.admin
         .from('sync_runs')
         .update({ lease_expires_at: new Date(Date.now() - 60_000).toISOString() })
-        .eq('id', stale.data![0]!.id);
+        .eq('id', firstRow(stale.data).id);
 
       const next = await alice.db.rpc('app_acquire_sync_run', {
         p_user_id: alice.id,
@@ -464,12 +476,12 @@ describeIntegration('persistence invariants', () => {
       const abandoned = await alice.db
         .from('sync_runs')
         .select('status')
-        .eq('id', stale.data![0]!.id)
+        .eq('id', firstRow(stale.data).id)
         .single();
       expect(abandoned.data!.status).toBe('ABANDONED');
 
       await alice.db.rpc('app_finalize_sync_run', {
-        p_sync_run_id: next.data![0]!.id,
+        p_sync_run_id: firstRow(next.data).id,
         p_status: 'SUCCESS',
         p_counts: {},
         p_error_summary: null,
