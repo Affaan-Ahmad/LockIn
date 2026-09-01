@@ -54,65 +54,41 @@ export default async function WelcomePage({
 }
 
 /**
- * The first screen anyone sees.
+ * The sign-in step.
  *
- * Split rather than centred: a centred stack of headline, paragraph and button
- * is the default composition of every generated landing page, and this one has
- * a genuine second column to fill, so it earns the asymmetry.
+ * Only reached deliberately, from a "Continue with Google" or "Sign in" on the
+ * landing page, so it does not sell. It used to: a split layout with a
+ * headline, a value proposition and a half-screen reserved for a hero image,
+ * because before the landing page existed this was the first thing a stranger
+ * saw and it had to do that job.
  *
- * Four text elements at most, and the consent note is one of them. No trust
- * strip, no version pill, no scroll cue: there is nothing below this screen to
- * scroll to.
+ * It no longer does, and repeating the pitch someone has just read, beside an
+ * empty column waiting on an image that would never be worth commissioning for
+ * a sign-in screen, was worse than saying nothing. So it is now one focused
+ * task in a narrow column, matching the setup steps that follow it.
+ *
+ * The consent note stays. It is the one thing a student needs at the moment
+ * they are about to grant access, rather than the moment they were reading
+ * about the product.
  */
 function SignInScreen() {
   return (
-    <main className="min-h-dvh lg:grid lg:grid-cols-[1.05fr_0.95fr]">
-      <div className="flex min-h-dvh flex-col justify-center px-6 py-14 sm:px-10 lg:min-h-0 lg:px-14">
-        <div className="w-full max-w-[30rem]">
-          <p className="text-xs font-semibold tracking-[0.1em] text-brand uppercase">LockIn</p>
+    <StepFrame
+      step="LockIn"
+      title="Sign in with Google"
+      intro="LockIn reads your Classroom coursework and shows you the work that is for your section."
+    >
+      <a href="/api/auth/google" className="block">
+        <Button variant="primary" fullWidth>
+          Continue with Google
+        </Button>
+      </a>
 
-          <h1 className="mt-3 text-3xl font-semibold text-balance text-ink sm:text-4xl">
-            Every deadline that is actually yours.
-          </h1>
-
-          <p className="mt-3 max-w-[34ch] text-lg leading-relaxed text-ink-soft">
-            Your section shares a Classroom with several others. LockIn reads the section out of
-            each post and shows you the rest.
-          </p>
-
-          <a href="/api/auth/google" className="mt-8 block sm:inline-block">
-            <Button variant="primary" fullWidth className="sm:w-auto sm:px-8">
-              Continue with Google
-            </Button>
-          </a>
-
-          <p className="mt-6 max-w-[42ch] text-xs leading-relaxed text-ink-muted">
-            Read-only access to your Classroom courses and coursework. LockIn never posts, submits
-            or changes anything.
-          </p>
-
-          <Footer />
-        </div>
-      </div>
-
-      {/*
-        The second column.
-
-        Left as a deliberate blank rather than filled with a hand-drawn preview
-        of the product. A stack of divs dressed up as a screenshot is the most
-        recognisable tell in a generated interface, and a mock feed of invented
-        assignments would be fabricated coursework on the one screen where a
-        student is deciding whether to trust us with the real thing.
-
-        TODO: real hero visual, roughly 1200x1400 portrait, light and dark
-        variants. A photograph of a student at a desk, or a genuine screenshot
-        of Today taken from a real account. Not stock illustration.
-      */}
-      <div
-        aria-hidden="true"
-        className="surface-sunken hidden lg:block lg:min-h-dvh lg:rounded-none"
-      />
-    </main>
+      <p className="measure mt-5 text-xs leading-relaxed text-ink-muted">
+        Read-only access to your Classroom courses and coursework. LockIn never posts, submits or
+        changes anything, and you can disconnect or delete everything at any time.
+      </p>
+    </StepFrame>
   );
 }
 
