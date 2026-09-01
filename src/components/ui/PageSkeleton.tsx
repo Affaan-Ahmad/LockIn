@@ -26,7 +26,11 @@ export function PageSkeleton({ rows = 3, groups = 2 }: PageSkeletonProps) {
           <div className="mb-3 px-0.5">
             <Skeleton variant="line" width="5.5rem" />
           </div>
-          <div className="flex flex-col gap-3">
+          {/* Matches whichever composition the shell is showing. A stack of
+              104px card skeletons inside the desktop shell promises cards and
+              then delivers rows, which is the layout shift a skeleton exists
+              to prevent. */}
+          <div className="flex flex-col gap-3 in-data-[density=pointer]:gap-2">
             <Skeleton variant="card" count={group === 0 ? rows : Math.max(1, rows - 1)} />
           </div>
         </div>

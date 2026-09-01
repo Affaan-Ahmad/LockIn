@@ -31,7 +31,9 @@ export function Skeleton({ variant = 'line', width, count = 1 }: SkeletonProps) 
             'animate-pulse bg-sunken',
             // Matches the real card: face plus well. A placeholder of the
             // wrong height causes exactly the shift it exists to prevent.
-            variant === 'card' ? 'h-[6.5rem] rounded-card' : 'h-[0.8em] rounded-xs',
+            variant === 'card'
+              ? 'h-[6.5rem] rounded-card in-data-[density=pointer]:h-[3.25rem] in-data-[density=pointer]:rounded-control'
+              : 'h-[0.8em] rounded-xs',
           )}
         />
       ))}

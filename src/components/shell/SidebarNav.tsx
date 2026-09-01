@@ -46,12 +46,18 @@ export function SidebarNav({ reviewCount = 0 }: SidebarNavProps) {
   return (
     <nav
       aria-label="Primary"
-      className="flex h-full flex-col gap-1 px-3 py-4"
-      // Compact by default; the shell widens it at xl. Icon-only below that is
-      // handled by the shell, not by a second component.
+      // Icon-only until there is width for labels. One component either way:
+      // a second "compact sidebar" would be the same links with the text
+      // removed, which is what a CSS variant is for.
+      className="flex h-full flex-col gap-1 px-2 py-4 lg:px-3"
     >
-      <div className="mb-5 flex items-center px-2">
-        <span className="text-base font-semibold tracking-[-0.03em] text-ink">LockIn</span>
+      <div className="mb-5 flex items-center justify-center px-2 lg:justify-start">
+        {/* The monogram is the same mark as the app icon, so a tablet running
+            LockIn beside its own home-screen icon shows one identity. */}
+        <span className="text-base font-semibold tracking-[-0.03em] text-ink lg:hidden">L</span>
+        <span className="hidden text-base font-semibold tracking-[-0.03em] text-ink lg:inline">
+          LockIn
+        </span>
       </div>
 
       {PRIMARY.map((item) => (
@@ -91,7 +97,8 @@ function Row({
       aria-current={active ? 'page' : undefined}
       title={item.label}
       className={cx(
-        'group relative flex h-[2.125rem] items-center gap-2.5 rounded-control px-2',
+        'group relative flex h-[2.125rem] items-center gap-2.5 rounded-control',
+        'justify-center px-0 lg:justify-start lg:px-2',
         'text-sm transition-colors duration-[120ms]',
         // Weight as well as colour. In greyscale or forced colours the tint
         // vanishes and the active row must still be identifiable.
@@ -99,9 +106,12 @@ function Row({
       )}
     >
       <item.Icon className={cx('size-[1.125rem] shrink-0', active ? 'text-brand' : '')} />
-      <span className="truncate group-data-[compact=true]:sr-only">{item.label}</span>
+      {/* sr-only rather than hidden when compact: the label is still the
+          accessible name, so a screen reader reads "Upcoming" and not an
+          unlabelled link. */}
+      <span className="truncate max-lg:sr-only">{item.label}</span>
       {badge === null ? null : (
-        <span className="ml-auto rounded-pill bg-review px-1.5 text-2xs font-semibold text-white">
+        <span className="absolute top-1 right-1 rounded-pill bg-review px-1 text-2xs font-semibold text-white lg:static lg:ml-auto lg:px-1.5">
           {badge > 9 ? '9+' : badge}
         </span>
       )}

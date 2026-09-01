@@ -21,9 +21,12 @@ import { SidebarNav } from './SidebarNav';
  *
  * The two shells are genuinely different, not one reshaped by breakpoints:
  *
- *   Mobile   compact header, content column, bottom tab bar, safe areas.
- *   Web      persistent sidebar, top bar carrying sync and account, a wider
- *            frame, and an optional right rail for secondary context.
+ *   Phone    below 768px: compact header, content column, bottom tab bar,
+ *            safe-area insets.
+ *   Tablet    768px and up: the web shell with an icon-only sidebar. A tablet
+ *            is badly served by a phone layout on a screen that fits
+ *            persistent navigation.
+ *   Desktop  1024px and up: sidebar labels appear, and a right rail at 1280px.
  *
  * `data-density="pointer"` on the web shell retunes control heights, padding
  * and radii for a mouse. It is a scope rather than a breakpoint so the tokens
@@ -56,19 +59,17 @@ export function AppShell({
 }: AppShellProps) {
   return (
     <>
-      {/* Skip link. The first tab stop on every page, so a keyboard user is not
-          forced through the whole nav to reach the list they came for. */}
-      <a
-        href="#main"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-control focus:bg-brand focus:px-4 focus:py-2 focus:text-on-brand"
-      >
-        Skip to content
-      </a>
+      {/* ---------------------------------------------------------------- */}
+      {/* Phone                                                            */}
+      {/* ---------------------------------------------------------------- */}
+      <div className="min-h-dvh md:hidden">
+        <a
+          href="#main-touch"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-control focus:bg-brand focus:px-4 focus:py-2 focus:text-on-brand"
+        >
+          Skip to content
+        </a>
 
-      {/* ---------------------------------------------------------------- */}
-      {/* Mobile and tablet                                                */}
-      {/* ---------------------------------------------------------------- */}
-      <div className="min-h-dvh lg:hidden">
         <header className="px-4 pt-6 pb-4">
           <div className="mx-auto flex max-w-[var(--content-max)] items-start justify-between gap-4">
             <div className="min-w-0">
@@ -91,7 +92,7 @@ export function AppShell({
         </header>
 
         <main
-          id="main"
+          id="main-touch"
           // Bottom padding clears the fixed tab bar plus the gesture area, so
           // the last card is never trapped underneath it.
           className="mx-auto max-w-[var(--content-max)] px-4 pb-[calc(var(--nav-h)+env(safe-area-inset-bottom)+1.5rem)]"
@@ -107,15 +108,29 @@ export function AppShell({
       </div>
 
       {/* ---------------------------------------------------------------- */}
-      {/* Desktop                                                          */}
+      {/* Tablet and desktop                                               */}
       {/* ---------------------------------------------------------------- */}
-      <div data-density="pointer" className="hidden min-h-dvh lg:grid lg:grid-cols-[var(--sidebar-w)_minmax(0,1fr)]">
+      {/* From 768px up. A tablet has room for persistent navigation and is
+          badly served by a phone layout on a screen that fits a sidebar; it
+          gets the icon-only rail, and the labels arrive at 1024px where there
+          is width to spend on them. */}
+      <div
+        data-density="pointer"
+        className="hidden min-h-dvh md:grid md:grid-cols-[var(--sidebar-w-compact)_minmax(0,1fr)] lg:grid-cols-[var(--sidebar-w)_minmax(0,1fr)]"
+      >
+        <a
+          href="#main-pointer"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-control focus:bg-brand focus:px-4 focus:py-2 focus:text-on-brand"
+        >
+          Skip to content
+        </a>
+
         <aside className="sticky top-0 h-dvh border-r border-line bg-raised">
           <SidebarNav reviewCount={reviewCount} />
         </aside>
 
         <div className="min-w-0">
-          <header className="sticky top-0 z-30 border-b border-line bg-ground/95 px-8 py-3.5 backdrop-blur-[2px]">
+          <header className="sticky top-0 z-30 border-b border-line bg-ground/95 px-5 py-3.5 backdrop-blur-[2px] lg:px-8">
             <div className="mx-auto flex max-w-[var(--app-max)] items-center justify-between gap-6">
               <div className="min-w-0">
                 <h1 className="truncate text-lg font-semibold text-ink">{title}</h1>
@@ -127,7 +142,7 @@ export function AppShell({
             </div>
           </header>
 
-          <main id="main" className="mx-auto max-w-[var(--app-max)] px-8 py-7">
+          <main id="main-pointer" className="mx-auto max-w-[var(--app-max)] px-5 py-6 lg:px-8 lg:py-7">
             <div
               className={
                 rail === undefined
