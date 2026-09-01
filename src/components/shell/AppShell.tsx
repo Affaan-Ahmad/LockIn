@@ -62,7 +62,11 @@ export function AppShell({
       {/* ---------------------------------------------------------------- */}
       {/* Phone                                                            */}
       {/* ---------------------------------------------------------------- */}
-      <div className="min-h-dvh md:hidden">
+      {/* A flex column so the footer is pushed to the bottom on a short page
+          rather than floating directly under the content. `main` takes the
+          slack; without this a screen with two assignments put the legal links
+          halfway up the viewport. */}
+      <div className="flex min-h-dvh flex-col md:hidden">
         <a
           href="#main-touch"
           className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-control focus:bg-brand focus:px-4 focus:py-2 focus:text-on-brand"
@@ -95,14 +99,19 @@ export function AppShell({
           id="main-touch"
           // Bottom padding clears the fixed tab bar plus the gesture area, so
           // the last card is never trapped underneath it.
-          className="mx-auto max-w-[var(--content-max)] px-4 pb-[calc(var(--nav-h)+env(safe-area-inset-bottom)+1.5rem)]"
+          className="mx-auto w-full max-w-[var(--content-max)] flex-1 px-4"
         >
           {children}
           {/* The rail's contents are not dropped on a phone, only relocated:
               they follow the main list instead of sitting beside it. */}
           {rail === undefined ? null : <div className="mt-8 flex flex-col gap-3">{rail}</div>}
-          <Footer inShell />
         </main>
+
+        {/* Outside main, so it is page furniture rather than page content, and
+            padded to clear the fixed tab bar plus the gesture area. */}
+        <div className="mx-auto w-full max-w-[var(--content-max)] px-4 pb-[calc(var(--nav-h)+env(safe-area-inset-bottom)+1.5rem)]">
+          <Footer inShell />
+        </div>
 
         <Nav reviewCount={reviewCount} />
       </div>
@@ -129,7 +138,7 @@ export function AppShell({
           <SidebarNav reviewCount={reviewCount} />
         </aside>
 
-        <div className="min-w-0">
+        <div className="flex min-w-0 flex-col">
           <header className="sticky top-0 z-30 border-b border-line bg-ground/95 px-5 py-3.5 backdrop-blur-[2px] lg:px-8">
             <div className="mx-auto flex max-w-[var(--app-max)] items-center justify-between gap-6">
               <div className="min-w-0">
@@ -142,7 +151,10 @@ export function AppShell({
             </div>
           </header>
 
-          <main id="main-pointer" className="mx-auto max-w-[var(--app-max)] px-5 py-6 lg:px-8 lg:py-7">
+          <main
+            id="main-pointer"
+            className="mx-auto w-full max-w-[var(--app-max)] flex-1 px-5 py-6 lg:px-8 lg:py-7"
+          >
             <div
               className={
                 rail === undefined
@@ -157,8 +169,11 @@ export function AppShell({
                 <aside className="flex min-w-0 flex-col gap-3">{rail}</aside>
               )}
             </div>
-            <Footer inShell />
           </main>
+
+          <div className="mx-auto w-full max-w-[var(--app-max)] px-5 pb-6 lg:px-8">
+            <Footer inShell />
+          </div>
         </div>
       </div>
     </>

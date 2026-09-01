@@ -77,6 +77,36 @@ function daysBetween(from: Date, to: Date, timeZone: string): number {
  * calendar date when there is not -- a date-only item is not late until that
  * day has ended locally.
  */
+/**
+ * Which calendar day a deadline falls on, as `YYYY-MM-DD`.
+ *
+ * Shared so a calendar and a list can never disagree about which day something
+ * is due. Returns null when the source gave no date, which is how an undated
+ * assignment stays off a calendar rather than being placed on a guess.
+ *
+ * The two precisions are handled differently on purpose. An EXACT deadline is
+ * an instant, so it has to be resolved in the student's zone: 11:59 PM in
+ * Karachi is the previous day in UTC, and bucketing by the raw timestamp would
+ * file it under the wrong date. A DATE_ONLY deadline is already a calendar
+ * date, not an instant, so it is used verbatim -- converting it through a
+ * timezone would shift it by a day, which is the exact bug the overdue query
+ * had to be rewritten to avoid.
+ */
+export function deadlineDayKey(deadline: ApiDeadline, timeZone: string): string | null {
+  if (deadline.precision === 'NONE') return null;
+
+  if (deadline.precision === 'EXACT' && deadline.dueAtUtc !== null) {
+    const { y, m, d } = localParts(new Date(deadline.dueAtUtc), timeZone);
+    return `${pad(y, 4)}-${pad(m, 2)}-${pad(d, 2)}`;
+  }
+
+  return deadline.dueDateUtc;
+}
+
+function pad(value: number, width: number): string {
+  return String(value).padStart(width, '0');
+}
+
 export function urgencyBand(
   deadline: ApiDeadline,
   now: Date,
