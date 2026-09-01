@@ -67,7 +67,30 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   return (
     <html lang="en" className={GeistSans.variable} suppressHydrationWarning>
       <head>
-        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: THEME_BOOT }} />
+        {/*
+          suppressHydrationWarning is correct here rather than a workaround.
+          The HTML spec requires a browser to blank the `nonce` content
+          attribute once the element is inserted -- getAttribute('nonce')
+          returns "" while the element.nonce IDL property keeps the value --
+          so that a CSS attribute selector cannot be used to exfiltrate it.
+
+          React therefore compares nonce="..." from the server against nonce=""
+          in the DOM and reports a mismatch that is not one. Nothing is broken:
+          the script is synchronous and already executed during parse, which is
+          the whole reason it is inline, and it executed precisely because the
+          nonce was present when the parser reached it.
+
+          The warning is suppressed on the element rather than inherited,
+          because suppressHydrationWarning only applies one level deep and the
+          flag on <html> does not reach here. Left unsuppressed it would print
+          on every page load and train us to scroll past hydration errors,
+          which is how a real one gets missed.
+        */}
+        <script
+          nonce={nonce}
+          suppressHydrationWarning
+          dangerouslySetInnerHTML={{ __html: THEME_BOOT }}
+        />
       </head>
       <body>{children}</body>
     </html>
