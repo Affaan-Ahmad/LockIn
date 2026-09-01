@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import Link from 'next/link';
 
 import { formatDeadline } from '@/lib/format';
 import type { AssignmentView } from '@/lib/queries';
@@ -49,6 +50,15 @@ export interface AssignmentCardProps {
    * regardless of what interactive controls a screen decides to attach.
    */
   readonly actions?: ReactNode;
+  /**
+   * Turns the pointer row into a detail trigger. A plain link to a search
+   * parameter, so selecting a row stays a navigation the back button
+   * understands and the list never needs client state to remember which one is
+   * open. Omitted on touch, where the panel has nowhere to sit and Classroom is
+   * the better destination anyway.
+   */
+  readonly detailHref?: string;
+  readonly selected?: boolean;
 }
 
 export function AssignmentCard({
@@ -57,6 +67,8 @@ export function AssignmentCard({
   timeZone,
   showScope = false,
   actions,
+  detailHref,
+  selected = false,
 }: AssignmentCardProps) {
   const deadline = formatDeadline(item.deadline, now, timeZone);
 
@@ -67,6 +79,7 @@ export function AssignmentCard({
         'in-data-[density=pointer]:rounded-control',
         'in-data-[density=pointer]:shadow-none',
         'in-data-[density=pointer]:hover:shadow-raised',
+        selected ? 'in-data-[density=pointer]:ring-1 in-data-[density=pointer]:ring-brand' : '',
       ].join(' ')}
     >
       {/* Touch composition */}
@@ -99,7 +112,18 @@ export function AssignmentCard({
 
       {/* Pointer composition */}
       <div className="hidden in-data-[density=pointer]:block">
-        <div className="grid grid-cols-12 items-center gap-x-4 px-3.5 py-2.5">
+        {detailHref === undefined ? null : (
+          <Link
+            href={detailHref}
+            scroll={false}
+            aria-label={`Show details for ${item.title}`}
+            // Covers the row beneath the content, so the whole row is
+            // clickable without wrapping the title link inside another link,
+            // which is invalid and gives a screen reader one enormous target.
+            className="absolute inset-0 z-0"
+          />
+        )}
+        <div className="pointer-events-none relative z-10 grid grid-cols-12 items-center gap-x-4 px-3.5 py-2.5 [&_a]:pointer-events-auto [&_button]:pointer-events-auto">
           {/* Course leads on desktop. On a phone it is context read after the
               title; in a scanned column it is what the eye groups by. */}
           <CourseLabel item={item} className="col-span-3 text-xs" />

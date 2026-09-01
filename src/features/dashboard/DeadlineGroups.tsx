@@ -27,6 +27,13 @@ export interface DeadlineGroupsProps {
    * meet; hiding something already missed and dealt with is housekeeping.
    */
   readonly allowHideOverdue?: boolean;
+  /**
+   * Builds the detail link for each row. Passed as a function rather than a
+   * flag so the caller owns the URL shape and this component never has to know
+   * which route it is rendering inside.
+   */
+  readonly detailHrefFor?: (assignmentId: string) => string;
+  readonly selectedId?: string | null;
 }
 
 export function DeadlineGroups({
@@ -34,6 +41,8 @@ export function DeadlineGroups({
   now,
   timeZone,
   allowHideOverdue = false,
+  detailHrefFor,
+  selectedId = null,
 }: DeadlineGroupsProps) {
   const grouped = new Map<UrgencyBand, AssignmentView[]>();
 
@@ -74,6 +83,10 @@ export function DeadlineGroups({
                     item={item}
                     now={now}
                     timeZone={timeZone}
+                    {...(detailHrefFor === undefined
+                      ? {}
+                      : { detailHref: detailHrefFor(item.assignmentId) })}
+                    selected={selectedId === item.assignmentId}
                     actions={
                       allowHideOverdue && band === 'overdue' ? (
                         <IgnoreButton

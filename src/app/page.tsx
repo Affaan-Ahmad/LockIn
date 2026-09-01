@@ -2,6 +2,7 @@ import { CheckIcon } from '@/components/icons';
 import { AppShell } from '@/components/shell/AppShell';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { AssignmentDetail } from '@/features/assignments/AssignmentDetail';
 import { DeadlineGroups } from '@/features/dashboard/DeadlineGroups';
 import { RailPanel } from '@/features/dashboard/RailPanel';
 import { WorkloadHeader } from '@/features/dashboard/WorkloadHeader';
@@ -24,8 +25,13 @@ import Link from 'next/link';
  */
 export const dynamic = 'force-dynamic';
 
-export default async function TodayPage() {
+export default async function TodayPage({
+  searchParams,
+}: {
+  readonly searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const user = await requireSessionUser();
+  const params = await searchParams;
 
   // Started together, not one after the other. Every Supabase call is a round
   // trip to another region, so awaiting the setup check before beginning the
@@ -60,12 +66,21 @@ export default async function TodayPage() {
   // burying it under future work is how it gets missed twice.
   const items = [...data.overdue, ...data.upcoming];
 
+  // Detail selection lives in the URL, so the panel costs no client state and
+  // the back button closes it. An id that matches nothing simply shows the
+  // normal rail rather than an error: a stale link should not break the page.
+  const selectedId = typeof params['assignment'] === 'string' ? params['assignment'] : null;
+  const selected = items.find((item) => item.assignmentId === selectedId) ?? null;
+
   return (
     <AppShell
       title="Today"
       reviewCount={data.reviewCount}
       headerAside={<SyncStatus freshness={data.freshness} />}
       rail={
+        selected !== null ? (
+          <AssignmentDetail item={selected} now={now} timeZone={timeZone} closeHref="/" />
+        ) : (
         <>
           {data.reviewCount > 0 ? (
             <RailPanel
@@ -91,6 +106,7 @@ export default async function TodayPage() {
             />
           ) : null}
         </>
+        )
       }
     >
       <SyncStatus freshness={data.freshness} variant="banner" />
@@ -114,7 +130,14 @@ export default async function TodayPage() {
           }
         />
       ) : (
-        <DeadlineGroups items={items} now={now} timeZone={timeZone} allowHideOverdue />
+        <DeadlineGroups
+          items={items}
+          now={now}
+          timeZone={timeZone}
+          allowHideOverdue
+          detailHrefFor={(id) => `/?assignment=${id}`}
+          selectedId={selectedId}
+        />
       )}
 
     </AppShell>
