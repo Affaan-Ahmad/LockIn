@@ -33,10 +33,11 @@ export const viewport = {
   // Colour of the browser chrome on mobile. Matches the ground so the app does
   // not look like it is sitting inside a differently coloured frame.
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#f7f4ef' },
-    // Re-measured against the deepened ground. Left at the old value the
-    // browser chrome sat visibly lighter than the page below it.
-    { media: '(prefers-color-scheme: dark)', color: '#1c1d23' },
+    // The exact sRGB conversions of --surface-ground in each mode, not
+    // approximations. Both were eyeballed before and both were wrong, which
+    // showed as browser chrome a shade off the page below it.
+    { media: '(prefers-color-scheme: light)', color: '#f6f3ed' },
+    { media: '(prefers-color-scheme: dark)', color: '#080a0f' },
     ],
     // Zoom stays enabled. Locking it is an accessibility failure that mostly
   // hurts people who need to magnify text.

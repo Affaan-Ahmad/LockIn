@@ -106,7 +106,16 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Everything except static assets and image optimisation output.
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    // Everything except static assets, image optimisation output, and the PWA
+    // metadata.
+    //
+    // The manifest and icons are excluded rather than merely allowed through
+    // the session check: a browser fetches them before anyone signs in, and an
+    // installed app re-fetches them on launch. Running them through the gate
+    // redirected them to /welcome, so the "manifest" a browser received was an
+    // HTML page and the app could not be installed at all.
+    //
+    // Excluding also skips an auth round trip on every icon request.
+    '/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|icon|apple-icon|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
     ],
 };
