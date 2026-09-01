@@ -8,7 +8,15 @@ import tseslint from 'typescript-eslint';
  */
 export default tseslint.config(
   {
-    ignores: ['node_modules/**', '.next/**', 'coverage/**', 'next-env.d.ts'],
+    ignores: [
+      'node_modules/**',
+      '.next/**',
+      // Output of an isolated verification build. Same reason as .next: it is
+      // generated, and it does not exist on a fresh clone.
+      '.next-verify/**',
+      'coverage/**',
+      'next-env.d.ts',
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked,
@@ -37,6 +45,16 @@ export default tseslint.config(
       '@typescript-eslint/no-floating-promises': 'error',
       'no-console': 'error',
       eqeqeq: ['error', 'always'],
+    },
+  },
+  {
+    // The root config files run in Node during the build, not in a browser.
+    // Without declaring that, `process` reads as an undefined global -- which
+    // is how a genuine error in next.config.mjs went unseen: `next build` only
+    // lints src, so nothing checked this file until eslint was run directly.
+    files: ['*.mjs', '*.config.mjs'],
+    languageOptions: {
+      globals: { process: 'readonly', __dirname: 'readonly', console: 'readonly' },
     },
   },
   {
