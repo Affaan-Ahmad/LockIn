@@ -180,9 +180,54 @@
   --curve-out: cubic-bezier(0.22, 0.61, 0.36, 1);
   --curve-in-out: cubic-bezier(0.65, 0, 0.35, 1);
 
-  /* Cards stretched across a 27" monitor are unreadable. */
+  /* ----------------------------------------------------------------------
+     Layout and density.
+
+     `--content-max` used to be 44rem everywhere, which is why the desktop
+     looked like a phone: a 704px column on a 1440px screen leaves half the
+     display empty and forces one card per row. It is now the *reading* measure
+     for prose and single-task screens only. The application shell has its own
+     wider frame.
+
+     Density is a scope, not a second token system. Brand, colour and type stay
+     shared; only the values that decide how much fits on a screen change, and
+     they change once here rather than through breakpoint overrides scattered
+     across forty components.
+     -------------------------------------------------------------------- */
   --content-max: 44rem;
+  --app-max: 87.5rem;
+  --sidebar-w: 15rem;
+  --sidebar-w-compact: 4.5rem;
+  --rail-w: 20rem;
   --nav-h: 4.25rem;
+
+  /* Touch density. The default, because the phone is the harder constraint and
+     a control sized for a thumb is never wrong on a mouse, only generous. */
+  --control-h: 2.75rem;
+  --control-h-sm: 2.25rem;
+  --card-pad: 1rem;
+  --row-gap: 0.75rem;
+  --card-radius: var(--r-lg);
+}
+
+/* ----------------------------------------------------------------------------
+   Pointer density.
+
+   Applied by the web shell, not by a breakpoint, so the same tokens follow a
+   component wherever it is composed. A mouse resolves a 36px target as easily
+   as a 44px one, and the eight pixels reclaimed on every control is the
+   difference between five assignments visible and nine.
+
+   Radii tighten as well. The 16px corner that reads as friendly on a 390px
+   phone reads as unserious on a 1440px monitor, where the same arc is a much
+   smaller fraction of the element.
+   -------------------------------------------------------------------------- */
+[data-density='pointer'] {
+  --control-h: 2.25rem;
+  --control-h-sm: 1.875rem;
+  --card-pad: 0.875rem;
+  --row-gap: 0.5rem;
+  --card-radius: var(--r-md);
 }
 
 /* ==========================================================================
@@ -388,6 +433,10 @@
 
   /* Named for their job, not their size, so `rounded-card` stays correct if the
      radius is retuned later. */
+  --spacing-card: var(--card-pad);
+  --spacing-row: var(--row-gap);
+
+  --radius-surface: var(--card-radius);
   --radius-control: var(--r-md);
   --radius-card: var(--r-lg);
   --radius-sheet: var(--r-xl);

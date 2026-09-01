@@ -3,6 +3,7 @@ import { AppShell } from '@/components/shell/AppShell';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { DeadlineGroups } from '@/features/dashboard/DeadlineGroups';
+import { RailPanel } from '@/features/dashboard/RailPanel';
 import { WorkloadHeader } from '@/features/dashboard/WorkloadHeader';
 import { SyncStatus } from '@/features/sync/SyncStatus';
 import { urgencyBand } from '@/lib/format';
@@ -22,36 +23,6 @@ import Link from 'next/link';
  * failure the product is built to prevent.
  */
 export const dynamic = 'force-dynamic';
-
-function SecondaryLink({
-  href,
-  label,
-  hint,
-}: {
-  readonly href: string;
-  readonly label: string;
-  readonly hint?: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className="press group flex items-center justify-between gap-3 rounded-control px-1 py-3.5 hover:bg-sunken "
-    >
-      <span className="min-w-0">
-        <span className="block text-sm font-medium text-ink">{label}</span>
-        {hint === undefined ? null : (
-          <span className="mt-1 block text-xs text-ink-muted">{hint}</span>
-        )}
-      </span>
-      <span
-        aria-hidden="true"
-        className="shrink-0 text-ink-muted transition-transform duration-[120ms] group-hover:translate-x-0.5"
-      >
-        &rarr;
-      </span>
-    </Link>
-  );
-}
 
 export default async function TodayPage() {
   const user = await requireSessionUser();
@@ -94,6 +65,33 @@ export default async function TodayPage() {
       title="Today"
       reviewCount={data.reviewCount}
       headerAside={<SyncStatus freshness={data.freshness} />}
+      rail={
+        <>
+          {data.reviewCount > 0 ? (
+            <RailPanel
+              title="Needs a decision"
+              value={String(data.reviewCount)}
+              hint="LockIn could not tell whether these are for your section."
+              href="/review"
+              tone="review"
+            />
+          ) : null}
+          <RailPanel
+            title="Courses"
+            value={String(data.trackedCourseCount)}
+            hint="tracked for coursework"
+            href="/courses"
+          />
+          {data.ignoredCount > 0 ? (
+            <RailPanel
+              title="Hidden"
+              value={String(data.ignoredCount)}
+              hint="not shown in your lists"
+              href="/ignored"
+            />
+          ) : null}
+        </>
+      }
     >
       <SyncStatus freshness={data.freshness} variant="banner" />
 
@@ -119,27 +117,6 @@ export default async function TodayPage() {
         <DeadlineGroups items={items} now={now} timeZone={timeZone} allowHideOverdue />
       )}
 
-      {/* Secondary destinations, below the work and quieter than it. These
-          were two clay panels competing with the assignment cards above; as
-          rows on the ground they read as what they are, which is a way out of
-          this screen rather than more of it. */}
-      {data.reviewCount > 0 || data.ignoredCount > 0 ? (
-        <div className="mt-8 flex flex-col divide-y divide-line border-t border-line">
-          {data.reviewCount > 0 ? (
-            <SecondaryLink
-              href="/review"
-              label={`${String(data.reviewCount)} ${data.reviewCount === 1 ? 'item needs' : 'items need'} a decision`}
-              hint="LockIn wasn't sure whether these are for your section."
-            />
-          ) : null}
-          {data.ignoredCount > 0 ? (
-            <SecondaryLink
-              href="/ignored"
-              label={`${String(data.ignoredCount)} hidden ${data.ignoredCount === 1 ? 'item' : 'items'}`}
-            />
-          ) : null}
-        </div>
-      ) : null}
     </AppShell>
   );
 }
