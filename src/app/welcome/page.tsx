@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 
 import { Footer } from '@/components/shell/Footer';
 import { Button } from '@/components/ui/Button';
+import { LandingPage } from '@/features/marketing/LandingPage';
 import { ProfileForm } from '@/features/onboarding/ProfileForm';
 import { getSessionUser, loadSetupState } from '@/lib/queries';
 
@@ -23,10 +24,22 @@ import { getSessionUser, loadSetupState } from '@/lib/queries';
  */
 export const dynamic = 'force-dynamic';
 
-export default async function WelcomePage() {
+export default async function WelcomePage({
+  searchParams,
+}: {
+  readonly searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const user = await getSessionUser();
 
-  if (user === null) return <SignInScreen />;
+  if (user === null) {
+    // A stranger gets the explanation; someone who clicked "sign in" gets the
+    // button they asked for. Sending a first-time visitor straight to a Google
+    // consent prompt asks for read access to their coursework before saying
+    // what the product is, which is the most suspicious thing a page can do --
+    // and it is the page Google's OAuth reviewers land on.
+    const params = await searchParams;
+    return params['signin'] === '1' ? <SignInScreen /> : <LandingPage />;
+  }
 
   const setup = await loadSetupState(user.id);
 

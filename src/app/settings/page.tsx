@@ -33,7 +33,7 @@ export default async function SettingsPage() {
           comes to find out why nothing is updating. */}
       <SyncStatus freshness={data.freshness} variant="banner" />
 
-      <div className="flex flex-col gap-8">
+      <div className="flex flex-col gap-8 in-data-[density=pointer]:grid in-data-[density=pointer]:grid-cols-2 in-data-[density=pointer]:items-start in-data-[density=pointer]:gap-x-8 in-data-[density=pointer]:gap-y-7">
         <section aria-labelledby="account">
           <SectionHeading id="account">Account</SectionHeading>
           <div className="surface-raised p-4">
@@ -44,7 +44,7 @@ export default async function SettingsPage() {
           </div>
         </section>
 
-        <section aria-labelledby="section">
+        <section aria-labelledby="section" className="in-data-[density=pointer]:col-span-2">
           <SectionHeading id="section">Your section</SectionHeading>
           <p className="measure mb-3 text-sm leading-relaxed text-ink-soft">
             Changing this re-checks every assignment on the next sync, so verdicts you see now may
@@ -100,12 +100,12 @@ export default async function SettingsPage() {
           </div>
         </section>
 
-        <section aria-labelledby="connection">
+        <section aria-labelledby="connection" className="in-data-[density=pointer]:col-span-2">
           <SectionHeading id="connection">Connection and deletion</SectionHeading>
           <DangerZone connected={setup.hasConnection} />
         </section>
 
-        <p className="measure text-xs leading-relaxed text-ink-muted">
+        <p className="measure text-xs leading-relaxed text-ink-muted in-data-[density=pointer]:col-span-2">
           LockIn reads your Classroom courses and coursework. It never posts, submits or changes
           anything in Classroom, and it does not share your coursework with anyone.
         </p>

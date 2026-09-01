@@ -100,7 +100,7 @@ export function CourseTracker({ courses, setupMode = false }: CourseTrackerProps
 
   return (
     <div>
-      <ul className="flex flex-col gap-2">
+      <ul className="flex flex-col gap-2 in-data-[density=pointer]:grid in-data-[density=pointer]:grid-cols-2 in-data-[density=pointer]:gap-2">
         {courses.map((course) => {
           const on = tracked.get(course.courseId) === true;
           const dirty = on !== course.isTracked;
@@ -109,7 +109,8 @@ export function CourseTracker({ courses, setupMode = false }: CourseTrackerProps
             <li key={course.courseId}>
               <label
                 className={cx(
-                  'press flex cursor-pointer items-start gap-3 rounded-control border p-3.5',
+                  'press flex h-full cursor-pointer items-start gap-3 rounded-control border p-3.5',
+                  'in-data-[density=pointer]:items-center in-data-[density=pointer]:p-2.5',
                   'has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-brand',
                   // Tracked courses are raised; untracked ones sit flat on the
                   // ground. The state is the elevation, so the list can be read
@@ -131,7 +132,7 @@ export function CourseTracker({ courses, setupMode = false }: CourseTrackerProps
                   className="mt-1 size-5 shrink-0 accent-[var(--color-brand)]"
                 />
                 <span className="min-w-0 flex-1">
-                  <span className="block text-base leading-snug font-medium text-ink">
+                  <span className="block text-base leading-snug font-medium text-ink in-data-[density=pointer]:text-sm">
                     {course.name}
                   </span>
                   <span className="mt-1 block text-sm text-ink-muted">
@@ -160,9 +161,12 @@ export function CourseTracker({ courses, setupMode = false }: CourseTrackerProps
         className={cx(
           // Sticks to the bottom so the action is reachable without scrolling
           // back up a list of twenty courses.
+          // The offset clears the mobile tab bar. Desktop has no tab bar, so
+          // the same offset would strand the save bar above the viewport edge.
           'sticky bottom-[calc(var(--nav-h)+env(safe-area-inset-bottom))] z-10 mt-6',
+          'in-data-[density=pointer]:bottom-4 in-data-[density=pointer]:py-2.5',
           'surface-raised flex flex-wrap items-center justify-between gap-3 px-4 py-3',
-          'md:bottom-4',
+          'in-data-[density=pointer]:bottom-4 in-data-[density=pointer]:py-2.5',
         )}
       >
         <p className="text-sm tabular-nums text-ink-soft">

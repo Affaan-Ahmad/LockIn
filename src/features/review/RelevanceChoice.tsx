@@ -92,9 +92,12 @@ export function RelevanceChoice({ assignmentId, current, title }: RelevanceChoic
   }
 
   return (
-    <div className="mt-3 border-t border-line pt-3">
-      <p className="text-sm text-ink-soft">Is this yours?</p>
-      <div className="mt-2 flex flex-wrap items-center gap-2">
+    <div className="mt-3 border-t border-line pt-3 in-data-[density=pointer]:flex in-data-[density=pointer]:items-center in-data-[density=pointer]:justify-between in-data-[density=pointer]:gap-3">
+      <p className="text-sm font-medium text-ink">Is this yours?</p>
+      {/* Stacked under the question on a phone, where width is the scarce
+          thing. Beside it on desktop, where prompt and decision on one line is
+          faster to work a queue through. */}
+      <div className="mt-2 flex flex-wrap items-center gap-2 in-data-[density=pointer]:mt-0 in-data-[density=pointer]:shrink-0">
         <Choice
           label="Yes, it's mine"
           tone="brand"
@@ -140,7 +143,8 @@ function Choice({
       aria-label={`${label}: ${describedBy}`}
       className={cx(
         'press min-h-11 rounded-control px-4 text-sm font-medium active:translate-y-px',
-        ' disabled:opacity-50',
+        'in-data-[density=pointer]:min-h-8 in-data-[density=pointer]:px-3',
+        'disabled:opacity-50',
         tone === 'brand'
           ? 'bg-brand text-on-brand shadow-clay hover:bg-brand-hover'
           : 'surface-raised text-ink hover:bg-overlay',
