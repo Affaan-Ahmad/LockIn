@@ -1,5 +1,7 @@
 node_modules/
 .next/
+# Isolated output for verification builds, so they never touch the dev server.
+.next-verify/
 out/
 dist/
 coverage/
