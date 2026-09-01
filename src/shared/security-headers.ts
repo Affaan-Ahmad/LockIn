@@ -1,3 +1,4 @@
+import { THEME_BOOT_SHA256 } from './theme-boot';
 /**
  * HTTP security headers.
  *
@@ -37,6 +38,11 @@ export function buildContentSecurityPolicy(options: CspOptions): string {
     'script-src': [
       "'self'",
       `'nonce-${nonce}'`,
+      // The theme boot script, pinned by content rather than by nonce. A nonce
+      // authorises whatever happens to carry it; a hash authorises exactly
+      // these bytes. It also removes the `nonce` attribute React was comparing
+      // across hydration, which the browser blanks by spec.
+      `'${THEME_BOOT_SHA256}'`,
       "'strict-dynamic'",
       ...(isDevelopment ? ["'unsafe-eval'"] : []),
     ],
