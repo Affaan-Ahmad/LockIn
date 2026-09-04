@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { DeadlineGroups } from '@/features/dashboard/DeadlineGroups';
 import { MonthCalendar } from '@/features/dashboard/MonthCalendar';
+import { AutoSync } from '@/features/sync/AutoSync';
 import { SyncStatus } from '@/features/sync/SyncStatus';
 import { deadlineDayKey } from '@/lib/format';
 import { loadDashboard, requireSessionUser } from '@/lib/queries';
@@ -87,6 +88,7 @@ export default async function UpcomingPage({
       }
     >
       <SyncStatus freshness={data.freshness} variant="banner" />
+      <AutoSync level={data.freshness.level} />
 
       {listed.length === 0 ? (
         <EmptyState

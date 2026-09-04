@@ -6,6 +6,7 @@ import { AssignmentDetail } from '@/features/assignments/AssignmentDetail';
 import { DeadlineGroups } from '@/features/dashboard/DeadlineGroups';
 import { RailPanel } from '@/features/dashboard/RailPanel';
 import { WorkloadHeader } from '@/features/dashboard/WorkloadHeader';
+import { AutoSync } from '@/features/sync/AutoSync';
 import { SyncStatus } from '@/features/sync/SyncStatus';
 import { urgencyBand } from '@/lib/format';
 import { loadDashboard, loadSetupState, requireSessionUser } from '@/lib/queries';
@@ -110,6 +111,7 @@ export default async function TodayPage({
       }
     >
       <SyncStatus freshness={data.freshness} variant="banner" />
+      <AutoSync level={data.freshness.level} />
 
       <WorkloadHeader
         hour={hour}

@@ -6,6 +6,7 @@ import { ProfileForm } from '@/features/onboarding/ProfileForm';
 import { DangerZone } from '@/features/settings/DangerZone';
 import { ThemeToggle } from '@/features/settings/ThemeToggle';
 import { SyncButton } from '@/features/sync/SyncButton';
+import { AutoSync } from '@/features/sync/AutoSync';
 import { SyncStatus } from '@/features/sync/SyncStatus';
 import { formatAge } from '@/lib/format';
 import { loadDashboard, loadProfile, loadSetupState, requireSessionUser } from '@/lib/queries';
@@ -33,6 +34,7 @@ export default async function SettingsPage() {
       {/* A failed or stale sync belongs here too: this is where a student
           comes to find out why nothing is updating. */}
       <SyncStatus freshness={data.freshness} variant="banner" />
+      <AutoSync level={data.freshness.level} />
 
       <div className="flex flex-col gap-8 in-data-[density=pointer]:grid in-data-[density=pointer]:grid-cols-2 in-data-[density=pointer]:items-start in-data-[density=pointer]:gap-x-8 in-data-[density=pointer]:gap-y-7">
         <section aria-labelledby="account">

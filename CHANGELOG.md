@@ -13,6 +13,27 @@ came from.
 
 ---
 
+## [0.3.0] — 2026-09-05
+
+### Added
+
+- **Classroom syncs by itself when you open the app.** A screen whose data has
+  aged past the comfort window refreshes in the background as it loads, and
+  swaps the result in when it arrives. Nothing blocks: the page renders with
+  what was already stored, exactly as before.
+
+  Deliberately not a scheduler. Vercel's free tier caps cron at once per day
+  with an hour of jitter, which for a deadline product is close to useless — an
+  assignment posted at nine could sit unseen until the following afternoon.
+  Refreshing on arrival makes the data current at the only moment freshness is
+  worth anything: when somebody is looking at it. It also costs nothing and has
+  no quota to exhaust.
+
+  A revoked Google grant is left alone rather than retried, since every attempt
+  would fail identically and consume a rate-limit slot the reconnect prompt
+  cannot use. A five-minute cooldown, shared across tabs, stops a student moving
+  between screens from firing a sync per screen.
+
 ## [0.2.1] — 2026-09-05
 
 ### Fixed
@@ -117,5 +138,6 @@ Baseline: the first deployed version, before this changelog existed. Google
 Classroom sync, section-based relevance classification, the review queue, course
 tracking, and the account and legal surfaces.
 
+[0.3.0]: https://github.com/Affaan-Ahmad/LockIn/releases/tag/v0.3.0
 [0.2.1]: https://github.com/Affaan-Ahmad/LockIn/releases/tag/v0.2.1
 [0.2.0]: https://github.com/Affaan-Ahmad/LockIn/releases/tag/v0.2.0

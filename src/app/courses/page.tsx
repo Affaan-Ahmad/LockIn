@@ -1,6 +1,7 @@
 import { AppShell } from '@/components/shell/AppShell';
 import { CourseTracker } from '@/features/courses/CourseTracker';
 import { SyncButton } from '@/features/sync/SyncButton';
+import { AutoSync } from '@/features/sync/AutoSync';
 import { SyncStatus } from '@/features/sync/SyncStatus';
 import { loadCourses, loadReviewCount, requireSessionUser } from '@/lib/queries';
 
@@ -43,6 +44,7 @@ export default async function CoursesPage({
       headerAside={<SyncStatus freshness={freshness} />}
     >
       <SyncStatus freshness={freshness} variant="banner" />
+      <AutoSync level={freshness.level} />
 
       {courses.length === 0 ? (
         <div className="surface-raised p-4">

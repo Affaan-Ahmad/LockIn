@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { AssignmentCard } from '@/features/assignments/AssignmentCard';
 import { RelevanceChoice } from '@/features/review/RelevanceChoice';
+import { AutoSync } from '@/features/sync/AutoSync';
 import { SyncStatus } from '@/features/sync/SyncStatus';
 import { loadDecisions, loadReviewQueue, requireSessionUser } from '@/lib/queries';
 
@@ -44,6 +45,7 @@ export default async function ReviewPage() {
       headerAside={<SyncStatus freshness={freshness} />}
     >
       <SyncStatus freshness={freshness} variant="banner" />
+      <AutoSync level={freshness.level} />
 
       {items.length === 0 ? (
         <EmptyState
