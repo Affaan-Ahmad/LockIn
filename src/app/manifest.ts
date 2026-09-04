@@ -57,6 +57,17 @@ export default function manifest(): MetadataRoute.Manifest {
         type: 'image/png',
         purpose: 'any',
       },
+      {
+        // Android's adaptive icon. Without a maskable entry the launcher
+        // cannot crop to its own shape, so Chrome centres a shrunken copy on a
+        // white plate -- a small lime square in a white circle, beside every
+        // other app that fills its shape. This one runs edge to edge with the
+        // mark inside the 80% safe zone, so it survives any mask.
+        src: '/maskable-icon',
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'maskable',
+      },
     ],
   };
 }

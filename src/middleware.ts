@@ -115,7 +115,12 @@ export const config = {
     // redirected them to /welcome, so the "manifest" a browser received was an
     // HTML page and the app could not be installed at all.
     //
+    // maskable-icon is listed separately rather than leaning on the `icon`
+    // prefix: a launcher fetches it with no session, and a redirect to /welcome
+    // hands Android an HTML page where it expected a PNG. Every entry here is
+    // something outside a browser session has to be able to reach.
+    //
     // Excluding also skips an auth round trip on every icon request.
-    '/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|icon|apple-icon|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|icon|apple-icon|maskable-icon|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
     ],
 };

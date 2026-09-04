@@ -13,6 +13,29 @@ came from.
 
 ---
 
+## [0.3.2] — 2026-09-05
+
+### Added
+
+- **A maskable icon for Android launchers.** The manifest previously offered
+  only `purpose: "any"`, which Android cannot crop to its own shape — so Chrome
+  centred a shrunken copy on a white plate, giving a small lime square inside a
+  white circle beside every app that fills its shape properly. `/maskable-icon`
+  runs edge to edge with the mark inside the 80% safe zone, verified to leave no
+  pixel outside a circular crop.
+
+### Fixed
+
+- `/maskable-icon` was redirected to `/welcome` by the auth middleware, whose
+  matcher excluded `icon` and `apple-icon` but not this. A launcher fetches
+  icons with no session, so Android would have received an HTML page where it
+  expected a PNG.
+
+### Note
+
+- An already-installed PWA keeps the icon it was installed with. Reinstall to
+  pick up a new one; nothing server-side can change a launcher shortcut.
+
 ## [0.3.1] — 2026-09-05
 
 ### Fixed
@@ -156,6 +179,7 @@ Baseline: the first deployed version, before this changelog existed. Google
 Classroom sync, section-based relevance classification, the review queue, course
 tracking, and the account and legal surfaces.
 
+[0.3.2]: https://github.com/Affaan-Ahmad/LockIn/releases/tag/v0.3.2
 [0.3.1]: https://github.com/Affaan-Ahmad/LockIn/releases/tag/v0.3.1
 [0.3.0]: https://github.com/Affaan-Ahmad/LockIn/releases/tag/v0.3.0
 [0.2.1]: https://github.com/Affaan-Ahmad/LockIn/releases/tag/v0.2.1
