@@ -13,6 +13,24 @@ came from.
 
 ---
 
+## [0.3.1] — 2026-09-05
+
+### Fixed
+
+- Pull-to-refresh, Ctrl+R and the browser's refresh button are honoured even
+  inside the automatic-sync cooldown. The cooldown exists to stop *automatic*
+  triggers stampeding when someone moves between screens; applying it to a
+  deliberate request meant a student pulled down, saw nothing happen, and
+  reasonably concluded the app was broken. A reload still respects the freshness
+  rule — data thirty seconds old is not worth re-fetching however firmly it is
+  asked for.
+
+### Known gap
+
+- The installed app has no pull-to-refresh at all. Chrome and iOS both suppress
+  the native gesture in `display: standalone`, so there is no reload to detect.
+  The Sync button is the only manual refresh there.
+
 ## [0.3.0] — 2026-09-05
 
 ### Added
@@ -138,6 +156,7 @@ Baseline: the first deployed version, before this changelog existed. Google
 Classroom sync, section-based relevance classification, the review queue, course
 tracking, and the account and legal surfaces.
 
+[0.3.1]: https://github.com/Affaan-Ahmad/LockIn/releases/tag/v0.3.1
 [0.3.0]: https://github.com/Affaan-Ahmad/LockIn/releases/tag/v0.3.0
 [0.2.1]: https://github.com/Affaan-Ahmad/LockIn/releases/tag/v0.2.1
 [0.2.0]: https://github.com/Affaan-Ahmad/LockIn/releases/tag/v0.2.0

@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useTransition } from 'react';
 
 import type { FreshnessLevel } from '@/domain/sync/freshness';
-import { cooldownElapsed, shouldAutoSync } from '@/features/sync/auto-sync';
+import { cooldownElapsed, shouldAutoSync, wasReloaded } from '@/features/sync/auto-sync';
 
 /**
  * Refreshes Classroom when the student opens a screen and the data is old.
@@ -34,6 +34,22 @@ const LAST_ATTEMPT_KEY = 'lockin.autosync.lastAttemptAt';
 /** Matches SyncButton. Frequent enough to feel live, rare enough to be cheap. */
 const POLL_INTERVAL_MS = 2_500;
 const MAX_POLL_MS = 3 * 60 * 1000;
+
+/**
+ * How this page load happened, when the browser will say.
+ *
+ * Wrapped because the Navigation Timing entry is absent in older Safari and in
+ * some embedded webviews, and an exception here would stop the sync entirely --
+ * failing shut on the feature this is meant to enable.
+ */
+function navigationType(): string | undefined {
+  try {
+    const [entry] = performance.getEntriesByType('navigation') as PerformanceNavigationTiming[];
+    return entry?.type;
+  } catch {
+    return undefined;
+  }
+}
 
 function readLastAttempt(): string | null {
   try {
@@ -77,7 +93,12 @@ export function AutoSync({ level }: AutoSyncProps) {
 
   useEffect(() => {
     if (attempted.current || !shouldAutoSync(level)) return;
-    if (!cooldownElapsed(readLastAttempt(), Date.now())) return;
+
+    // Pull-to-refresh, Ctrl+R and the toolbar button all arrive as a reload,
+    // and all three mean "make this current now". Honour that over the
+    // anti-stampede cooldown, which exists for automatic triggers.
+    const explicit = wasReloaded(navigationType());
+    if (!explicit && !cooldownElapsed(readLastAttempt(), Date.now())) return;
 
     attempted.current = true;
     recordAttempt(Date.now());

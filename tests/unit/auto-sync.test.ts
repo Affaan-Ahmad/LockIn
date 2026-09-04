@@ -4,6 +4,7 @@ import {
   AUTO_SYNC_COOLDOWN_MS,
   cooldownElapsed,
   shouldAutoSync,
+  wasReloaded,
 } from '@/features/sync/auto-sync';
 
 /**
@@ -80,5 +81,30 @@ describe('the cooldown between automatic attempts', () => {
     // A clock change or a tampered value must not lock automatic sync out
     // until real time catches up.
     expect(cooldownElapsed(String(NOW + 86_400_000), NOW)).toBe(true);
+  });
+});
+
+describe('an explicit reload', () => {
+  it('is recognised, and a plain navigation is not', () => {
+    // Pull-to-refresh in a mobile browser, Ctrl+R and the toolbar button all
+    // arrive as a reload. Following a link does not.
+    expect(wasReloaded('reload')).toBe(true);
+    expect(wasReloaded('navigate')).toBe(false);
+    expect(wasReloaded('back_forward')).toBe(false);
+  });
+
+  it('is not assumed when the browser will not say', () => {
+    // Navigation Timing is absent in older Safari and some webviews. Treating
+    // silence as "reload" would bypass the cooldown on every page load and
+    // undo the throttle entirely.
+    expect(wasReloaded(undefined)).toBe(false);
+  });
+
+  it('overrides the cooldown but not the freshness rule', () => {
+    // The distinction the component encodes: a reload means "make this current
+    // now", which beats an anti-stampede throttle. It does not make
+    // thirty-second-old data worth re-fetching.
+    expect(wasReloaded('reload')).toBe(true);
+    expect(shouldAutoSync('FRESH')).toBe(false);
   });
 });

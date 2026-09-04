@@ -61,3 +61,26 @@ export function cooldownElapsed(lastAttemptAt: string | null, now: number): bool
 
   return now - parsed >= AUTO_SYNC_COOLDOWN_MS;
 }
+
+/**
+ * Whether this page load was a deliberate reload rather than a navigation.
+ *
+ * The signal behind honouring pull-to-refresh. In a mobile browser the gesture
+ * is a full reload, and so is Ctrl+R and the toolbar button -- all of them mean
+ * "I want this current now", which is a different statement from "I clicked a
+ * link and arrived here".
+ *
+ * The cooldown exists to stop *automatic* triggers stampeding when a student
+ * moves between screens. Applying it to an explicit request means the student
+ * pulls down, watches nothing happen, and concludes the app is broken. So a
+ * reload skips the cooldown.
+ *
+ * It does not skip the freshness rule. Data thirty seconds old is still fresh
+ * however firmly it was asked for, and spending a Google request to fetch
+ * identical rows helps nobody. A dedicated pull-to-refresh gesture would be
+ * unambiguous enough to override that too; a reload is not -- people reload for
+ * all sorts of reasons.
+ */
+export function wasReloaded(navigationType: string | undefined): boolean {
+  return navigationType === 'reload';
+}
