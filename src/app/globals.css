@@ -57,11 +57,23 @@
      the contrast suite added alongside it is what finally caught it. */
   --ink-muted: oklch(54% 0.009 145);
 
-  /* Near-black, NOT near-white. This is the single most dangerous token in the
-     file: the brand is a 90%-lightness lime, so white on it measures 1.3:1 and
-     a primary button would be unreadable. The logo's own #101210 gives 14.3:1.
-     Anything placed on --brand must use this. */
-  --ink-on-brand: oklch(17.9% 0.005 145);
+  /* The lime, because on a light page --brand is the near-black half of the
+     mark. Flips with it: see the brand block below.
+
+     Never white. Whichever way round the pair sits, white lands on one of them
+     at 1.3:1 and the button's label disappears. */
+  --ink-on-brand: oklch(89.6% 0.190 122);
+
+  /* What sits on a saturated SEMANTIC fill -- danger, review -- as opposed to
+     the brand fill above.
+     
+     Same trap, one level down: --danger and --review each serve as a fill and
+     as a text colour, and in the dark theme they are lifted to ~70% lightness
+     so that text-danger stays legible on a dark ground. White on a 70% fill is
+     2.7-3.1:1. So the label flips with the theme exactly as the brand's does:
+     near-white on the darker light-theme fills, near-black on the lighter
+     dark-theme ones. */
+  --ink-on-fill: oklch(99% 0.003 107);
 
   --line: oklch(88% 0.009 107);
   --line-strong: oklch(78% 0.012 107);
@@ -76,21 +88,36 @@
      Review is orchid, well away from both brand and danger: "we are not sure"
      needs its own voice, and uncertainty must never look like failure.
      -------------------------------------------------------------------- */
-  /* THE BRAND HAS TWO TOKENS AND THEY ARE NOT INTERCHANGEABLE.
+  /* THE BRAND HAS THREE TOKENS AND THEY ARE NOT INTERCHANGEABLE.
 
-     `--brand` is the lime, straight off the mark. It is a *fill*: something
-     sits on top of it, in --ink-on-brand. At 90% lightness it measures 1.2:1
-     against this ground, so as text it is not subtle, it is invisible.
+     `--brand` is the emphatic FILL, and it is the half of the mark that
+     opposes the page. The mark is lime and near-black together, and which half
+     goes underneath depends on what it is sitting on:
 
-     `--brand-ink` is the same hue dragged to 45% lightness, reaching 6.4:1 on
+       light page -> near-black fill, lime label
+       dark page  -> lime fill, near-black label
+
+     This is not a compromise on the lime. It is the reason a lime fill was
+     wrong here: at 90% lightness against a 96.6% ground it measured 1.19:1, so
+     the button differed from the page in hue alone and had no edge, no
+     presence, and no way to read as a raised control. WCAG 1.4.11 asks 3:1 for
+     a UI component against what surrounds it; this had a fifth of that.
+
+     Inverting gives ~16:1 against the page and keeps 14.3:1 under the label,
+     and it is exactly the pairing in `appicon-dark.svg`.
+
+     `--ink-on-brand` is whatever sits on that fill -- the other half of the
+     mark, so it flips with it.
+
+     `--brand-ink` is the lime hue dragged to 45% lightness, reaching 6.4:1 on
      the ground. That is what brand-coloured *text* uses: links, the active nav
-     item, step labels.
+     item, step labels. It is never a fill.
 
-     A violet brand needed no such split, because one value happened to serve
-     both roles. Lime does not forgive that, so the split lives in the token
-     names, where a call site is forced to choose. */
-  --brand: oklch(89.6% 0.190 122);
-  --brand-hover: oklch(85% 0.185 122);
+     A violet brand needed none of this, because one value happened to serve
+     every role. Lime forgives nothing, so each role has its own token and a
+     call site is forced to choose. */
+  --brand: oklch(17.9% 0.005 145);
+  --brand-hover: oklch(26% 0.010 145);
   --brand-ink: oklch(45% 0.140 130);
   --brand-ink-hover: oklch(38% 0.130 130);
   --brand-soft: oklch(94% 0.055 118);
@@ -302,6 +329,7 @@
   /* Unchanged between themes, because the surface it sits on is unchanged:
      --brand is lime in both. */
   --dark-ink-on-brand: oklch(17.9% 0.005 145);
+  --dark-ink-on-fill: oklch(17.9% 0.005 145);
 
   --dark-ink: oklch(96% 0.006 145);
   --dark-ink-soft: oklch(76% 0.009 145);
@@ -372,6 +400,8 @@
     --ink-soft: var(--dark-ink-soft);
     --ink-muted: var(--dark-ink-muted);
     --ink-on-brand: var(--dark-ink-on-brand);
+    --ink-on-fill: var(--dark-ink-on-fill);
+  --ink-on-fill: var(--dark-ink-on-fill);
 
     --line: var(--dark-line);
     --line-strong: var(--dark-line-strong);
@@ -414,6 +444,7 @@
   --ink-soft: var(--dark-ink-soft);
   --ink-muted: var(--dark-ink-muted);
   --ink-on-brand: var(--dark-ink-on-brand);
+  --ink-on-fill: var(--dark-ink-on-fill);
 
   --line: var(--dark-line);
   --line-strong: var(--dark-line-strong);
@@ -456,6 +487,7 @@
   --color-ink-soft: var(--ink-soft);
   --color-ink-muted: var(--ink-muted);
   --color-on-brand: var(--ink-on-brand);
+  --color-on-fill: var(--ink-on-fill);
 
   --color-line: var(--line);
   --color-line-strong: var(--line-strong);
@@ -709,46 +741,67 @@
 
 /* ========================================================================== */
 
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
+/* Element resets, in @layer base so utilities can override them.
+ *
+ * These used to be unlayered, and unlayered CSS beats every cascade layer --
+ * including `@layer utilities`, where Tailwind v4 puts every `text-*`, `bg-*`
+ * and `font-*` class. So `button { color: inherit }` silently outranked
+ * `.text-on-brand` on every button in the product, and `a { color: inherit }`
+ * did the same to every `text-brand-ink` link.
+ *
+ * The effect was invisible for as long as the inherited colour happened to be
+ * an acceptable one. On the old iris button, inheriting near-black ink instead
+ * of the intended near-white looked merely a bit flat. On a lime button in the
+ * dark theme it inherits near-white ink and lands at 1.3:1 -- a label that is
+ * simply not there. The design intent had never actually shipped; the palette
+ * change only made the gap visible.
+ *
+ * `@layer base` is what these were always meant to be: a floor that a utility
+ * can stand on top of. `:focus-visible` below stays unlayered deliberately --
+ * that one *should* win against everything.
+ */
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
 
-html {
-  -webkit-text-size-adjust: 100%;
-}
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
 
-body {
-  margin: 0;
-  background: var(--surface-ground);
-  color: var(--ink);
-  font-family: var(--font-sans), ui-sans-serif, system-ui, -apple-system, sans-serif;
-  line-height: 1.5;
-  /* Deadlines are read as numbers. Tabular figures keep 11:59 and 9:00 the same
-     width, so a column of times scans as a column. */
-  font-variant-numeric: tabular-nums;
-  -webkit-font-smoothing: antialiased;
-  min-height: 100dvh;
-}
+  body {
+    margin: 0;
+    background: var(--surface-ground);
+    color: var(--ink);
+    font-family: var(--font-sans), ui-sans-serif, system-ui, -apple-system, sans-serif;
+    line-height: 1.5;
+    /* Deadlines are read as numbers. Tabular figures keep 11:59 and 9:00 the same
+       width, so a column of times scans as a column. */
+    font-variant-numeric: tabular-nums;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100dvh;
+  }
 
-h1, h2, h3, h4 {
-  margin: 0;
-  /* Weight is set per component now. It used to be forced to 650 here and
-     overridden at every call site, so the rule did nothing except disagree
-     with the components. Inheriting means a heading that specifies nothing
-     gets body weight, which is the honest default. */
-  font-weight: inherit;
-  letter-spacing: -0.02em;
-  /* Always upright. An italicised heading is the most reliable generated-UI
-     tell there is. */
-  font-style: normal;
-}
+  h1, h2, h3, h4 {
+    margin: 0;
+    /* Weight is set per component now. It used to be forced to 650 here and
+       overridden at every call site, so the rule did nothing except disagree
+       with the components. Inheriting means a heading that specifies nothing
+       gets body weight, which is the honest default. */
+    font-weight: inherit;
+    letter-spacing: -0.02em;
+    /* Always upright. An italicised heading is the most reliable generated-UI
+       tell there is. */
+    font-style: normal;
+  }
 
-p { margin: 0; }
-ul, ol { margin: 0; padding: 0; list-style: none; }
-button, input, select, textarea { font: inherit; color: inherit; }
-a { color: inherit; text-decoration: none; }
+  p { margin: 0; }
+  ul, ol { margin: 0; padding: 0; list-style: none; }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  a { color: inherit; text-decoration: none; }
+}
 
 /* One focus treatment everywhere. Depth alone never signals focus — that is the
    accessibility failure neumorphism is known for. */

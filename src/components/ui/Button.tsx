@@ -39,7 +39,7 @@ const VARIANT: Record<ButtonVariant, string> = {
   ghost: 'bg-transparent text-ink-soft hover:bg-sunken hover:text-ink',
   // Filled, and visually distinct from primary rather than a shade of it:
   // deleting an account must not look like confirming one.
-  danger: 'bg-danger text-white shadow-clay hover:brightness-[0.94]',
+  danger: 'bg-danger text-on-fill shadow-clay hover:brightness-[0.94]',
 };
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {

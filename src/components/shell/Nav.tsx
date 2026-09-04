@@ -89,7 +89,7 @@ export function Nav({ reviewCount = 0 }: NavProps) {
                   <span
                     className={cx(
                       'absolute -top-1.5 -right-2 min-w-[1.05rem] rounded-pill px-1',
-                      'bg-review text-center text-2xs leading-[1.05rem] font-semibold text-white',
+                      'bg-review text-center text-2xs leading-[1.05rem] font-semibold text-on-fill',
                     )}
                   >
                     {badge > 9 ? '9+' : badge}

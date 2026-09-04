@@ -7,14 +7,23 @@ import { describe, expect, it } from 'vitest';
  *
  * These exist because the brand is a 90%-lightness lime, which is legible on
  * almost nothing. Every other colour in the system tolerates being used in the
- * wrong role and merely looks slightly off; lime used as text measures 1.2:1
- * and is *gone*. Nothing in TypeScript, ESLint or the build catches that, and
- * it is invisible in a screenshot taken on the theme where it happens to work.
+ * wrong role and merely looks slightly off; lime measures 1.2:1 both as text on
+ * the page and as a fill behind it, and in either case the thing is simply
+ * gone. Nothing in TypeScript, ESLint or the build catches that.
  *
- * So the ratios are asserted against the real token values parsed out of
- * globals.css. A future retune that drags --brand down to a text-safe lightness
- * (losing the mark's colour) or promotes --brand-ink up to the lime (losing the
- * legibility) fails here rather than in front of a student.
+ * Two distinct questions are asked of every fill, and the first version of this
+ * suite only asked one of them:
+ *
+ *   Can the LABEL be read on the fill?  (>= 4.5:1)
+ *   Can the FILL be seen on the page?   (>= 3:1, WCAG 1.4.11)
+ *
+ * A lime button passed the first and failed the second at 1.19:1 -- a perfectly
+ * legible label on a control with no edge and no presence. That shipped, and it
+ * is why the second question is now asked out loud.
+ *
+ * Ratios are computed from the real token values parsed out of globals.css, so
+ * a retune that breaks either question fails here rather than in front of a
+ * student.
  */
 
 const CSS = readFileSync('src/app/globals.css', 'utf8');
@@ -68,10 +77,9 @@ function contrast(a: Oklch, b: Oklch): number {
   return (hi + 0.05) / (lo + 0.05);
 }
 
-describe('the lime fill', () => {
-  it('carries near-black, not near-white', () => {
-    // The single most dangerous pairing in the system. White on this lime is
-    // 1.3:1 -- a primary button whose label cannot be read at all.
+describe('the emphatic fill', () => {
+  it('carries a label that can be read on it', () => {
+    // The two halves of the mark, whichever way round the theme puts them.
     expect(contrast(token('ink-on-brand'), token('brand'))).toBeGreaterThanOrEqual(4.5);
   });
 
@@ -79,13 +87,31 @@ describe('the lime fill', () => {
     expect(contrast(token('ink-on-brand'), token('brand-hover'))).toBeGreaterThanOrEqual(4.5);
   });
 
-  it('is genuinely the mark’s lime and not a darkened stand-in', () => {
-    // If a future change makes --brand text-safe on a light ground, it has
-    // stopped being the brand colour. The split exists precisely so this token
-    // never has to compromise.
-    const brand = token('brand');
-    expect(brand.l).toBeGreaterThan(85);
-    expect(brand.c).toBeGreaterThan(0.15);
+  it('separates from the page it sits on', () => {
+    // The check this suite was missing, and the one that mattered. A filled
+    // button whose fill matches the page luminance has no edge and no
+    // presence -- the label can be perfectly legible while the control is
+    // invisible as a control. WCAG 1.4.11 asks 3:1 for a UI component against
+    // adjacent colour; a lime fill on the cream ground managed 1.19:1.
+    expect(contrast(token('brand'), token('surface-ground'))).toBeGreaterThanOrEqual(3);
+    expect(contrast(token('brand'), token('surface-raised'))).toBeGreaterThanOrEqual(3);
+    expect(contrast(token('dark-brand'), token('dark-surface-ground'))).toBeGreaterThanOrEqual(3);
+  });
+
+  it('keeps its hover state separated from the page as well', () => {
+    // A hover that dissolves into the background is a hover that reads as the
+    // button being disabled.
+    expect(contrast(token('brand-hover'), token('surface-ground'))).toBeGreaterThanOrEqual(3);
+    expect(
+      contrast(token('dark-brand-hover'), token('dark-surface-ground')),
+    ).toBeGreaterThanOrEqual(3);
+  });
+
+  it('pairs the two halves of the mark, never white', () => {
+    // Whichever way round the pair sits, white lands on one half at ~1.3:1.
+    const white = { l: 100, c: 0, h: 0 };
+    expect(contrast(white, token('brand'))).not.toBeLessThan(4.5);
+    expect(contrast(white, token('dark-brand'))).toBeLessThan(4.5);
   });
 });
 
@@ -104,8 +130,15 @@ describe('brand-coloured text', () => {
     expect(contrast(token('brand-ink'), token('brand-soft'))).toBeGreaterThanOrEqual(4.5);
   });
 
-  it('is far darker than the fill, which is the whole point of the split', () => {
-    expect(token('brand-ink').l).toBeLessThan(token('brand').l - 30);
+  it('stays recognisably the mark’s hue rather than a generic green', () => {
+    // The lightness relationship to --brand is not the invariant: --brand
+    // inverts per theme, so comparing the two says nothing. What must hold is
+    // that brand-coloured text still reads as *this* brand -- same hue family
+    // as the lime, with enough chroma to be a colour rather than a grey.
+    const lime = token('dark-brand');
+    const ink = token('brand-ink');
+    expect(Math.abs(ink.h - lime.h)).toBeLessThanOrEqual(20);
+    expect(ink.c).toBeGreaterThan(0.08);
   });
 });
 
@@ -136,6 +169,36 @@ describe('body text', () => {
     expect(contrast(token('dark-ink-muted'), token('dark-surface-ground'))).toBeGreaterThanOrEqual(
       4.5,
     );
+  });
+});
+
+describe('semantic fills', () => {
+  // danger and review carry the same one-token-two-roles hazard the brand had:
+  // each is a fill AND a text colour, and the dark theme lifts them to ~70%
+  // lightness so the text role stays legible. That makes white unreadable on
+  // them, which is why the label flips with the theme.
+  it.each(['danger', 'review'] as const)(
+    'carries a readable label on %s in the light theme',
+    (name) => {
+      expect(contrast(token('ink-on-fill'), token(name))).toBeGreaterThanOrEqual(4.5);
+    },
+  );
+
+  it.each(['danger', 'review'] as const)(
+    'carries a readable label on %s in the dark theme',
+    (name) => {
+      expect(contrast(token('dark-ink-on-fill'), token(`dark-${name}`))).toBeGreaterThanOrEqual(
+        4.5,
+      );
+    },
+  );
+
+  it('would fail with a fixed white label, which is why the token flips', () => {
+    // Guards the reasoning, not just the result: if someone reverts these call
+    // sites to text-white, this records what that costs in the dark theme.
+    const white = { l: 100, c: 0, h: 0 };
+    expect(contrast(white, token('dark-danger'))).toBeLessThan(4.5);
+    expect(contrast(white, token('dark-review'))).toBeLessThan(4.5);
   });
 });
 

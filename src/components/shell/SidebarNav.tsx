@@ -120,7 +120,7 @@ function Row({
           unlabelled link. */}
       <span className="truncate max-lg:sr-only">{item.label}</span>
       {badge === null ? null : (
-        <span className="absolute top-1 right-1 rounded-pill bg-review px-1 text-2xs font-semibold text-white lg:static lg:ml-auto lg:px-1.5">
+        <span className="absolute top-1 right-1 rounded-pill bg-review px-1 text-2xs font-semibold text-on-fill lg:static lg:ml-auto lg:px-1.5">
           {badge > 9 ? '9+' : badge}
         </span>
       )}
