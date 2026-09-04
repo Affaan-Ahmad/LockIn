@@ -111,12 +111,12 @@ export function CourseTracker({ courses, setupMode = false }: CourseTrackerProps
                 className={cx(
                   'press flex h-full cursor-pointer items-start gap-3 rounded-control border p-3.5',
                   'in-data-[density=pointer]:items-center in-data-[density=pointer]:p-2.5',
-                  'has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-brand',
+                  'has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-brand-ink',
                   // Tracked courses are raised; untracked ones sit flat on the
                   // ground. The state is the elevation, so the list can be read
                   // at a glance without inspecting twenty checkboxes.
                   on
-                    ? 'surface-raised border-brand/30'
+                    ? 'surface-raised border-brand-ink/30'
                     : 'border-line bg-transparent hover:bg-sunken',
                 )}
               >
@@ -147,7 +147,7 @@ export function CourseTracker({ courses, setupMode = false }: CourseTrackerProps
                   </span>
                 </span>
                 {dirty ? (
-                  <span className="shrink-0 self-center text-xs font-semibold text-brand">
+                  <span className="shrink-0 self-center text-xs font-semibold text-brand-ink">
                     {on ? 'Adding' : 'Removing'}
                   </span>
                 ) : null}

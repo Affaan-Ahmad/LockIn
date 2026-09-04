@@ -7,6 +7,8 @@ import type {
   CourseTrackingRepository,
   StoredCourse,
   SubmissionRepository,
+  SyncCourseWorkItem,
+  SyncRunLease,
   SyncRunRepository,
 } from '@/application/ports/repositories';
 import type { AcademicSourceAdapter } from '@/application/ports/source-adapter';
@@ -19,41 +21,56 @@ import type {
   RelevanceDecision,
   RelevanceInput,
 } from '@/domain/classification/relevance';
-import type { CourseDiscoveryService } from './course-discovery.service';
+import { ExecutionDeadline, type DeadlineOptions } from '@/domain/sync/deadline';
 import type {
   CourseSyncResult,
   SyncCounts,
   SyncIssue,
   SyncMode,
-  SyncRunOutcome,
+  SyncRunStatus,
   SyncTrigger,
 } from '@/domain/sync/outcome';
-import { EMPTY_SYNC_COUNTS, addCounts, resolveRunStatus } from '@/domain/sync/outcome';
+import { EMPTY_SYNC_COUNTS, addCounts } from '@/domain/sync/outcome';
 import type { Clock } from '@/shared/clock';
-import { mapWithConcurrency } from '@/shared/concurrency';
-import { toAppError } from '@/shared/errors';
+import { AuthorizationExpiredError, ConfigError, toAppError } from '@/shared/errors';
 import type { Logger } from '@/shared/logger';
 
+import type { CourseDiscoveryService } from './course-discovery.service';
+
 /**
- * Orchestrates one synchronisation run.
+ * A resumable synchronisation worker.
  *
- * Every step it performs lives somewhere else: fetching is the adapter's,
- * persistence is the repositories', deciding relevance is the engine's. What
- * remains here is sequencing, concurrency, counting and failure containment --
- * which is why this file is a few hundred lines instead of the thousand-line
- * `syncEverything()` this design exists to avoid.
+ * The previous design ran an entire multi-course sync inside one HTTP request,
+ * which meant the request staying alive *was* the reliability model. It is not
+ * one: a serverless invocation is bounded, a sync is not, and being killed
+ * mid-run left nothing finalised and nothing resumable.
  *
- * Three properties are load-bearing:
+ * What replaces it:
  *
- *   PARTIAL SUCCESS IS A REAL OUTCOME. One course failing does not discard the
- *   others. Each course's result is recorded independently and the run reports
- *   what actually happened.
+ *   THE DATABASE HOLDS THE PLAN. Discovery enqueues one work item per tracked
+ *   course. That queue is the checkpoint -- no blob, no page cursor, no state in
+ *   memory that dies with the process.
  *
- *   NO NETWORK CALL HOLDS A TRANSACTION. Google is contacted, the response is
- *   fully in memory, and only then does a short transactional batch write run.
+ *   A WORKER TAKES ONE UNIT AT A TIME. It claims a course, syncs it, records
+ *   the result, and only then looks at the next. Whatever it finished is
+ *   durable the moment it finished.
  *
- *   DELETION REQUIRES PROOF. Disappearance reconciliation runs only for a
- *   course whose listing came back COMPLETE.
+ *   IT STOPS BEFORE IT IS STOPPED. An internal deadline, well inside the
+ *   platform's, decides whether there is time for another unit. When there is
+ *   not, the worker hands the run back and asks for a successor. The platform
+ *   timeout becomes the emergency boundary it should always have been.
+ *
+ *   EVERY WRITE IS FENCED. The lease carries an owner token. A worker that lost
+ *   its lease -- because it stalled long enough to be declared dead -- cannot
+ *   write anything, so it cannot corrupt the state of the worker that replaced
+ *   it.
+ *
+ * The unit is one course, chosen from the shape of the Classroom API rather
+ * than for convenience. A course's completeness verdict (COMPLETE vs PARTIAL)
+ * is what licenses deletion reconciliation, and that verdict is only meaningful
+ * for a whole course listing. Splitting finer would either forfeit
+ * reconciliation or make it unsound, and unsound reconciliation deletes a
+ * student's coursework.
  */
 
 export interface ClassroomSyncServiceDeps {
@@ -75,202 +92,169 @@ export interface ClassroomSyncServiceDeps {
 }
 
 export interface SyncConfig {
-  readonly courseConcurrency: number;
   readonly leaseTtlSeconds: number;
+  /** Wall-clock this invocation may use before handing over. */
+  readonly invocationBudgetMs: number;
+  /** Held back from the budget for a clean checkout. */
+  readonly checkoutReserveMs: number;
+  /** Seed for "how long does one course take"; replaced by observation. */
+  readonly initialUnitEstimateMs: number;
+  /** A course claimed this many times without succeeding is given up on. */
+  readonly maxCourseAttempts: number;
 }
 
-export interface RunSyncInput {
+export interface StartSyncInput {
   readonly userId: string;
   readonly trigger: SyncTrigger;
   readonly mode: SyncMode;
-  /** Learned from Classroom submissions; persisted by the caller. */
-  readonly onSourceUserIdObserved?: (sourceUserId: string) => Promise<void>;
-  /** Known Classroom user id, enabling the source-targeting rule. */
   readonly googleUserId?: string | null;
+  readonly onSourceUserIdObserved?: (sourceUserId: string) => Promise<void>;
 }
+
+/** Why this invocation stopped. The caller decides what to do about it. */
+export type WorkOutcome =
+  /** Every unit is done and the run has a terminal status. */
+  | { readonly kind: 'COMPLETED'; readonly syncRunId: string; readonly status: SyncRunStatus }
+  /** The deadline arrived with work left. The run is QUEUED for a successor. */
+  | { readonly kind: 'HANDED_OFF'; readonly syncRunId: string; readonly remainingCourses: number }
+  /** A run-level fault no retry can fix. The run is FAILED. */
+  | { readonly kind: 'FAILED'; readonly syncRunId: string; readonly errorCode: string }
+  /** The lease moved on mid-flight. Somebody else owns this run; do nothing. */
+  | { readonly kind: 'FENCED'; readonly syncRunId: string };
 
 export class ClassroomSyncService {
   constructor(private readonly deps: ClassroomSyncServiceDeps) {}
 
-  async run(input: RunSyncInput): Promise<SyncRunOutcome> {
-    const { deps } = this;
-    const startedAt = deps.clock.now();
+  /**
+   * Claims a new run and returns immediately.
+   *
+   * Deliberately does no Google work. The caller answers the HTTP request with
+   * this id and drives the actual synchronisation separately, so the student
+   * gets an answer in milliseconds and the sync is not tied to their connection.
+   */
+  async start(input: StartSyncInput): Promise<SyncRunLease> {
+    const mode = await this.resolveMode(input.userId, input.mode);
 
-    // Resolved before the lease so the run records the mode it actually used.
-    // This is a single indexed read, not an API call, so it does not weaken the
-    // "reject a duplicate trigger before spending a request" property below.
-    const mode = await this.resolveMode(input);
-
-    // Acquiring the lease first means a duplicate trigger is rejected before it
-    // spends a single Google API call.
-    const lease = await deps.syncRuns.acquire(
+    return this.deps.syncRuns.start(
       input.userId,
       input.trigger,
       mode,
-      deps.config.leaseTtlSeconds,
+      this.deps.config.leaseTtlSeconds,
+      newOwnerToken(),
     );
+  }
 
+  /** Adopts a run left QUEUED by a handover or a dead worker. */
+  async resume(userId: string): Promise<SyncRunLease | null> {
+    return this.deps.syncRuns.resume(
+      userId,
+      this.deps.config.leaseTtlSeconds,
+      newOwnerToken(),
+    );
+  }
+
+  /**
+   * Processes units until the queue empties or the deadline arrives.
+   *
+   * Every exit path leaves the run in a state somebody else can act on: a
+   * terminal status, or QUEUED with the completed work intact. There is no path
+   * that leaves it RUNNING and owned by a worker that has gone away, except a
+   * hard process kill -- which the lease expiry covers.
+   */
+  async work(lease: SyncRunLease, context: StartSyncInput): Promise<WorkOutcome> {
+    const { deps } = this;
     const logger = deps.logger.child({
       syncRunId: lease.syncRunId,
-      userId: input.userId,
-      mode,
+      userId: lease.userId,
+      mode: lease.mode,
+      resumeAttempt: lease.resumeAttempts,
     });
 
-    const stopHeartbeat = this.startHeartbeat(lease.syncRunId, logger);
-
-    const runIssues: SyncIssue[] = [];
-    let courseResults: CourseSyncResult[] = [];
-    let counts = EMPTY_SYNC_COUNTS;
+    const deadline = new ExecutionDeadline(deps.clock, this.deadlineOptions());
+    const stopHeartbeat = this.startHeartbeat(lease, logger);
 
     try {
-      const student = await this.loadStudentProfile(input.userId, runIssues, logger);
-
-      // Phase one: discovery. Always runs, always cheap -- one paginated call.
-      // The student cannot choose subjects they have not been shown.
-      const discovery = await deps.discovery.discover(input.userId, lease.syncRunId);
-      runIssues.push(...discovery.issues);
-
-      // Phase two: coursework, for tracked subjects only. Everything expensive
-      // -- topics, coursework pages, submission pages, classification -- happens
-      // below this line, and only for courses the student opted into.
-      const allCourses = await deps.courses.listForUser(input.userId, deps.source.id);
-      const trackedIds = await deps.tracking.listTrackedCourseIds(input.userId);
-      const storedCourses = allCourses.filter((course) => trackedIds.has(course.id));
-
-      logger.info('courses discovered', {
-        discovered: discovery.courses.length,
-        tracked: storedCourses.length,
-        undecided: discovery.undecidedCount,
-        completeness: discovery.completeness,
-      });
-
-      if (storedCourses.length === 0 && discovery.courses.length > 0) {
-        // Not a failure. The student has courses but has not chosen any yet,
-        // and saying so plainly is more useful than an empty successful sync.
-        runIssues.push({
-          code: 'NO_TRACKED_COURSES',
-          message:
-            'No courses are being tracked. Choose the subjects to follow before synchronising coursework.',
-          retryable: false,
-          scope: 'RUN',
-          sourceCourseId: null,
-          sourceItemId: null,
-        });
+      if (!lease.discoveryCompleted) {
+        const planned = await this.plan(lease, logger);
+        if (planned === 'FENCED') return { kind: 'FENCED', syncRunId: lease.syncRunId };
       }
 
-      // Bounded concurrency, not Promise.all. A student with twenty courses
-      // would otherwise open twenty simultaneous Classroom conversations, each
-      // of which is itself several paginated requests.
-      const settled = await mapWithConcurrency(
-        storedCourses,
-        deps.config.courseConcurrency,
-        async (course) =>
-          this.syncCourse({
-            course,
-            lease,
-            input,
-            mode,
-            student,
-            logger,
-          }),
-      );
+      const student = await this.loadStudentProfile(lease, logger);
 
-      courseResults = settled.map((entry, index) => {
-        const course = storedCourses[index] as StoredCourse;
-        if (entry.status === 'fulfilled') return entry.value;
+      for (;;) {
+        const decision = deadline.shouldStartUnit();
+        if (!decision.canStartAnotherUnit) {
+          // Nothing is half-done here: the check happens between units, never
+          // inside one.
+          const released = await deps.syncRuns.releaseLease(lease.syncRunId, lease.owner);
+          if (!released) return { kind: 'FENCED', syncRunId: lease.syncRunId };
 
-        const error = toAppError(entry.reason);
-        logger.error('course synchronisation failed', {
-          sourceCourseId: course.sourceCourseId,
-          errorCode: error.code,
-          message: error.message,
-        });
+          logger.info('handing sync over to a successor invocation', {
+            stage: 'handover',
+            reason: decision.reason,
+            remainingMs: decision.remainingMs,
+            unitsCompleted: deadline.completedUnits,
+            unitEstimateMs: deadline.currentUnitEstimateMs,
+          });
+          return { kind: 'HANDED_OFF', syncRunId: lease.syncRunId, remainingCourses: -1 };
+        }
 
-        return {
-          sourceCourseId: course.sourceCourseId,
-          courseName: course.name,
-          status: 'FAILED',
-          completeness: 'FAILED',
-          counts: { ...EMPTY_SYNC_COUNTS, coursesProcessed: 1, coursesFailed: 1 },
-          issues: [
+        const item = await deps.syncRuns.claimNextCourse(lease.syncRunId, lease.owner);
+        if (item === null) break;
+
+        const startedAt = deps.clock.now().getTime();
+        const fenced = await this.runUnit(lease, item, student, context, logger);
+        if (fenced) return { kind: 'FENCED', syncRunId: lease.syncRunId };
+        deadline.recordUnit(deps.clock.now().getTime() - startedAt);
+      }
+
+      const status = await deps.syncRuns.finalize(lease.syncRunId, lease.owner, null);
+      if (status === null) {
+        // Either the lease moved on or work reappeared. Both mean this worker
+        // is no longer the authority on whether the run is finished.
+        logger.warn('finalisation refused; another worker owns this run', { stage: 'finalize' });
+        return { kind: 'FENCED', syncRunId: lease.syncRunId };
+      }
+
+      logger.info('sync run finished', {
+        stage: 'finalize',
+        status,
+        unitsCompleted: deadline.completedUnits,
+        durationMs: deadline.elapsedMs(),
+      });
+      return { kind: 'COMPLETED', syncRunId: lease.syncRunId, status };
+    } catch (caught) {
+      // Run-level faults only: a revoked grant, an unreadable credential, a
+      // discovery call that could not complete. Course-level failures never
+      // reach here -- they are recorded against their work item and the run
+      // carries on, which is what makes one bad course survivable.
+      const error = toAppError(caught);
+      logger.error('sync run failed', {
+        stage: 'run',
+        errorCode: error.code,
+        retryable: error.retryable,
+      });
+
+      await this.safely(
+        () =>
+          deps.syncRuns.recordIssues(lease.syncRunId, [
             {
               code: error.code,
               message: error.message,
               retryable: error.retryable,
-              scope: 'COURSE',
-              sourceCourseId: course.sourceCourseId,
+              scope: 'RUN',
+              sourceCourseId: null,
               sourceItemId: null,
             },
-          ],
-        } satisfies CourseSyncResult;
-      });
-
-      for (const result of courseResults) {
-        counts = addCounts(counts, result.counts);
-        await deps.syncRuns.recordCourseResult(lease.syncRunId, result);
-        if (result.issues.length > 0) {
-          await deps.syncRuns.recordIssues(lease.syncRunId, result.issues);
-        }
-      }
-
-      if (runIssues.length > 0) {
-        await deps.syncRuns.recordIssues(lease.syncRunId, runIssues);
-      }
-
-      const status = resolveRunStatus(courseResults);
-      const finishedAt = deps.clock.now();
-      await deps.syncRuns.finalize(lease.syncRunId, status, counts, finishedAt);
-
-      logger.info('sync run finished', { status, ...counts });
-
-      return {
-        syncRunId: lease.syncRunId,
-        userId: input.userId,
-        trigger: input.trigger,
-        mode,
-        status,
-        startedAt,
-        finishedAt,
-        counts,
-        courses: courseResults,
-        issues: runIssues,
-      };
-    } catch (caught) {
-      // A run-level failure (revoked token, course listing unreachable) still
-      // gets finalised with everything learned so far, so the record is never
-      // left RUNNING and the student is told what actually happened.
-      const error = toAppError(caught);
-      const issue: SyncIssue = {
-        code: error.code,
-        message: error.message,
-        retryable: error.retryable,
-        scope: 'RUN',
-        sourceCourseId: null,
-        sourceItemId: null,
-      };
-      runIssues.push(issue);
-
-      logger.error('sync run failed', { errorCode: error.code, message: error.message });
-
-      await safely(() => deps.syncRuns.recordIssues(lease.syncRunId, [issue]), logger);
-      const finishedAt = deps.clock.now();
-      await safely(
-        () => deps.syncRuns.finalize(lease.syncRunId, 'FAILED', counts, finishedAt),
+          ]),
+        logger,
+      );
+      await this.safely(
+        () => deps.syncRuns.failRun(lease.syncRunId, lease.owner, error.code),
         logger,
       );
 
-      return {
-        syncRunId: lease.syncRunId,
-        userId: input.userId,
-        trigger: input.trigger,
-        mode,
-        status: 'FAILED',
-        startedAt,
-        finishedAt,
-        counts,
-        courses: courseResults,
-        issues: runIssues,
-      };
+      return { kind: 'FAILED', syncRunId: lease.syncRunId, errorCode: error.code };
     } finally {
       stopHeartbeat();
     }
@@ -278,25 +262,181 @@ export class ClassroomSyncService {
 
   // ---------------------------------------------------------------------------
 
-  private async syncCourse(args: {
-    course: StoredCourse;
-    lease: { syncRunId: string };
-    input: RunSyncInput;
-    mode: SyncMode;
-    student: StudentSectionProfile | null;
-    logger: Logger;
-  }): Promise<CourseSyncResult> {
+  /**
+   * Discovery, then the work queue.
+   *
+   * Runs once per run, not once per invocation: `discovery_completed_at` is
+   * stamped by the enqueue, so a continuation skips straight to the queue
+   * rather than spending another Google call re-listing courses it already
+   * enumerated.
+   */
+  private async plan(lease: SyncRunLease, logger: Logger): Promise<'PLANNED' | 'FENCED'> {
     const { deps } = this;
-    const { course, lease, input, student } = args;
-    const logger = args.logger.child({ sourceCourseId: course.sourceCourseId });
+    const startedAt = deps.clock.now().getTime();
+
+    const discovery = await deps.discovery.discover(lease.userId, lease.syncRunId);
+    if (discovery.issues.length > 0) {
+      await deps.syncRuns.recordIssues(lease.syncRunId, discovery.issues);
+    }
+
+    const allCourses = await deps.courses.listForUser(lease.userId, deps.source.id);
+    const trackedIds = await deps.tracking.listTrackedCourseIds(lease.userId);
+    const tracked = allCourses.filter((course) => trackedIds.has(course.id));
+
+    const enqueued = await deps.syncRuns.enqueueCourses(
+      lease.syncRunId,
+      lease.owner,
+      tracked.map((course) => ({
+        sourceCourseId: course.sourceCourseId,
+        courseId: course.id,
+        courseName: course.name,
+      })),
+    );
+
+    logger.info('sync plan built', {
+      stage: 'discovery',
+      discovered: discovery.courses.length,
+      tracked: tracked.length,
+      enqueued,
+      completeness: discovery.completeness,
+      durationMs: deps.clock.now().getTime() - startedAt,
+    });
+
+    if (tracked.length === 0 && discovery.courses.length > 0) {
+      // Not a failure. The student has courses and has not chosen any, and
+      // saying so plainly beats an empty successful sync.
+      await deps.syncRuns.recordIssues(lease.syncRunId, [
+        {
+          code: 'NO_TRACKED_COURSES',
+          message:
+            'No courses are being tracked. Choose the subjects to follow before synchronising coursework.',
+          retryable: false,
+          scope: 'RUN',
+          sourceCourseId: null,
+          sourceItemId: null,
+        },
+      ]);
+    }
+
+    return 'PLANNED';
+  }
+
+  /**
+   * One unit: sync a course, record what happened, never throw.
+   *
+   * A course failure is data, not an exception. Letting it propagate would end
+   * the invocation and, worse, make the run's fate depend on which course
+   * happened to be last. Returning `true` means the write was fenced, which is
+   * the one case the caller must stop for.
+   */
+  private async runUnit(
+    lease: SyncRunLease,
+    item: SyncCourseWorkItem,
+    student: StudentSectionProfile | null,
+    context: StartSyncInput,
+    parentLogger: Logger,
+  ): Promise<boolean> {
+    const { deps } = this;
+    const logger = parentLogger.child({ sourceCourseId: item.sourceCourseId });
+    const startedAt = deps.clock.now().getTime();
+
+    let result: CourseSyncResult;
+    let errorCode: string | null = null;
+
+    try {
+      const course = await this.loadCourse(lease.userId, item);
+      result = await this.syncCourse(lease, course, student, context, logger);
+
+      logger.info('course synchronised', {
+        stage: 'course',
+        completeness: result.completeness,
+        attempt: item.attempts,
+        durationMs: deps.clock.now().getTime() - startedAt,
+        ...result.counts,
+      });
+    } catch (caught) {
+      const error = toAppError(caught);
+
+      // A dead credential is not this course's problem and will fail every
+      // other course identically. Rethrowing turns it into the run-level
+      // failure it actually is, instead of a queue of identical errors and a
+      // dozen wasted Google calls.
+      if (error instanceof AuthorizationExpiredError || error instanceof ConfigError) throw error;
+
+      errorCode = error.code;
+      result = {
+        sourceCourseId: item.sourceCourseId,
+        courseName: item.courseName ?? item.sourceCourseId,
+        status: 'FAILED',
+        completeness: 'FAILED',
+        counts: { ...EMPTY_SYNC_COUNTS, coursesProcessed: 1, coursesFailed: 1 },
+        issues: [
+          {
+            code: error.code,
+            message: error.message,
+            retryable: error.retryable,
+            scope: 'COURSE',
+            sourceCourseId: item.sourceCourseId,
+            sourceItemId: null,
+          },
+        ],
+      };
+
+      logger.error('course synchronisation failed', {
+        stage: 'course',
+        errorCode: error.code,
+        retryable: error.retryable,
+        attempt: item.attempts,
+        durationMs: deps.clock.now().getTime() - startedAt,
+      });
+    }
+
+    if (result.issues.length > 0) {
+      await this.safely(() => deps.syncRuns.recordIssues(lease.syncRunId, result.issues), logger);
+    }
+
+    const accepted = await deps.syncRuns.completeCourse(
+      lease.syncRunId,
+      lease.owner,
+      result,
+      errorCode,
+    );
+    return !accepted;
+  }
+
+  /**
+   * The work item stores the course id, but the row is the source of truth for
+   * the watermark -- which another run may have advanced since this one was
+   * planned.
+   */
+  private async loadCourse(userId: string, item: SyncCourseWorkItem): Promise<StoredCourse> {
+    const courses = await this.deps.courses.listForUser(userId, this.deps.source.id);
+    const match = courses.find((course) => course.sourceCourseId === item.sourceCourseId);
+    if (match === undefined) {
+      throw new Error(`Course ${item.sourceCourseId} is no longer stored for this user`);
+    }
+    return match;
+  }
+
+  private async syncCourse(
+    lease: SyncRunLease,
+    course: StoredCourse,
+    student: StudentSectionProfile | null,
+    context: StartSyncInput,
+    logger: Logger,
+  ): Promise<CourseSyncResult> {
+    const { deps } = this;
+    const userId = lease.userId;
 
     let counts: SyncCounts = { ...EMPTY_SYNC_COUNTS, coursesProcessed: 1 };
     const issues: SyncIssue[] = [];
 
-    const updatedSince = args.mode === 'INCREMENTAL' ? course.courseworkWatermark : null;
+    const updatedSince = lease.mode === 'INCREMENTAL' ? course.courseworkWatermark : null;
 
+    // Google is contacted here, with the whole response in memory before any
+    // write begins. No database transaction is open across this call.
     const content = await deps.source.fetchCourseContent(
-      { userId: input.userId, syncRunId: lease.syncRunId },
+      { userId, syncRunId: lease.syncRunId },
       { sourceCourseId: course.sourceCourseId, name: course.name },
       { updatedSince },
     );
@@ -304,21 +444,19 @@ export class ClassroomSyncService {
     issues.push(...content.issues);
     counts = addCounts(counts, { itemsRejectedByValidation: content.rejectedItemCount });
 
-    if (content.observedSourceUserId !== null && input.onSourceUserIdObserved !== undefined) {
-      await safely(
-        () => input.onSourceUserIdObserved?.(content.observedSourceUserId as string),
+    if (content.observedSourceUserId !== null && context.onSourceUserIdObserved !== undefined) {
+      await this.safely(
+        () => context.onSourceUserIdObserved?.(content.observedSourceUserId as string),
         logger,
       );
     }
 
     const syncedAt = deps.clock.now();
 
-    // Topics first: assignment rows reference them, and the topic name feeds
-    // the classifier.
-    await deps.courses.upsertTopics(input.userId, course.id, content.topics, syncedAt);
+    await deps.courses.upsertTopics(userId, course.id, content.topics, syncedAt);
 
     const upsert = await deps.assignments.upsertMany(
-      input.userId,
+      userId,
       course.id,
       content.assignments,
       syncedAt,
@@ -331,7 +469,7 @@ export class ClassroomSyncService {
     });
 
     const submissionResult = await deps.submissions.upsertMany(
-      input.userId,
+      userId,
       course.id,
       content.submissions,
       syncedAt,
@@ -339,12 +477,12 @@ export class ClassroomSyncService {
     counts = addCounts(counts, { submissionsUpserted: submissionResult.upserted });
 
     // Only a listing that enumerated the whole course may conclude that an
-    // absent item was removed. Anything else -- an incremental prefix, a
-    // truncated page sweep -- carries no information about absence at all.
+    // absent item was removed. An incremental prefix or a truncated page sweep
+    // carries no information about absence at all.
     if (content.completeness === 'COMPLETE') {
       const seen = content.assignments.map((assignment) => assignment.sourceItemId);
       const reconciled = await deps.assignments.reconcileMissing(
-        input.userId,
+        userId,
         course.id,
         seen,
         content.completeness,
@@ -354,28 +492,34 @@ export class ClassroomSyncService {
     }
 
     if (student !== null) {
-      const classificationCounts = await this.classifyCourse({
-        userId: input.userId,
-        googleUserId: input.googleUserId ?? null,
-        student,
-        course,
-        records: content.assignments,
-        topicNames: new Map(content.topics.map((topic) => [topic.sourceTopicId, topic.name])),
-        upsertedIds: new Map(upsert.rows.map((row) => [row.sourceItemId, row.assignmentId])),
-        logger,
-      });
-      counts = addCounts(counts, classificationCounts);
+      counts = addCounts(
+        counts,
+        await this.classifyCourse({
+          userId,
+          googleUserId: context.googleUserId ?? null,
+          student,
+          course,
+          records: content.assignments,
+          topicNames: new Map(content.topics.map((topic) => [topic.sourceTopicId, topic.name])),
+          upsertedIds: new Map(upsert.rows.map((row) => [row.sourceItemId, row.assignmentId])),
+          logger,
+        }),
+      );
     }
 
-    // The watermark advances even for a partial listing: ordering by update time
-    // descending means everything newer than the previous watermark was seen.
+    // Advanced last, and only after every write above succeeded.
+    //
+    // This is what makes an interrupted course safe to redo. If the invocation
+    // dies partway through, the watermark still points at the last fully
+    // ingested state, so the retry re-reads the same window rather than
+    // skipping past coursework it never persisted. Re-reading is cheap and
+    // idempotent; skipping would lose an assignment silently.
     if (content.highWatermark !== null) {
       const next =
-        course.courseworkWatermark === null ||
-        content.highWatermark > course.courseworkWatermark
+        course.courseworkWatermark === null || content.highWatermark > course.courseworkWatermark
           ? content.highWatermark
           : course.courseworkWatermark;
-      await deps.courses.setCourseworkWatermark(input.userId, course.id, next);
+      await deps.courses.setCourseworkWatermark(userId, course.id, next);
     }
 
     counts = addCounts(counts, { coursesSucceeded: 1 });
@@ -394,9 +538,7 @@ export class ClassroomSyncService {
    * Classifies the coursework of one course.
    *
    * Everything needed is already in memory from the fetch, so this costs two
-   * queries per course regardless of how many assignments it holds: one to read
-   * existing fingerprints, one to read overrides. Classification itself is pure
-   * and runs in process.
+   * queries per course regardless of how many assignments it holds.
    */
   private async classifyCourse(args: {
     userId: string;
@@ -448,9 +590,7 @@ export class ClassroomSyncService {
       };
 
       // Skip only when every input is provably identical, including the ruleset
-      // version and the student's alias set. A cheaper check would leave stale
-      // verdicts behind after a rule fix, which is the one caching mistake that
-      // produces confidently wrong output.
+      // version and the student's alias set.
       const fingerprint = deps.classifier.fingerprintOf(classificationInput);
       if (existingFingerprints.get(assignmentId) === fingerprint) continue;
 
@@ -467,13 +607,9 @@ export class ClassroomSyncService {
         decidedByRule: decision.decidedBy,
         reason: decision.reason,
         evidence: decision.evidence,
-        // The resolver reports a conflict as an UNCERTAIN scope; the flag is
-        // kept so the two causes of UNCERTAIN stay distinguishable in the data.
         conflicted: decision.scopeRule === 'SCOPE_CONFLICT',
         rulesetVersion: decision.rulesetVersion,
         inputFingerprint: fingerprint,
-        // Stored beside the verdict, not merged into it: what the coursework
-        // targeted is a fact about the assignment, independent of this student.
         scopeType: decision.scope.type,
         scopeSections: sectionsOf(decision.scope),
         scopeRule: decision.scopeRule,
@@ -486,6 +622,7 @@ export class ClassroomSyncService {
     const written = await deps.classifications.upsertMany(args.userId, rows);
 
     args.logger.debug('classified coursework', {
+      stage: 'classification',
       evaluated: rows.length,
       written,
       relevant,
@@ -505,22 +642,20 @@ export class ClassroomSyncService {
    * Decides whether an incremental pass is safe.
    *
    * An incremental sync only revisits coursework Google changed recently. If the
-   * rule set has moved on since those verdicts were written, the items Google
-   * did not touch would keep their old classification forever -- the exact
-   * "stale verdict survives a rule fix" failure the fingerprint scheme exists to
-   * prevent. Escalating to a full pass is the only way the fix reaches them.
+   * rule set has moved on since those verdicts were written, items Google did
+   * not touch would keep their old classification forever.
    */
-  private async resolveMode(input: RunSyncInput): Promise<SyncMode> {
-    if (input.mode === 'FULL') return 'FULL';
+  private async resolveMode(userId: string, requested: SyncMode): Promise<SyncMode> {
+    if (requested === 'FULL') return 'FULL';
 
     const stale = await this.deps.classifications.hasStaleRuleset(
-      input.userId,
+      userId,
       this.deps.classifier.version,
     );
     if (!stale) return 'INCREMENTAL';
 
     this.deps.logger.info('escalating to a full sync: stored verdicts predate the rule set', {
-      userId: input.userId,
+      userId,
       rulesetVersion: this.deps.classifier.version,
     });
     return 'FULL';
@@ -529,60 +664,101 @@ export class ClassroomSyncService {
   /**
    * A missing academic profile does not abort the run.
    *
-   * Source data is still worth ingesting -- it is the student's coursework
-   * either way. What we will not do is classify without knowing their section,
-   * because every verdict would be an invention. Unclassified assignments read
-   * back as UNCERTAIN, which is the honest answer.
+   * Source data is still worth ingesting. What we will not do is classify
+   * without knowing the student's section, because every verdict would be an
+   * invention. Unclassified assignments read back as UNCERTAIN, which is honest.
    */
   private async loadStudentProfile(
-    userId: string,
-    runIssues: SyncIssue[],
+    lease: SyncRunLease,
     logger: Logger,
-    ): Promise<StudentSectionProfile | null> {
-    const profile = await this.deps.profiles.findByUserId(userId);
+  ): Promise<StudentSectionProfile | null> {
+    const profile = await this.deps.profiles.findByUserId(lease.userId);
     if (profile === null) {
       logger.warn('no academic profile; coursework will be synced but not classified', {
-        userId,
+        stage: 'profile',
       });
-      runIssues.push({
-        code: 'NO_ACADEMIC_PROFILE',
-        message:
-          'No academic profile is configured, so relevance was not evaluated. Coursework was still synchronised.',
-        retryable: false,
-        scope: 'RUN',
-        sourceCourseId: null,
-        sourceItemId: null,
-      });
+      await this.safely(
+        () =>
+          this.deps.syncRuns.recordIssues(lease.syncRunId, [
+            {
+              code: 'NO_ACADEMIC_PROFILE',
+              message:
+                'No academic profile is configured, so relevance was not evaluated. Coursework was still synchronised.',
+              retryable: false,
+              scope: 'RUN',
+              sourceCourseId: null,
+              sourceItemId: null,
+            },
+          ]),
+        logger,
+      );
       return null;
     }
 
     return buildStudentSectionProfile(profile.identity, profile.aliases);
   }
 
-  private startHeartbeat(syncRunId: string, logger: Logger): () => void {
-    const intervalMs = Math.max(15_000, (this.deps.config.leaseTtlSeconds * 1000) / 3);
+  /**
+   * Keeps the lease alive while this worker is genuinely working.
+   *
+   * Renewal is fenced: once the token stops matching, renewal fails and stays
+   * failed. That is the signal that this worker has been replaced -- there is
+   * nothing useful it can do afterwards, and every write it attempts will be
+   * refused, so it only needs to stop.
+   */
+  private startHeartbeat(lease: SyncRunLease, logger: Logger): () => void {
+    // A third of the TTL: two consecutive misses still leave a renewal before
+    // the lease lapses.
+    const intervalMs = Math.max(5_000, (this.deps.config.leaseTtlSeconds * 1000) / 3);
 
     const schedule =
       this.deps.scheduleHeartbeat ??
       ((fn: () => void, ms: number): (() => void) => {
         const timer = setInterval(fn, ms);
-        // Never keep the process alive for a heartbeat.
         timer.unref?.();
         return () => clearInterval(timer);
       });
 
     return schedule(() => {
-      void this.deps.syncRuns.heartbeat(syncRunId).catch((cause: unknown) => {
-        logger.warn('heartbeat failed', { errorCode: toAppError(cause).code });
-      });
+      void this.deps.syncRuns
+        .renewLease(lease.syncRunId, lease.owner, this.deps.config.leaseTtlSeconds)
+        .then((renewed) => {
+          if (!renewed) {
+            logger.warn('lease is no longer ours; another worker owns this run', {
+              stage: 'heartbeat',
+            });
+          }
+        })
+        .catch((cause: unknown) => {
+          logger.warn('lease renewal failed', {
+            stage: 'heartbeat',
+            errorCode: toAppError(cause).code,
+          });
+        });
     }, intervalMs);
+  }
+
+  private deadlineOptions(): DeadlineOptions {
+    return {
+      budgetMs: this.deps.config.invocationBudgetMs,
+      reserveMs: this.deps.config.checkoutReserveMs,
+      initialUnitEstimateMs: this.deps.config.initialUnitEstimateMs,
+    };
+  }
+
+  /** Best-effort bookkeeping must never mask the real failure. */
+  private async safely(fn: () => Promise<unknown> | undefined, logger: Logger): Promise<void> {
+    try {
+      await fn();
+    } catch (cause) {
+      logger.warn('non-critical operation failed', { errorCode: toAppError(cause).code });
+    }
   }
 }
 
 /**
  * The sections a scope names: targeted for SPECIFIC_SECTIONS, excluded for
- * ALL_SECTIONS_EXCEPT. The column is interpreted through scope_type, and the
- * database CHECK keeps the two in step.
+ * ALL_SECTIONS_EXCEPT. The column is interpreted through scope_type.
  */
 function sectionsOf(scope: RelevanceDecision['scope']): string[] {
   if (scope.type === 'SPECIFIC_SECTIONS') return [...scope.sections];
@@ -590,11 +766,13 @@ function sectionsOf(scope: RelevanceDecision['scope']): string[] {
   return [];
 }
 
-/** Best-effort bookkeeping must never mask the real failure. */
-async function safely(fn: () => Promise<unknown> | undefined, logger: Logger): Promise<void> {
-  try {
-    await fn();
-  } catch (cause) {
-    logger.warn('non-critical operation failed', { errorCode: toAppError(cause).code });
-  }
+/**
+ * A fresh fencing token per claim.
+ *
+ * Never derived from the run id or the user: the whole point is that a worker
+ * which claimed the same run five minutes ago holds a *different* token, so its
+ * writes are rejected once the run has moved on.
+ */
+function newOwnerToken(): string {
+  return crypto.randomUUID();
 }

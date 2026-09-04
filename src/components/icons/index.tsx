@@ -136,14 +136,33 @@ export function SparkIcon(props: IconProps) {
   );
 }
 
-/** The LockIn mark. A padlock shackle over a bar, drawn rather than imported. */
+/**
+ * The LockIn mark.
+ *
+ * Filled geometry, so it deliberately does not use the `Icon` wrapper above --
+ * that one is a stroked 24px grid with round caps, and forcing a solid logotype
+ * through it would either hairline the shapes or round off the corners that
+ * make the mark recognisable.
+ *
+ * `currentColor` rather than a fixed lime. The mark appears on the ground, on
+ * dark surfaces and inside the lime button, and the correct colour is different
+ * in each -- inheriting means one file instead of the three colour variants the
+ * brand kit ships, and it can never fall out of step with the theme.
+ */
 export function LockInMark(props: IconProps) {
   return (
-    <Icon viewBox="0 0 24 24" strokeWidth="2" {...props}>
-      <path d="M8 10V7.5a4 4 0 0 1 8 0V10" />
-      <rect x="4.5" y="10" width="15" height="10.5" rx="3.2" />
-      <path d="M12 14v2.5" />
-    </Icon>
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 64 64"
+      fill="currentColor"
+      aria-hidden="true"
+      focusable="false"
+      {...props}
+    >
+      <path d="M9 6h13v39h28v13H9z" />
+      <rect x="30" y="6" width="13" height="26" />
+    </svg>
   );
 }
 

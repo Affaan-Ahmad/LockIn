@@ -78,19 +78,19 @@ export default async function SettingsPage() {
             </div>
             <ul className="mt-3 flex flex-col gap-2 text-sm">
               <li>
-                <Link href="/courses" className="font-semibold text-brand hover:underline">
+                <Link href="/courses" className="font-semibold text-brand-ink hover:underline">
                   Manage tracked courses
                 </Link>
               </li>
               <li>
-                <Link href="/ignored" className="font-semibold text-brand hover:underline">
+                <Link href="/ignored" className="font-semibold text-brand-ink hover:underline">
                   {data.ignoredCount > 0
                     ? `Hidden work (${String(data.ignoredCount)})`
                     : 'Hidden work'}
                 </Link>
               </li>
               <li>
-                <Link href="/review" className="font-semibold text-brand hover:underline">
+                <Link href="/review" className="font-semibold text-brand-ink hover:underline">
                   {data.reviewCount > 0
                     ? `Review and your answers (${String(data.reviewCount)})`
                     : 'Review and your answers'}

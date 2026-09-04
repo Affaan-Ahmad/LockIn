@@ -4,7 +4,10 @@ import { ClassroomSyncService } from '@/application/services/classroom-sync.serv
 import { AccountService } from '@/application/services/account.service';
 import { CourseDiscoveryService } from '@/application/services/course-discovery.service';
 import { GoogleTokenService } from '@/application/services/google-token.service';
+import { SyncWorker, type ContinuationTrigger } from '@/application/services/sync-worker';
 import { getServerEnv } from '@/config/env';
+import { deriveWorkerSecret, PLATFORM_MAX_DURATION_SECONDS } from '@/config/sync-runtime';
+import { deriveBudget } from '@/domain/sync/deadline';
 import { createRelevanceClassifier } from '@/domain/classification/registry';
 import { GoogleClassroomSource } from '@/infrastructure/google/classroom.source';
 import { GoogleOAuthHttpClient } from '@/infrastructure/google/oauth';
@@ -82,6 +85,7 @@ export interface BackendContext {
   readonly db: AppSupabaseClient;
   readonly logger: Logger;
   readonly sync: ClassroomSyncService;
+  readonly worker: SyncWorker;
   readonly discovery: CourseDiscoveryService;
   readonly account: AccountService;
   readonly profiles: SupabaseAcademicProfileRepository;
@@ -98,17 +102,61 @@ export interface BackendContext {
 }
 
 /**
- * Builds everything a request handler needs.
+ * Asks the deployment for another invocation to continue a run.
  *
- * Constructed per request rather than as a module-level singleton: the
- * user-scoped Supabase client carries that request's session, and sharing one
- * across requests would let one user's queries run with another user's
- * credentials.
+ * Authenticated with a secret derived from the service-role key rather than a
+ * new environment variable, so there is nothing extra to configure and nothing
+ * extra to leak. The request is not awaited to completion -- only to acceptance
+ * -- because the successor's whole job is to outlive this one.
  */
-export async function createBackendContext(): Promise<BackendContext> {
+function createContinuationTrigger(logger: Logger): ContinuationTrigger {
   const env = getServerEnv();
-  const logger = createRootLogger();
-  const db = await createUserScopedClient();
+  const secret = deriveWorkerSecret(env.SUPABASE_SERVICE_ROLE_KEY);
+  const url = new URL('/api/sync/continue', env.NEXT_PUBLIC_SITE_URL).toString();
+
+  return {
+    async request(userId: string, syncRunId: string): Promise<boolean> {
+      const controller = new AbortController();
+      // Just long enough to hand the work over. The successor runs for minutes;
+      // waiting for it here would recreate the very coupling this removes.
+      const timer = setTimeout(() => controller.abort(), 5_000);
+
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-sync-worker-token': secret,
+          },
+          body: JSON.stringify({ userId, syncRunId }),
+          signal: controller.signal,
+        });
+        return response.ok;
+      } catch (cause) {
+        // A failed handover is not a failed sync. The run is QUEUED with its
+        // progress durable, and the next trigger picks it up.
+        logger.warn('continuation could not be requested', {
+          stage: 'continuation',
+          syncRunId,
+          errorCode: cause instanceof Error ? cause.name : 'UNKNOWN',
+        });
+        return false;
+      } finally {
+        clearTimeout(timer);
+      }
+    },
+  };
+}
+
+/**
+ * Everything a request handler needs, wired against one Supabase client.
+ *
+ * Split from the entry points below so the user-scoped and worker contexts
+ * cannot drift apart. Which client arrives is the only difference between them,
+ * and it is a deliberate one -- see `createWorkerContext`.
+ */
+function buildContext(db: AppSupabaseClient, logger: Logger): BackendContext {
+  const env = getServerEnv();
 
   const tokens = createGoogleTokenService(logger);
 
@@ -126,12 +174,10 @@ export async function createBackendContext(): Promise<BackendContext> {
   const overrides = new SupabaseOverrideRepository(db);
   const profiles = new SupabaseAcademicProfileRepository(db);
   const tracking = new SupabaseCourseTrackingRepository(db);
-  const syncRuns = new SupabaseSyncRunRepository(db, env.SYNC_LEASE_TTL_SECONDS);
+  const syncRuns = new SupabaseSyncRunRepository(db);
   const connections = createGoogleConnectionRepository(logger);
   const rateLimiter = new SupabaseRateLimiter(db, logger);
 
-  // Deleting an auth user requires the service role: it is the one operation
-  // a user cannot perform on themselves through the normal API.
   const account = new AccountService({
     google: tokens,
     logger,
@@ -156,6 +202,11 @@ export async function createBackendContext(): Promise<BackendContext> {
     clock: systemClock,
     });
 
+  // The worker's budget comes from the platform ceiling, not a hardcoded
+  // number, so lowering maxDuration or losing fluid compute changes how much
+  // work one invocation attempts rather than how it fails.
+  const { budgetMs, reserveMs } = deriveBudget(PLATFORM_MAX_DURATION_SECONDS * 1000);
+
   const sync = new ClassroomSyncService({
     source,
     courses,
@@ -170,15 +221,25 @@ export async function createBackendContext(): Promise<BackendContext> {
     logger,
     clock: systemClock,
     config: {
-      courseConcurrency: env.SYNC_COURSE_CONCURRENCY,
       leaseTtlSeconds: env.SYNC_LEASE_TTL_SECONDS,
+      invocationBudgetMs: budgetMs,
+      checkoutReserveMs: reserveMs,
+      initialUnitEstimateMs: env.SYNC_UNIT_ESTIMATE_MS,
+      maxCourseAttempts: env.SYNC_MAX_COURSE_ATTEMPTS,
     },
+    });
+
+  const worker = new SyncWorker({
+    sync,
+    continuation: createContinuationTrigger(logger),
+    logger,
     });
 
   return {
     db,
     logger,
     sync,
+    worker,
     discovery,
     account,
     profiles,
@@ -196,4 +257,42 @@ export async function createBackendContext(): Promise<BackendContext> {
       },
     },
     };
+}
+
+/**
+ * Builds everything a request handler needs, scoped to the signed-in user.
+ *
+ * Constructed per request rather than as a module-level singleton: the
+ * user-scoped Supabase client carries that request's session, and sharing one
+ * across requests would let one user's queries run with another user's
+ * credentials.
+ */
+export async function createBackendContext(): Promise<BackendContext> {
+  return buildContext(await createUserScopedClient(), createRootLogger());
+}
+
+/**
+ * The context a background worker runs in.
+ *
+ * Uses the service role, and that is a deliberate, uncomfortable trade. A
+ * continuation is the server calling itself: there is no cookie, so there is no
+ * user JWT, so row-level security has no identity to enforce. The alternatives
+ * were worse -- keeping a user's session alive in a background job means storing
+ * a JWT we would then have to protect and refresh, and driving continuation from
+ * the browser strands the sync the moment a tab closes.
+ *
+ * What holds the boundary instead:
+ *
+ *   Every repository method already takes an explicit user id and filters on
+ *   it. RLS was defence in depth here, never the only filter.
+ *
+ *   The continuation endpoint accepts a user id only alongside a secret derived
+ *   from the service-role key, and it acts solely on that user's own resumable
+ *   run. It cannot be pointed at an arbitrary account by an outside caller.
+ *
+ *   The lease is scoped to one run, and every write is fenced by its owner
+ *   token, so even a confused worker cannot touch a run it does not hold.
+ */
+export function createWorkerContext(): BackendContext {
+  return buildContext(createServiceRoleClient(), createRootLogger().child({ component: 'worker' }));
 }

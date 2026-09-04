@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { NextResponse } from 'next/server';
+import { after, NextResponse } from 'next/server';
 
 import { createUserScopedClient } from '@/infrastructure/supabase/clients';
 import {
@@ -102,8 +102,53 @@ export async function enforceRateLimit(
     );
 }
 
+/**
+ * Keeps work running after the response has been sent.
+ *
+ * `after` is Next.js's own hook for this and needs no extra dependency: the
+ * callback runs once the response is flushed, inside the same invocation, so
+ * the client is not waiting on it and the platform still accounts for it.
+ *
+ * It is emphatically not a durability guarantee. The invocation can still be
+ * terminated, and the promise dies with it -- which is precisely why everything
+ * scheduled here has to be resumable from the database on its own. Treat this
+ * as "finish sooner if we can", never as "this will complete".
+ *
+ * The rejection handler is mandatory. An unhandled rejection in a background
+ * task is not attached to any request, and on a runtime that shares one
+ * instance across concurrent invocations it is other people's requests that
+ * pay for it.
+ */
+export function runInBackground(work: Promise<unknown>, label: string): void {
+  after(async () => {
+    try {
+      await work;
+    } catch (caught) {
+      createLogger({ base: { component: 'api' } }).error('background task failed', {
+        label,
+        ...toAppError(caught).toLogObject(),
+      });
+    }
+  });
+}
+
 export function jsonOk<T>(body: T, status = 200): NextResponse {
   return NextResponse.json(body, { status });
+}
+
+/**
+ * The message for an error code, curated the same way `jsonError` curates one.
+ *
+ * A synchronisation run reports its failures inside a 200 body rather than by
+ * throwing, because the per-course breakdown is the useful part. That route
+ * bypasses `jsonError`, and with it the whitelist -- so the issue messages it
+ * returned came straight from `AppError.message`, which for a persistence
+ * failure is a Postgres error string carrying operation, table and constraint
+ * names. This is the same filter, available to callers that build their own
+ * body.
+ */
+export function clientSafeMessage(code: ErrorCode, message: string): string {
+  return CLIENT_SAFE_CODES.has(code) ? message : 'The request could not be completed.';
 }
 
 export function jsonError(caught: unknown): NextResponse {

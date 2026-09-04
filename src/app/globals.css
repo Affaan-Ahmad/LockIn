@@ -35,36 +35,66 @@
      Raised is lighter than ground and sunken is darker, so depth survives even
      when shadows are stripped — which they are in forced-colours mode.
      -------------------------------------------------------------------- */
-  --surface-ground: oklch(96.5% 0.008 85);
-  --surface-raised: oklch(98.4% 0.006 85);
-  --surface-sunken: oklch(93.8% 0.011 85);
-  --surface-pressed: oklch(94.6% 0.010 85);
-  --surface-overlay: oklch(99.2% 0.004 85);
+  /* Hue moved 85 -> 107 with the brand. At 85 the ground was a warm
+     orange-cream: a complement to a violet brand, but mud beside lime -- two
+     adjacent yellows, neither committing. 107 is the logo's own off-white
+     (#F4F4EF), near-neutral with a whisper of the brand hue, so the lime is
+     the only saturated thing on the page. */
+  --surface-ground: oklch(96.6% 0.007 107);
+  --surface-raised: oklch(98.5% 0.005 107);
+  --surface-sunken: oklch(93.9% 0.010 107);
+  --surface-pressed: oklch(94.7% 0.009 107);
+  --surface-overlay: oklch(99.3% 0.003 107);
 
-  /* Slightly cool against the warm ground: the small hue opposition adds
-     perceived contrast without having to darken the text further. */
-  --ink: oklch(24% 0.021 265);
-  --ink-soft: oklch(47% 0.019 265);
-  --ink-muted: oklch(60% 0.016 265);
-  --ink-on-brand: oklch(99% 0.004 272);
+  /* Carried over to the logo's near-black rather than the old cool blue. Text
+     and mark now share one family, which is what stops the ink reading as a
+     third colour beside lime and off-white. */
+  --ink: oklch(22% 0.010 145);
+  --ink-soft: oklch(46% 0.010 145);
+  /* 54%, not 60%. At 60 this measured 3.6:1 on the ground, under the 4.5:1 AA
+     floor -- and it is used at text-xs for deadline metadata and the footer, so
+     it is normal-size body text, not large. That failure predates the rebrand;
+     the contrast suite added alongside it is what finally caught it. */
+  --ink-muted: oklch(54% 0.009 145);
 
-  --line: oklch(88% 0.010 85);
-  --line-strong: oklch(78% 0.014 85);
+  /* Near-black, NOT near-white. This is the single most dangerous token in the
+     file: the brand is a 90%-lightness lime, so white on it measures 1.3:1 and
+     a primary button would be unreadable. The logo's own #101210 gives 14.3:1.
+     Anything placed on --brand must use this. */
+  --ink-on-brand: oklch(17.9% 0.005 145);
+
+  --line: oklch(88% 0.009 107);
+  --line-strong: oklch(78% 0.012 107);
 
   /* ----------------------------------------------------------------------
      Brand and semantics.
 
-     Iris, not a corporate blue or a Material purple. Semantic hues stay
+     Lime, taken from the mark rather than picked to sit beside it. Semantic hues stay
      conventional on purpose — a student reading a deadline should not have to
      learn what our red means.
 
      Review is orchid, well away from both brand and danger: "we are not sure"
      needs its own voice, and uncertainty must never look like failure.
      -------------------------------------------------------------------- */
-  --brand: oklch(55% 0.19 272);
-  --brand-hover: oklch(50% 0.19 272);
-  --brand-soft: oklch(93% 0.045 272);
-  --brand-ring: oklch(62% 0.17 272);
+  /* THE BRAND HAS TWO TOKENS AND THEY ARE NOT INTERCHANGEABLE.
+
+     `--brand` is the lime, straight off the mark. It is a *fill*: something
+     sits on top of it, in --ink-on-brand. At 90% lightness it measures 1.2:1
+     against this ground, so as text it is not subtle, it is invisible.
+
+     `--brand-ink` is the same hue dragged to 45% lightness, reaching 6.4:1 on
+     the ground. That is what brand-coloured *text* uses: links, the active nav
+     item, step labels.
+
+     A violet brand needed no such split, because one value happened to serve
+     both roles. Lime does not forgive that, so the split lives in the token
+     names, where a call site is forced to choose. */
+  --brand: oklch(89.6% 0.190 122);
+  --brand-hover: oklch(85% 0.185 122);
+  --brand-ink: oklch(45% 0.140 130);
+  --brand-ink-hover: oklch(38% 0.130 130);
+  --brand-soft: oklch(94% 0.055 118);
+  --brand-ring: oklch(55% 0.160 128);
 
   --success: oklch(58% 0.14 155);
   --success-soft: oklch(94% 0.045 155);
@@ -261,23 +291,35 @@
    live tokens at them, so a colour is changed in exactly one place and both
    paths move together. */
 :root {
-  --dark-surface-ground: oklch(14.5% 0.012 268);
-  --dark-surface-raised: oklch(19% 0.014 268);
-  --dark-surface-sunken: oklch(11% 0.010 268);
-  --dark-surface-pressed: oklch(12.5% 0.011 268);
-  --dark-surface-overlay: oklch(22% 0.016 268);
+  /* Rehued to the mark's near-black (#101210, hue 145) so the app icon sitting
+     on a dark home screen and the app behind it are the same material. */
+  --dark-surface-ground: oklch(14.5% 0.008 145);
+  --dark-surface-raised: oklch(19% 0.009 145);
+  --dark-surface-sunken: oklch(11% 0.007 145);
+  --dark-surface-pressed: oklch(12.5% 0.007 145);
+  --dark-surface-overlay: oklch(22% 0.010 145);
 
-  --dark-ink: oklch(96% 0.008 268);
-  --dark-ink-soft: oklch(76% 0.014 268);
-  --dark-ink-muted: oklch(62% 0.014 268);
+  /* Unchanged between themes, because the surface it sits on is unchanged:
+     --brand is lime in both. */
+  --dark-ink-on-brand: oklch(17.9% 0.005 145);
 
-  --dark-line: oklch(26% 0.016 268);
-  --dark-line-strong: oklch(37% 0.020 268);
+  --dark-ink: oklch(96% 0.006 145);
+  --dark-ink-soft: oklch(76% 0.009 145);
+  --dark-ink-muted: oklch(62% 0.009 145);
 
-  --dark-brand: oklch(70% 0.15 272);
-  --dark-brand-hover: oklch(76% 0.15 272);
-  --dark-brand-soft: oklch(27% 0.070 272);
-  --dark-brand-ring: oklch(74% 0.15 272);
+  --dark-line: oklch(26% 0.010 145);
+  --dark-line-strong: oklch(37% 0.013 145);
+
+  /* In the dark the split collapses, and that is the point rather than an
+     accident: lime reaches 14.9:1 on this ground, so the fill colour and the
+     text colour can finally be the same value. The brand looks most like
+     itself here -- which is exactly the pairing the mark was drawn in. */
+  --dark-brand: oklch(89.6% 0.190 122);
+  --dark-brand-hover: oklch(93% 0.170 122);
+  --dark-brand-ink: oklch(89.6% 0.190 122);
+  --dark-brand-ink-hover: oklch(93% 0.170 122);
+  --dark-brand-soft: oklch(28% 0.070 130);
+  --dark-brand-ring: oklch(80% 0.170 125);
 
   --dark-success: oklch(72% 0.12 155);
   --dark-success-soft: oklch(25% 0.050 155);
@@ -329,12 +371,15 @@
     --ink: var(--dark-ink);
     --ink-soft: var(--dark-ink-soft);
     --ink-muted: var(--dark-ink-muted);
+    --ink-on-brand: var(--dark-ink-on-brand);
 
     --line: var(--dark-line);
     --line-strong: var(--dark-line-strong);
 
     --brand: var(--dark-brand);
     --brand-hover: var(--dark-brand-hover);
+    --brand-ink: var(--dark-brand-ink);
+    --brand-ink-hover: var(--dark-brand-ink-hover);
     --brand-soft: var(--dark-brand-soft);
     --brand-ring: var(--dark-brand-ring);
 
@@ -368,12 +413,15 @@
   --ink: var(--dark-ink);
   --ink-soft: var(--dark-ink-soft);
   --ink-muted: var(--dark-ink-muted);
+  --ink-on-brand: var(--dark-ink-on-brand);
 
   --line: var(--dark-line);
   --line-strong: var(--dark-line-strong);
 
   --brand: var(--dark-brand);
   --brand-hover: var(--dark-brand-hover);
+  --brand-ink: var(--dark-brand-ink);
+  --brand-ink-hover: var(--dark-brand-ink-hover);
   --brand-soft: var(--dark-brand-soft);
   --brand-ring: var(--dark-brand-ring);
 
@@ -414,6 +462,10 @@
 
   --color-brand: var(--brand);
   --color-brand-hover: var(--brand-hover);
+  /* text-brand-ink / border-brand-ink. See the brand block above for why this
+     is a separate colour and not a shade of the one below it. */
+  --color-brand-ink: var(--brand-ink);
+  --color-brand-ink-hover: var(--brand-ink-hover);
   --color-brand-soft: var(--brand-soft);
 
   --color-success: var(--success);

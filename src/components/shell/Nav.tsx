@@ -80,11 +80,11 @@ export function Nav({ reviewCount = 0 }: NavProps) {
                 // Weight, not just colour, marks the active item. Colour alone
                 // disappears in greyscale and for a red-green colour-blind
                 // reader; the tint is a reinforcement, not the signal.
-                active ? 'font-semibold text-brand' : 'text-ink-muted',
+                active ? 'font-semibold text-brand-ink' : 'text-ink-muted',
               )}
             >
               <span className="relative">
-                <Icon className={cx('size-[1.35rem]', active ? 'text-brand' : '')} />
+                <Icon className={cx('size-[1.35rem]', active ? 'text-brand-ink' : '')} />
                 {badge !== null ? (
                   <span
                     className={cx(
@@ -98,11 +98,15 @@ export function Nav({ reviewCount = 0 }: NavProps) {
               </span>
               {label}
               {/* Active marker that survives greyscale and forced colours,
-                  where the brand tint above disappears entirely. */}
+                  where the brand tint above disappears entirely.
+
+                  brand-ink, not brand: this is a mark drawn on the ground, and
+                  the lime fill would measure 1.2:1 against it. A 2px bar nobody
+                  can see is not an indicator. */}
               {active ? (
                 <span
                   aria-hidden="true"
-                  className="absolute top-0 left-1/2 h-0.5 w-8 -translate-x-1/2 rounded-pill bg-brand"
+                  className="absolute top-0 left-1/2 h-0.5 w-8 -translate-x-1/2 rounded-pill bg-brand-ink"
                 />
               ) : null}
             </Link>

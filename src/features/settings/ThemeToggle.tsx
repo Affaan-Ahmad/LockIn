@@ -85,7 +85,7 @@ export function ThemeToggle() {
               // Focus is drawn on the label because the input itself is
               // visually hidden; :has keeps that tied to the real focus state
               // rather than a manually tracked one.
-              'has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-brand',
+              'has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-brand-ink',
               active ? 'bg-raised font-semibold text-ink shadow-raised' : 'text-ink-muted hover:text-ink',
             )}
           >

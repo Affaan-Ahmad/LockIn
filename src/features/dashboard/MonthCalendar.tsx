@@ -140,7 +140,10 @@ export function MonthCalendar({
                         ? 'bg-danger'
                         : entry.today
                           ? 'bg-warning'
-                          : 'bg-brand',
+                          // brand-ink: a 4px dot on the ground, where the lime
+                          // fill is invisible. The other three states here are
+                          // all mid-lightness for the same reason.
+                          : 'bg-brand-ink',
                   )}
                 />
               )}
@@ -177,7 +180,7 @@ export function MonthCalendar({
         <Link
           href={hrefFor({ month, day: null })}
           scroll={false}
-          className="mt-3 block text-center text-xs font-medium text-brand hover:underline"
+          className="mt-3 block text-center text-xs font-medium text-brand-ink hover:underline"
         >
           Show every date
         </Link>

@@ -35,6 +35,18 @@ export interface StoredGoogleConnection {
   readonly connectedAt: Date;
   readonly lastRefreshedAt: Date | null;
   readonly lastErrorCode: string | null;
+  /**
+   * True when a stored ciphertext was present but could not be decrypted --
+   * almost always a GOOGLE_TOKEN_ENCRYPTION_KEY that differs from the one the
+   * row was written with.
+   *
+   * It exists because `accessToken: null` and `refreshToken: null` cannot
+   * otherwise be told apart from "the column was NULL", and the two demand
+   * opposite responses: a genuinely absent refresh token means the student must
+   * grant offline access again, while an unreadable one means the deployment is
+   * misconfigured and no amount of reconnecting by the student is the fix.
+   */
+  readonly credentialsUnreadable: boolean;
 }
 
 export interface GoogleConnectionSnapshot {

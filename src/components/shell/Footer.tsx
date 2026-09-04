@@ -1,6 +1,7 @@
 import Link from 'next/link';
 
 import { CONTROLLER, LEGAL_PAGES } from '@/app/legal/content';
+import { LockInMark } from '@/components/icons';
 import { cx } from '@/lib/cx';
 
 /**
@@ -37,7 +38,10 @@ export function Footer({ inShell = false }: FooterProps) {
         )}
       >
         <div className="min-w-0">
-          <p className="text-sm font-bold text-ink">LockIn</p>
+          <p className="flex items-center gap-1.5 text-sm font-bold text-ink">
+            <LockInMark className="size-4 shrink-0" />
+            LockIn
+          </p>
           <p className="measure mt-1 text-xs leading-relaxed text-ink-muted">
             An independent project. Not affiliated with, endorsed by or sponsored by Google or any
             university.

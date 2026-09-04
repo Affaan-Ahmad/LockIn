@@ -421,21 +421,26 @@ describeIntegration('persistence invariants', () => {
     });
   });
 
-  describe('concurrency', () => {
-    it('permits only one running sync per user', async () => {
-      const first = await alice.db.rpc('app_acquire_sync_run', {
+  describe('concurrency and durability', () => {
+    const OWNER_A = '11111111-1111-4111-8111-111111111111';
+    const OWNER_B = '22222222-2222-4222-8222-222222222222';
+
+    it('permits only one active sync per user', async () => {
+      const first = await alice.db.rpc('app_start_sync_run', {
         p_user_id: alice.id,
         p_trigger: 'MANUAL',
         p_mode: 'FULL',
-        p_lease_ttl_seconds: 900,
+        p_lease_ttl_seconds: 90,
+        p_owner: OWNER_A,
       });
       expect(first.error).toBeNull();
 
-      const second = await alice.db.rpc('app_acquire_sync_run', {
+      const second = await alice.db.rpc('app_start_sync_run', {
         p_user_id: alice.id,
         p_trigger: 'MANUAL',
         p_mode: 'FULL',
-        p_lease_ttl_seconds: 900,
+        p_lease_ttl_seconds: 90,
+        p_owner: OWNER_B,
       });
 
       expect(second.error).not.toBeNull();
@@ -443,50 +448,212 @@ describeIntegration('persistence invariants', () => {
 
       await alice.db.rpc('app_finalize_sync_run', {
         p_sync_run_id: firstRow(first.data).id,
-        p_status: 'SUCCESS',
-        p_counts: {},
+        p_owner: OWNER_A,
         p_error_summary: null,
       });
     });
 
-    it('reclaims a lease whose heartbeat has expired', async () => {
-      const stale = await alice.db.rpc('app_acquire_sync_run', {
+    it('treats a queued run as active, so a handover cannot be raced', async () => {
+      // A handed-over run holds unfinished work. Treating QUEUED as idle would
+      // let a second trigger start a parallel run over the same courses.
+      const run = await alice.db.rpc('app_start_sync_run', {
         p_user_id: alice.id,
         p_trigger: 'MANUAL',
         p_mode: 'FULL',
-        p_lease_ttl_seconds: 900,
+        p_lease_ttl_seconds: 90,
+        p_owner: OWNER_A,
+      });
+      const runId = firstRow(run.data).id;
+
+      await alice.db.rpc('app_release_sync_lease', {
+        p_sync_run_id: runId,
+        p_owner: OWNER_A,
       });
 
-      // Simulate a process that died without finalising.
+      const racing = await alice.db.rpc('app_start_sync_run', {
+        p_user_id: alice.id,
+        p_trigger: 'MANUAL',
+        p_mode: 'FULL',
+        p_lease_ttl_seconds: 90,
+        p_owner: OWNER_B,
+      });
+      expect(racing.error).not.toBeNull();
+
+      const resumed = await alice.db.rpc('app_resume_sync_run', {
+        p_user_id: alice.id,
+        p_lease_ttl_seconds: 90,
+        p_owner: OWNER_B,
+      });
+      expect(firstRow(resumed.data).id).toBe(runId);
+
+      await alice.db.rpc('app_finalize_sync_run', {
+        p_sync_run_id: runId,
+        p_owner: OWNER_B,
+        p_error_summary: null,
+      });
+    });
+
+    it('makes a dead worker resumable rather than abandoning its progress', async () => {
+      const stale = await alice.db.rpc('app_start_sync_run', {
+        p_user_id: alice.id,
+        p_trigger: 'MANUAL',
+        p_mode: 'FULL',
+        p_lease_ttl_seconds: 90,
+        p_owner: OWNER_A,
+      });
+      const runId = firstRow(stale.data).id;
+
+      // Simulate a process that died without finalising or releasing.
       await harness.admin
         .from('sync_runs')
         .update({ lease_expires_at: new Date(Date.now() - 60_000).toISOString() })
-        .eq('id', firstRow(stale.data).id);
+        .eq('id', runId);
 
-      const next = await alice.db.rpc('app_acquire_sync_run', {
+      const resumed = await alice.db.rpc('app_resume_sync_run', {
+        p_user_id: alice.id,
+        p_lease_ttl_seconds: 90,
+        p_owner: OWNER_B,
+      });
+
+      // The same run continues under a new owner. Everything it had already
+      // completed stays completed -- which is the whole point of the change.
+      expect(firstRow(resumed.data).id).toBe(runId);
+      expect(firstRow(resumed.data).resume_attempts).toBe(1);
+
+      await alice.db.rpc('app_finalize_sync_run', {
+        p_sync_run_id: runId,
+        p_owner: OWNER_B,
+        p_error_summary: null,
+      });
+    });
+
+    it('refuses a stale worker trying to renew or release a lease it lost', async () => {
+      const run = await alice.db.rpc('app_start_sync_run', {
         p_user_id: alice.id,
         p_trigger: 'MANUAL',
         p_mode: 'FULL',
-        p_lease_ttl_seconds: 900,
+        p_lease_ttl_seconds: 90,
+        p_owner: OWNER_A,
       });
+      const runId = firstRow(run.data).id;
 
-      expect(next.error).toBeNull();
-
-      // The dead run is recorded as ABANDONED rather than deleted, so the
-      // failed attempt is still visible when debugging.
-      const abandoned = await alice.db
+      await harness.admin
         .from('sync_runs')
-        .select('status')
-        .eq('id', firstRow(stale.data).id)
-        .single();
-      expect(abandoned.data!.status).toBe('ABANDONED');
+        .update({ lease_owner: OWNER_B })
+        .eq('id', runId);
 
-      await alice.db.rpc('app_finalize_sync_run', {
-        p_sync_run_id: firstRow(next.data).id,
-        p_status: 'SUCCESS',
-        p_counts: {},
+      // The classic fencing failure: a worker returns from a stall and mutates
+      // a run that now belongs to somebody else.
+      const renew = await alice.db.rpc('app_renew_sync_lease', {
+        p_sync_run_id: runId,
+        p_owner: OWNER_A,
+        p_lease_ttl_seconds: 90,
+      });
+      expect(renew.data).toBe(false);
+
+      const release = await alice.db.rpc('app_release_sync_lease', {
+        p_sync_run_id: runId,
+        p_owner: OWNER_A,
+      });
+      expect(release.data).toBe(false);
+
+      const finalize = await alice.db.rpc('app_finalize_sync_run', {
+        p_sync_run_id: runId,
+        p_owner: OWNER_A,
         p_error_summary: null,
       });
+      expect(finalize.data).toBeNull();
+
+      await alice.db.rpc('app_finalize_sync_run', {
+        p_sync_run_id: runId,
+        p_owner: OWNER_B,
+        p_error_summary: null,
+      });
+    });
+
+    it('enqueues work idempotently and derives the run status from it', async () => {
+      const run = await alice.db.rpc('app_start_sync_run', {
+        p_user_id: alice.id,
+        p_trigger: 'MANUAL',
+        p_mode: 'FULL',
+        p_lease_ttl_seconds: 90,
+        p_owner: OWNER_A,
+      });
+      const runId = firstRow(run.data).id;
+
+      const queue = [
+        { source_course_id: 'q1', course_id: null, course_name: 'One' },
+        { source_course_id: 'q2', course_id: null, course_name: 'Two' },
+      ];
+
+      const first = await alice.db.rpc('app_enqueue_sync_courses', {
+        p_sync_run_id: runId,
+        p_owner: OWNER_A,
+        p_courses: queue,
+      });
+      expect(first.data).toBe(2);
+
+      // Re-planning after a resume must not duplicate or reset work.
+      const again = await alice.db.rpc('app_enqueue_sync_courses', {
+        p_sync_run_id: runId,
+        p_owner: OWNER_A,
+        p_courses: queue,
+      });
+      expect(again.data).toBe(0);
+
+      // Finalising is refused while anything is still queued, so a worker
+      // cannot record an outcome for work it merely stopped doing.
+      const premature = await alice.db.rpc('app_finalize_sync_run', {
+        p_sync_run_id: runId,
+        p_owner: OWNER_A,
+        p_error_summary: null,
+      });
+      expect(premature.data).toBeNull();
+
+      const claimed = await alice.db.rpc('app_claim_next_sync_course', {
+        p_sync_run_id: runId,
+        p_owner: OWNER_A,
+      });
+      expect(firstRow(claimed.data).status).toBe('RUNNING');
+
+      await alice.db.rpc('app_complete_sync_course', {
+        p_sync_run_id: runId,
+        p_owner: OWNER_A,
+        p_source_course_id: 'q1',
+        p_status: 'SUCCESS',
+        p_completeness: 'COMPLETE',
+        p_counts: { assignmentsCreated: 2 },
+        p_error_code: null,
+      });
+      await alice.db.rpc('app_complete_sync_course', {
+        p_sync_run_id: runId,
+        p_owner: OWNER_A,
+        p_source_course_id: 'q2',
+        p_status: 'FAILED',
+        p_completeness: 'FAILED',
+        p_counts: { coursesFailed: 1 },
+        p_error_code: 'GOOGLE_API_ERROR',
+      });
+
+      const final = await alice.db.rpc('app_finalize_sync_run', {
+        p_sync_run_id: runId,
+        p_owner: OWNER_A,
+        p_error_summary: null,
+      });
+
+      // One course failed, so the database refuses to call this a success --
+      // no matter what the application would have preferred to record.
+      expect(final.data).toBe('PARTIAL_SUCCESS');
+
+      const stored = await alice.db
+        .from('sync_runs')
+        .select('status, counts')
+        .eq('id', runId)
+        .single();
+      expect(stored.data!.status).toBe('PARTIAL_SUCCESS');
+      // Counts are summed from the work items, so a run spanning several
+      // invocations reports everything, not just the last worker's slice.
+      expect(stored.data!.counts).toMatchObject({ assignmentsCreated: 2, coursesFailed: 1 });
     });
   });
 

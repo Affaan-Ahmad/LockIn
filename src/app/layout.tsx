@@ -37,8 +37,8 @@ export const viewport = {
     // The exact sRGB conversions of --surface-ground in each mode, not
     // approximations. Both were eyeballed before and both were wrong, which
     // showed as browser chrome a shade off the page below it.
-    { media: '(prefers-color-scheme: light)', color: '#f6f3ed' },
-    { media: '(prefers-color-scheme: dark)', color: '#080a0f' },
+    { media: '(prefers-color-scheme: light)', color: '#f4f4ef' },
+    { media: '(prefers-color-scheme: dark)', color: '#080b08' },
     ],
     // Zoom stays enabled. Locking it is an accessibility failure that mostly
   // hurts people who need to magnify text.

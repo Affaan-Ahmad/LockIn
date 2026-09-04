@@ -10,7 +10,10 @@ import type {
   CourseTrackingRepository,
   StoredCourse,
   SubmissionRepository,
+  SyncCourseQueueEntry,
+  SyncCourseWorkItem,
   SyncRunLease,
+  SyncRunProgress,
   SyncRunRepository,
   SyncRunSummary,
   UndatedAssignment,
@@ -35,7 +38,7 @@ import type { ManualOverride } from '@/domain/classification/relevance';
 import type { DiscoveredCourse, TrackingDecision } from '@/domain/course/tracking';
 import type {
   CourseSyncResult,
-  SyncCounts,
+  CourseSyncStatus,
   SyncIssue,
   SyncMode,
   SyncRunStatus,
@@ -369,37 +372,153 @@ export class FakeAcademicProfileRepository implements AcademicProfileRepository 
   }
 }
 
+/**
+ * An in-memory stand-in for the durable sync store.
+ *
+ * Models the three properties the real implementation enforces in SQL, because
+ * they are the ones the service's correctness rests on and a fake that ignored
+ * them would let broken code pass:
+ *
+ *   Fencing. Every mutation checks the owner token, so a test can simulate a
+ *   worker that lost its lease and watch its writes get refused.
+ *
+ *   Derived status. finalize() computes the outcome from the work queue rather
+ *   than accepting one, so no test can assert a SUCCESS the real database would
+ *   have refused to record.
+ *
+ *   Single active run. start() refuses while a run is QUEUED or RUNNING, which
+ *   is what the partial unique index does.
+ */
 export class FakeSyncRunRepository implements SyncRunRepository {
-  active: string | null = null;
-  finalized: Array<{ status: SyncRunStatus; counts: SyncCounts }> = [];
-  courseResults: CourseSyncResult[] = [];
+  runs = new Map<string, FakeRun>();
   issues: SyncIssue[] = [];
-  heartbeats = 0;
-  private sequence = 0;
+  renewals = 0;
+  /** Set true to simulate this worker having been replaced. */
+  fenceEverything = false;
 
-  acquire(userId: string, _trigger: SyncTrigger, mode: SyncMode): Promise<SyncRunLease> {
-    // Mirrors the partial unique index: a second concurrent run is refused.
-    if (this.active !== null) {
-      return Promise.reject(new SyncAlreadyRunningError('already running'));
+  private sequence = 0;
+  private ownerSequence = 0;
+
+  start(
+    userId: string,
+    _trigger: SyncTrigger,
+    mode: SyncMode,
+    _leaseTtlSeconds: number,
+    owner: string,
+  ): Promise<SyncRunLease> {
+    for (const run of this.runs.values()) {
+      if (run.userId === userId && (run.status === 'QUEUED' || run.status === 'RUNNING')) {
+        return Promise.reject(new SyncAlreadyRunningError('already running'));
+      }
     }
+
     this.sequence += 1;
-    this.active = `run-${String(this.sequence)}`;
-    return Promise.resolve({
-      syncRunId: this.active,
+    const syncRunId = `run-${String(this.sequence)}`;
+    this.runs.set(syncRunId, {
+      syncRunId,
       userId,
-      startedAt: new Date('2026-03-01T00:00:00Z'),
       mode,
+      status: 'RUNNING',
+      owner,
+      courses: [],
+      discoveryCompleted: false,
+      resumeAttempts: 0,
+      finalStatus: null,
+    });
+
+    return Promise.resolve(this.leaseOf(syncRunId, owner));
+  }
+
+  resume(userId: string, _leaseTtlSeconds: number, owner: string): Promise<SyncRunLease | null> {
+    for (const run of this.runs.values()) {
+      if (run.userId !== userId || run.status !== 'QUEUED') continue;
+
+      run.status = 'RUNNING';
+      run.owner = owner;
+      run.resumeAttempts += 1;
+      // A course the previous worker was mid-way through goes back on the
+      // queue; its work was idempotent, so redoing it is safe.
+      for (const course of run.courses) {
+        if (course.status === 'RUNNING') course.status = 'PENDING';
+      }
+      return Promise.resolve(this.leaseOf(run.syncRunId, owner));
+    }
+    return Promise.resolve(null);
+  }
+
+  renewLease(syncRunId: string, owner: string, _leaseTtlSeconds = 0): Promise<boolean> {
+    this.renewals += 1;
+    return Promise.resolve(this.owns(syncRunId, owner));
+  }
+
+  releaseLease(syncRunId: string, owner: string): Promise<boolean> {
+    if (!this.owns(syncRunId, owner)) return Promise.resolve(false);
+    const run = this.runs.get(syncRunId) as FakeRun;
+    run.status = 'QUEUED';
+    run.owner = null;
+    return Promise.resolve(true);
+  }
+
+  enqueueCourses(
+    syncRunId: string,
+    owner: string,
+    items: readonly SyncCourseQueueEntry[],
+  ): Promise<number> {
+    if (!this.owns(syncRunId, owner)) return Promise.resolve(0);
+    const run = this.runs.get(syncRunId) as FakeRun;
+
+    let added = 0;
+    for (const item of items) {
+      // Idempotent, exactly like ON CONFLICT DO NOTHING: re-enqueueing must not
+      // duplicate a work item or reset one that already finished.
+      if (run.courses.some((course) => course.sourceCourseId === item.sourceCourseId)) continue;
+      run.courses.push({
+        sourceCourseId: item.sourceCourseId,
+        courseId: item.courseId,
+        courseName: item.courseName,
+        status: 'PENDING',
+        attempts: 0,
+        result: null,
+      });
+      added += 1;
+    }
+
+    run.discoveryCompleted = true;
+    return Promise.resolve(added);
+  }
+
+  claimNextCourse(syncRunId: string, owner: string): Promise<SyncCourseWorkItem | null> {
+    if (!this.owns(syncRunId, owner)) return Promise.resolve(null);
+    const run = this.runs.get(syncRunId) as FakeRun;
+
+    const next = run.courses.find((course) => course.status === 'PENDING');
+    if (next === undefined) return Promise.resolve(null);
+
+    next.status = 'RUNNING';
+    next.attempts += 1;
+
+    return Promise.resolve({
+      sourceCourseId: next.sourceCourseId,
+      courseId: next.courseId,
+      courseName: next.courseName,
+      attempts: next.attempts,
     });
   }
 
-  heartbeat(): Promise<void> {
-    this.heartbeats += 1;
-    return Promise.resolve();
-  }
+  completeCourse(
+    syncRunId: string,
+    owner: string,
+    result: CourseSyncResult,
+  ): Promise<boolean> {
+    if (!this.owns(syncRunId, owner)) return Promise.resolve(false);
+    const run = this.runs.get(syncRunId) as FakeRun;
 
-  recordCourseResult(_syncRunId: string, result: CourseSyncResult): Promise<void> {
-    this.courseResults.push(result);
-    return Promise.resolve();
+    const item = run.courses.find((course) => course.sourceCourseId === result.sourceCourseId);
+    if (item === undefined) return Promise.resolve(false);
+
+    item.status = result.status;
+    item.result = result;
+    return Promise.resolve(true);
   }
 
   recordIssues(_syncRunId: string, issues: readonly SyncIssue[]): Promise<void> {
@@ -407,10 +526,64 @@ export class FakeSyncRunRepository implements SyncRunRepository {
     return Promise.resolve();
   }
 
-  finalize(_syncRunId: string, status: SyncRunStatus, counts: SyncCounts): Promise<void> {
-    this.finalized.push({ status, counts });
-    this.active = null;
-    return Promise.resolve();
+  finalize(
+    syncRunId: string,
+    owner: string,
+    _errorSummary: string | null = null,
+  ): Promise<SyncRunStatus | null> {
+    if (!this.owns(syncRunId, owner)) return Promise.resolve(null);
+    const run = this.runs.get(syncRunId) as FakeRun;
+
+    // Refuses while work remains, so a worker cannot finalise a run it has
+    // merely stopped working on.
+    if (run.courses.some((c) => c.status === 'PENDING' || c.status === 'RUNNING')) {
+      return Promise.resolve(null);
+    }
+
+    const failed = run.courses.filter((course) => course.status === 'FAILED').length;
+    const status: SyncRunStatus = !run.discoveryCompleted
+      ? 'FAILED'
+      : run.courses.length === 0 || failed === 0
+        ? 'SUCCESS'
+        : failed === run.courses.length
+          ? 'FAILED'
+          : 'PARTIAL_SUCCESS';
+
+    run.status = status;
+    run.finalStatus = status;
+    run.owner = null;
+    return Promise.resolve(status);
+  }
+
+  failRun(syncRunId: string, owner: string): Promise<boolean> {
+    if (!this.owns(syncRunId, owner)) return Promise.resolve(false);
+    const run = this.runs.get(syncRunId) as FakeRun;
+    run.status = 'FAILED';
+    run.finalStatus = 'FAILED';
+    run.owner = null;
+    for (const course of run.courses) {
+      if (course.status === 'PENDING' || course.status === 'RUNNING') course.status = 'FAILED';
+    }
+    return Promise.resolve(true);
+  }
+
+  progress(syncRunId: string): Promise<SyncRunProgress | null> {
+    const run = this.runs.get(syncRunId);
+    if (run === undefined) return Promise.resolve(null);
+
+    return Promise.resolve({
+      syncRunId,
+      status: run.status,
+      mode: run.mode,
+      startedAt: new Date('2026-03-01T00:00:00Z'),
+      finishedAt: run.finalStatus === null ? null : new Date('2026-03-01T00:01:00Z'),
+      counts: null,
+      totalCourses: run.courses.length,
+      completedCourses: run.courses.filter((c) => c.status === 'SUCCESS').length,
+      failedCourses: run.courses.filter((c) => c.status === 'FAILED').length,
+      errorSummary: null,
+      issueCodes: [...new Set(this.issues.map((issue) => issue.code))],
+    });
   }
 
   latestForUser(): Promise<SyncRunSummary | null> {
@@ -420,6 +593,77 @@ export class FakeSyncRunRepository implements SyncRunRepository {
   lastSuccessfulAt(): Promise<Date | null> {
     return Promise.resolve(null);
   }
+
+  findResumableUserIds(): Promise<readonly string[]> {
+    const ids = [...this.runs.values()]
+      .filter((run) => run.status === 'QUEUED')
+      .map((run) => run.userId);
+    return Promise.resolve([...new Set(ids)]);
+  }
+
+  // --- test helpers ---------------------------------------------------------
+
+  /** The results a run actually recorded, in completion order. */
+  resultsOf(syncRunId: string): CourseSyncResult[] {
+    const run = this.runs.get(syncRunId);
+    if (run === undefined) return [];
+    return run.courses
+      .map((course) => course.result)
+      .filter((result): result is CourseSyncResult => result !== null);
+  }
+
+  runFor(userId: string): FakeRun | undefined {
+    return [...this.runs.values()].find((run) => run.userId === userId);
+  }
+
+  /** Simulates the lease being taken over by another worker. */
+  stealLease(syncRunId: string): string {
+    const run = this.runs.get(syncRunId) as FakeRun;
+    this.ownerSequence += 1;
+    run.owner = `thief-${String(this.ownerSequence)}`;
+    run.status = 'RUNNING';
+    return run.owner;
+  }
+
+  private owns(syncRunId: string, owner: string): boolean {
+    if (this.fenceEverything) return false;
+    const run = this.runs.get(syncRunId);
+    return run !== undefined && run.owner === owner && run.status === 'RUNNING';
+  }
+
+  private leaseOf(syncRunId: string, owner: string): SyncRunLease {
+    const run = this.runs.get(syncRunId) as FakeRun;
+    return {
+      syncRunId,
+      userId: run.userId,
+      owner,
+      startedAt: new Date('2026-03-01T00:00:00Z'),
+      mode: run.mode,
+      discoveryCompleted: run.discoveryCompleted,
+      resumeAttempts: run.resumeAttempts,
+    };
+  }
+}
+
+export interface FakeRun {
+  syncRunId: string;
+  userId: string;
+  mode: SyncMode;
+  status: SyncRunStatus;
+  owner: string | null;
+  courses: FakeCourseWorkItem[];
+  discoveryCompleted: boolean;
+  resumeAttempts: number;
+  finalStatus: SyncRunStatus | null;
+}
+
+export interface FakeCourseWorkItem {
+  sourceCourseId: string;
+  courseId: string | null;
+  courseName: string | null;
+  status: CourseSyncStatus;
+  attempts: number;
+  result: CourseSyncResult | null;
 }
 
 export function assignmentRecord(

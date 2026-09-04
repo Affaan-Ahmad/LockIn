@@ -110,6 +110,7 @@ function connection(overrides: Partial<StoredGoogleConnection> = {}): StoredGoog
     connectedAt: new Date('2026-01-01T00:00:00Z'),
     lastRefreshedAt: null,
     lastErrorCode: null,
+    credentialsUnreadable: false,
     ...overrides,
   };
 }
@@ -298,5 +299,115 @@ describe('concurrent refresh', () => {
       scopes: null,
     };
     await expect(service.getAccessToken('user-1')).resolves.toBe('recovered');
+  });
+});
+
+describe('unreadable stored credentials', () => {
+  /**
+   * The production incident this guards against.
+   *
+   * A deployment whose GOOGLE_TOKEN_ENCRYPTION_KEY differs from the one the rows
+   * were written with cannot decrypt either ciphertext. The repository reports
+   * that as `credentialsUnreadable`, and the distinction matters more than it
+   * looks: without it both tokens simply read back as null, which is
+   * indistinguishable from "Google never issued a refresh token" -- so the
+   * service reported NO_REFRESH_TOKEN, pushing whoever was debugging towards the
+   * OAuth consent screen while the actual fault sat in the environment.
+   */
+  it('reports a configuration fault, not a missing grant', async () => {
+    const repo = new FakeConnectionRepository();
+    const oauth = new FakeOAuthClient();
+    repo.connection = connection({
+      accessToken: null,
+      refreshToken: null,
+      accessTokenExpiresAt: null,
+      credentialsUnreadable: true,
+    });
+
+    await expect(buildService(repo, oauth).getAccessToken('user-1')).rejects.toMatchObject({
+      code: 'CONFIG_ERROR',
+    });
+  });
+
+  it('leaves the connection untouched so restoring the key restores service', async () => {
+    // Marking NEEDS_RECONNECT here would push every student through a consent
+    // flow to repair an environment variable, and would keep prompting them
+    // after the key was put back -- the stored ciphertext was never damaged.
+    const repo = new FakeConnectionRepository();
+    const oauth = new FakeOAuthClient();
+    repo.connection = connection({
+      accessToken: null,
+      refreshToken: null,
+      accessTokenExpiresAt: null,
+      credentialsUnreadable: true,
+    });
+
+    await expect(buildService(repo, oauth).getAccessToken('user-1')).rejects.toThrow();
+
+    expect(repo.statusChanges).toHaveLength(0);
+  });
+
+  it('never spends a token-endpoint call on a credential it could not read', async () => {
+    const repo = new FakeConnectionRepository();
+    const oauth = new FakeOAuthClient();
+    repo.connection = connection({
+      accessToken: null,
+      refreshToken: null,
+      accessTokenExpiresAt: null,
+      credentialsUnreadable: true,
+    });
+
+    await expect(buildService(repo, oauth).getAccessToken('user-1')).rejects.toThrow();
+
+    expect(oauth.calls).toBe(0);
+  });
+
+  it('still reports a genuinely absent refresh token as a reconnect', async () => {
+    // The other half of the distinction. A NULL column really does mean the
+    // student must grant offline access again.
+    const repo = new FakeConnectionRepository();
+    const oauth = new FakeOAuthClient();
+    repo.connection = connection({
+      accessTokenExpiresAt: null,
+      refreshToken: null,
+      credentialsUnreadable: false,
+    });
+
+    await expect(buildService(repo, oauth).getAccessToken('user-1')).rejects.toMatchObject({
+      code: 'AUTHORIZATION_EXPIRED',
+    });
+    expect(repo.statusChanges).toContainEqual({
+      status: 'NEEDS_RECONNECT',
+      errorCode: 'NO_REFRESH_TOKEN',
+    });
+  });
+});
+
+describe('a connection already needing reconnection', () => {
+  it('refuses without reusing a stored token that has not expired yet', async () => {
+    // Otherwise a connection we have already declared unusable keeps serving
+    // requests until its last access token happens to lapse.
+    const repo = new FakeConnectionRepository();
+    const oauth = new FakeOAuthClient();
+    repo.connection = connection({ status: 'NEEDS_RECONNECT' });
+
+    await expect(buildService(repo, oauth).getAccessToken('user-1')).rejects.toMatchObject({
+      code: 'AUTHORIZATION_EXPIRED',
+    });
+    expect(oauth.calls).toBe(0);
+  });
+
+  it('does not rewrite the status, preserving the code that explains it', async () => {
+    const repo = new FakeConnectionRepository();
+    const oauth = new FakeOAuthClient();
+    repo.connection = connection({
+      status: 'NEEDS_RECONNECT',
+      accessTokenExpiresAt: null,
+      lastErrorCode: 'NO_REFRESH_TOKEN',
+    });
+
+    await expect(buildService(repo, oauth).getAccessToken('user-1')).rejects.toThrow();
+
+    expect(repo.statusChanges).toHaveLength(0);
   });
 });

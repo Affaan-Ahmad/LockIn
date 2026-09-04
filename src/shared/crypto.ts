@@ -1,6 +1,12 @@
 import 'server-only';
 
-import { createCipheriv, createDecipheriv, randomBytes, timingSafeEqual } from 'node:crypto';
+import {
+  createCipheriv,
+  createDecipheriv,
+  createHash,
+  randomBytes,
+  timingSafeEqual,
+} from 'node:crypto';
 
 import { ConfigError, PersistenceError } from './errors';
 
@@ -36,11 +42,15 @@ export function encryptSecret(plaintext: string, key: Buffer, aad: string): Buff
 export function decryptSecret(envelope: Buffer, key: Buffer, aad: string): string {
   assertKey(key);
   if (envelope.length < 1 + IV_BYTES + TAG_BYTES) {
-    throw new PersistenceError('Stored credential envelope is truncated');
+    throw new PersistenceError('Stored credential envelope is truncated', {
+      context: { reason: 'TRUNCATED' },
+    });
   }
   const version = envelope[0];
   if (version !== VERSION) {
-    throw new PersistenceError(`Unsupported credential envelope version: ${String(version)}`);
+    throw new PersistenceError(`Unsupported credential envelope version: ${String(version)}`, {
+      context: { reason: 'UNSUPPORTED_VERSION', version: version ?? -1 },
+    });
   }
   const iv = envelope.subarray(1, 1 + IV_BYTES);
   const tag = envelope.subarray(1 + IV_BYTES, 1 + IV_BYTES + TAG_BYTES);
@@ -54,7 +64,16 @@ export function decryptSecret(envelope: Buffer, key: Buffer, aad: string): strin
   } catch (cause) {
     // Authentication failure: wrong key, wrong owner, or tampered bytes. All
     // three mean "treat this credential as unusable", never "guess".
-    throw new PersistenceError('Stored credential failed authentication', { cause });
+    //
+    // The reason is carried in the context so a caller can tell this apart from
+    // a column that was simply NULL. Conflating the two is what turns a wrong
+    // GOOGLE_TOKEN_ENCRYPTION_KEY into a report of "Google never sent a refresh
+    // token", which sends whoever is debugging to the consent screen instead of
+    // to the deployment's environment.
+    throw new PersistenceError('Stored credential failed authentication', {
+      cause,
+      context: { reason: 'AUTH_FAILED' },
+    });
   }
 }
 
@@ -64,6 +83,23 @@ export function decodeKey(base64Key: string): Buffer {
     throw new ConfigError('GOOGLE_TOKEN_ENCRYPTION_KEY must decode to exactly 32 bytes');
   }
   return key;
+}
+
+/**
+ * A short, non-reversible fingerprint of an encryption key.
+ *
+ * Exists to answer one question that has no safe answer otherwise: "is the key
+ * in production the same one that wrote these rows?" Comparing the keys
+ * themselves means printing them; comparing nothing means finding out from a
+ * user whose credentials stopped decrypting.
+ *
+ * Thirty-two bits of a SHA-256 over a 256-bit key. Enough to tell two
+ * deployments apart at a glance, far too little to attack -- and it is a hash of
+ * the key, never any part of the key.
+ */
+export function keyFingerprint(key: Buffer): string {
+  assertKey(key);
+  return createHash('sha256').update(key).digest('hex').slice(0, 8);
 }
 
 export function constantTimeEquals(a: string, b: string): boolean {

@@ -29,10 +29,16 @@ export type SubmissionStateDb =
   | 'RETURNED'
   | 'RECLAIMED_BY_STUDENT'
   | 'UNSPECIFIED';
-export type SyncStatusDb = 'RUNNING' | 'SUCCESS' | 'PARTIAL_SUCCESS' | 'FAILED' | 'ABANDONED';
+export type SyncStatusDb =
+  | 'QUEUED'
+  | 'RUNNING'
+  | 'SUCCESS'
+  | 'PARTIAL_SUCCESS'
+  | 'FAILED'
+  | 'ABANDONED';
 export type SyncModeDb = 'FULL' | 'INCREMENTAL';
 export type SyncTriggerDb = 'MANUAL' | 'SCHEDULED' | 'ON_DEMAND';
-export type CourseSyncStatusDb = 'SUCCESS' | 'FAILED' | 'SKIPPED';
+export type CourseSyncStatusDb = 'PENDING' | 'RUNNING' | 'SUCCESS' | 'FAILED' | 'SKIPPED';
 export type ListingCompletenessDb = 'COMPLETE' | 'PARTIAL' | 'FAILED';
 export type GoogleConnectionStatusDb = 'ACTIVE' | 'NEEDS_RECONNECT' | 'REVOKED';
 export type AcademicSourceDb = 'GOOGLE_CLASSROOM' | 'MANUAL';
@@ -175,6 +181,13 @@ export type IgnoredAssignmentRow = {
   ignored_at: string;
 };
 
+/** One work item handed to app_enqueue_sync_courses. */
+export type SyncCourseQueueItem = {
+  source_course_id: string;
+  course_id: string | null;
+  course_name: string | null;
+};
+
 export type SyncRunRow = {
   id: string;
   user_id: string;
@@ -187,6 +200,9 @@ export type SyncRunRow = {
   lease_expires_at: string;
   counts: Record<string, number> | null;
   error_summary: string | null;
+  lease_owner: string | null;
+  discovery_completed_at: string | null;
+  resume_attempts: number;
 };
 
 export type SyncCourseResultRow = {
@@ -197,9 +213,13 @@ export type SyncCourseResultRow = {
   source_course_id: string;
   course_name: string | null;
   status: CourseSyncStatusDb;
-  completeness: ListingCompletenessDb;
+  completeness: ListingCompletenessDb | null;
   counts: Record<string, number> | null;
   created_at: string;
+  attempts: number;
+  last_error_code: string | null;
+  started_at: string | null;
+  finished_at: string | null;
 };
 
 export type SyncErrorRow = {
@@ -395,27 +415,63 @@ export type Database = {
     };
     Views: Record<never, never>;
     Functions: {
-      app_acquire_sync_run: {
+      app_start_sync_run: {
         Args: {
           p_user_id: string;
           p_trigger: SyncTriggerDb;
           p_mode: SyncModeDb;
           p_lease_ttl_seconds: number;
+          p_owner: string;
         };
         Returns: SyncRunRow[];
       };
-      app_heartbeat_sync_run: {
-        Args: { p_sync_run_id: string; p_lease_ttl_seconds: number };
-        Returns: undefined;
+      app_resume_sync_run: {
+        Args: { p_user_id: string; p_lease_ttl_seconds: number; p_owner: string };
+        Returns: SyncRunRow[];
+      };
+      app_renew_sync_lease: {
+        Args: { p_sync_run_id: string; p_owner: string; p_lease_ttl_seconds: number };
+        Returns: boolean;
+      };
+      app_release_sync_lease: {
+        Args: { p_sync_run_id: string; p_owner: string };
+        Returns: boolean;
+      };
+      app_enqueue_sync_courses: {
+        Args: {
+          p_sync_run_id: string;
+          p_owner: string;
+          p_courses: SyncCourseQueueItem[];
+        };
+        Returns: number;
+      };
+      app_claim_next_sync_course: {
+        Args: { p_sync_run_id: string; p_owner: string };
+        Returns: SyncCourseResultRow[];
+      };
+      app_complete_sync_course: {
+        Args: {
+          p_sync_run_id: string;
+          p_owner: string;
+          p_source_course_id: string;
+          p_status: CourseSyncStatusDb;
+          p_completeness: ListingCompletenessDb | null;
+          p_counts: Record<string, number>;
+          p_error_code: string | null;
+        };
+        Returns: boolean;
       };
       app_finalize_sync_run: {
         Args: {
           p_sync_run_id: string;
-          p_status: SyncStatusDb;
-          p_counts: Record<string, number>;
+          p_owner: string;
           p_error_summary: string | null;
         };
-        Returns: undefined;
+        Returns: SyncStatusDb | null;
+      };
+      app_fail_sync_run: {
+        Args: { p_sync_run_id: string; p_owner: string; p_error_summary: string };
+        Returns: boolean;
       };
       app_upsert_courses: {
         Args: { p_user_id: string; p_items: CourseUpsertPayload[]; p_synced_at: string };

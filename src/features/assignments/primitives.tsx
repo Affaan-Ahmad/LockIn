@@ -36,7 +36,7 @@ export function AssignmentTitle({
         rel="noopener noreferrer"
         // The whole row is not a link: that would make the title unselectable
         // and give a screen reader one enormous link.
-        className="rounded-xs hover:text-brand"
+        className="rounded-xs hover:text-brand-ink"
       >
         {item.title}
         {/* Revealed on hover, and on focus so a keyboard user still learns the

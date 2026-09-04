@@ -105,7 +105,7 @@ function StepFrame({
 }) {
   return (
     <main className="mx-auto flex min-h-dvh max-w-[34rem] flex-col justify-center px-5 py-12">
-      <p className="text-sm font-semibold text-brand">{step}</p>
+      <p className="text-sm font-semibold text-brand-ink">{step}</p>
       <h1 className="mt-2 text-2xl font-semibold text-balance text-ink">
         {title}
       </h1>

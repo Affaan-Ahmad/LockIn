@@ -120,6 +120,7 @@ class FakeConnections implements GoogleConnectionRepository {
     connectedAt: new Date('2026-01-01'),
     lastRefreshedAt: null,
     lastErrorCode: null,
+    credentialsUnreadable: false,
   };
   statusChanges: Array<{ status: GoogleConnectionStatus; errorCode: string | null }> = [];
 

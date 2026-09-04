@@ -14,14 +14,52 @@ export type SyncTrigger = 'MANUAL' | 'SCHEDULED' | 'ON_DEMAND';
 export type SyncMode = 'FULL' | 'INCREMENTAL';
 
 export type SyncRunStatus =
+  /** Durable progress exists and no worker owns it. The resumable state. */
+  | 'QUEUED'
   | 'RUNNING'
   | 'SUCCESS'
   | 'PARTIAL_SUCCESS'
   | 'FAILED'
-  /** Lease expired without a terminal status; the process died mid-run. */
+  /** Resumed too many times without completing. Terminal, and a failure. */
   | 'ABANDONED';
 
-export type CourseSyncStatus = 'SUCCESS' | 'FAILED' | 'SKIPPED';
+/**
+ * The two non-terminal states are what the frontend must never round off.
+ *
+ * `isTerminal` exists so a caller cannot accidentally treat QUEUED or RUNNING
+ * as an answer: an unfinished sync is not a successful one, and the polling
+ * client needs the difference to be a type-level fact rather than a convention.
+ */
+const TERMINAL_STATUSES = new Set<SyncRunStatus>([
+  'SUCCESS',
+  'PARTIAL_SUCCESS',
+  'FAILED',
+  'ABANDONED',
+]);
+
+export function isTerminalStatus(status: SyncRunStatus): boolean {
+  return TERMINAL_STATUSES.has(status);
+}
+
+/**
+ * Whether a run genuinely refreshed everything it set out to refresh.
+ *
+ * The single question the freshness model and the UI both need, in one place,
+ * so neither can answer it differently. PARTIAL_SUCCESS is deliberately false:
+ * some courses were not represented, and recency does not fix incompleteness.
+ */
+export function isCompleteSuccess(status: SyncRunStatus): boolean {
+  return status === 'SUCCESS';
+}
+
+export type CourseSyncStatus =
+  /** Queued, not yet attempted. This set is the run's checkpoint. */
+  | 'PENDING'
+  /** Claimed by a worker. Returns to PENDING if that worker dies. */
+  | 'RUNNING'
+  | 'SUCCESS'
+  | 'FAILED'
+  | 'SKIPPED';
 
 export interface SyncCounts {
   readonly coursesProcessed: number;
@@ -108,10 +146,22 @@ export function addCounts(a: SyncCounts, b: Partial<SyncCounts>): SyncCounts {
 /**
  * A run with zero courses is a SUCCESS, not a vacuous PARTIAL_SUCCESS: the
  * student genuinely has no courses and the run genuinely completed.
+ *
+ * This mirrors `app_finalize_sync_run`, which is the authority -- the database
+ * derives the stored status from the work queue so no application bug can
+ * record SUCCESS for a run that had a failed course. Kept here because the
+ * projection the API returns has to agree with what was stored, and because a
+ * pure function is where this rule can actually be tested.
  */
 export function resolveRunStatus(courses: readonly CourseSyncResult[]): SyncRunStatus {
   if (courses.length === 0) return 'SUCCESS';
   const failed = courses.filter((course) => course.status === 'FAILED').length;
+  const unfinished = courses.filter(
+    (course) => course.status === 'PENDING' || course.status === 'RUNNING',
+  ).length;
+  // Not finished, so not an outcome. Reporting SUCCESS here would be the exact
+  // "partial mistaken for complete" failure the state machine exists to stop.
+  if (unfinished > 0) return 'RUNNING';
   if (failed === 0) return 'SUCCESS';
   if (failed === courses.length) return 'FAILED';
   return 'PARTIAL_SUCCESS';

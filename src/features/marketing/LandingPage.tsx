@@ -1,5 +1,6 @@
 import Link from 'next/link';
 
+import { LockInMark } from '@/components/icons';
 import { Footer } from '@/components/shell/Footer';
 import { Button } from '@/components/ui/Button';
 
@@ -25,7 +26,10 @@ export function LandingPage() {
   return (
     <div className="min-h-dvh">
       <header className="mx-auto flex max-w-[64rem] items-center justify-between px-5 py-5 sm:px-8">
-        <span className="text-lg font-semibold tracking-[-0.03em] text-ink">LockIn</span>
+        <span className="flex items-center gap-2 text-lg font-semibold tracking-[-0.03em] text-ink">
+          <LockInMark className="size-6 shrink-0" />
+          LockIn
+        </span>
         <Link href="/welcome?signin=1">
           <Button variant="secondary" size="sm">
             Sign in
@@ -111,10 +115,10 @@ export function LandingPage() {
             asking anyone.
           </p>
           <div className="mt-6 flex flex-wrap gap-4 text-sm">
-            <Link href="/legal/privacy" className="font-medium text-brand hover:underline">
+            <Link href="/legal/privacy" className="font-medium text-brand-ink hover:underline">
               Privacy policy
             </Link>
-            <Link href="/legal/disclaimer" className="font-medium text-brand hover:underline">
+            <Link href="/legal/disclaimer" className="font-medium text-brand-ink hover:underline">
               What it can get wrong
             </Link>
           </div>

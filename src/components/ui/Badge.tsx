@@ -24,7 +24,7 @@ export type BadgeTone = 'neutral' | 'brand' | 'success' | 'warning' | 'danger' |
 
 const TONE: Record<BadgeTone, string> = {
   neutral: 'bg-sunken text-ink-soft border-line',
-  brand: 'bg-brand-soft text-brand border-transparent',
+  brand: 'bg-brand-soft text-brand-ink border-transparent',
   success: 'bg-success-soft text-success border-transparent',
   warning: 'bg-warning-soft text-warning border-transparent',
   danger: 'bg-danger-soft text-danger border-transparent',

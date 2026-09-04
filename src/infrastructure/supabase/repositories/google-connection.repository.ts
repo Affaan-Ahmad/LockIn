@@ -49,19 +49,23 @@ export class SupabaseGoogleConnectionRepository implements GoogleConnectionRepos
     if (error !== null) throw translatePostgrestError(error, 'googleConnections.findByUserId');
     if (data === null) return null;
 
+    const access = this.decryptOrNull(data.access_token_ct, userId, 'access');
+    const refresh = this.decryptOrNull(data.refresh_token_ct, userId, 'refresh');
+
     return {
       userId: data.user_id,
       googleSub: data.google_sub,
       googleUserId: data.google_user_id,
       grantedScopes: data.granted_scopes,
-      accessToken: this.decryptOrNull(data.access_token_ct, userId, 'access'),
+      accessToken: access.value,
       accessTokenExpiresAt:
         data.access_token_expires_at === null ? null : new Date(data.access_token_expires_at),
-      refreshToken: this.decryptOrNull(data.refresh_token_ct, userId, 'refresh'),
+      refreshToken: refresh.value,
       status: data.status,
       connectedAt: new Date(data.connected_at),
       lastRefreshedAt: data.last_refreshed_at === null ? null : new Date(data.last_refreshed_at),
       lastErrorCode: data.last_error_code,
+      credentialsUnreadable: access.unreadable || refresh.unreadable,
     };
   }
 
@@ -199,25 +203,42 @@ export class SupabaseGoogleConnectionRepository implements GoogleConnectionRepos
     return encryptSecret(plaintext, this.key, userId);
   }
 
+  /**
+   * Decrypts one stored ciphertext, reporting *why* it produced nothing.
+   *
+   * `unreadable` is the whole point. A NULL column and a ciphertext that fails
+   * AES-GCM authentication both yield no usable token, but they are different
+   * incidents: the first is a consent problem the student can fix by
+   * reconnecting, the second is a key problem only the operator can fix. The
+   * caller must be able to tell them apart, so this returns both facts rather
+   * than flattening them into `null`.
+   *
+   * Nothing derived from the ciphertext is logged -- not the bytes, not their
+   * length, which would leak the size of the plaintext token.
+   */
   private decryptOrNull(
     hex: string | null,
     userId: string,
     label: 'access' | 'refresh',
-    ): string | null {
+    ): { value: string | null; unreadable: boolean } {
     const buffer = pgHexToBuffer(hex);
-    if (buffer === null) return null;
+    if (buffer === null) return { value: null, unreadable: false };
 
     try {
-      return decryptSecret(buffer, this.key, userId);
+      return { value: decryptSecret(buffer, this.key, userId), unreadable: false };
     } catch (cause) {
-      // Most likely a rotated encryption key. Treated as "no credential", which
-      // routes the student through reconnect, rather than as a crash.
       if (cause instanceof PersistenceError) {
+        const reason = cause.context['reason'];
         this.logger.error('stored google credential could not be decrypted', {
+          errorCode: 'CREDENTIAL_DECRYPTION_FAILED',
           userId,
           credential: label,
+          // AUTH_FAILED here means the envelope is intact but this key did not
+          // produce it: check GOOGLE_TOKEN_ENCRYPTION_KEY for this deployment
+          // before concluding anything about the student's Google grant.
+          reason: typeof reason === 'string' ? reason : 'UNKNOWN',
         });
-        return null;
+        return { value: null, unreadable: true };
       }
       throw cause;
     }

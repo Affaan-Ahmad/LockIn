@@ -70,7 +70,7 @@ export function IgnoreButton({ assignmentId, ignored, title }: IgnoreButtonProps
           'press min-h-9 rounded-control px-3 text-xs font-medium active:translate-y-px',
           ' disabled:opacity-50',
           ignored
-            ? 'bg-brand-soft text-brand hover:brightness-95'
+            ? 'bg-brand-soft text-brand-ink hover:brightness-95'
             : 'text-ink-muted hover:bg-sunken hover:text-ink',
         )}
       >

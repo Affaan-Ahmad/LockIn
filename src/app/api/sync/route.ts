@@ -4,21 +4,39 @@ import { z } from 'zod';
 import { createBackendContext } from '@/infrastructure/composition';
 import { InvalidInputError } from '@/shared/errors';
 
-import { enforceRateLimit, handleRoute, jsonOk, requireUser } from '../_lib/handler';
+import { enforceRateLimit, handleRoute, jsonOk, requireUser, runInBackground } from '../_lib/handler';
 
 /**
- * Triggers a synchronisation run.
+ * Starts a synchronisation run.
  *
- * The handler validates input, resolves the caller, and calls one service
- * method. Concurrency, partial failure and error mapping are all handled below
- * this layer -- a second simultaneous request is rejected by the database lease,
- * not by anything written here.
+ * Answers as soon as the run exists, not when it finishes. That inversion is
+ * the point of the whole redesign: the previous handler awaited the entire
+ * multi-course sync, so the platform's request timeout was the sync's timeout,
+ * and losing the connection lost the work.
+ *
+ * Now the request does three cheap things -- authenticate, rate limit, claim a
+ * run -- and hands back an id. The synchronisation itself proceeds in the
+ * background and survives this response, this connection, and if necessary this
+ * invocation.
  */
 
 export const runtime = 'nodejs';
-// Sync reads the user's session and writes their data; a cached response would
-// be both wrong and a cross-user hazard.
 export const dynamic = 'force-dynamic';
+
+/**
+ * The platform ceiling, taken in full.
+ *
+ * Verified rather than assumed: with fluid compute -- default for projects
+ * created after April 2025 -- Hobby allows 300s as both the default and the
+ * maximum, so the previous `maxDuration = 60` was cutting the available budget
+ * by five. This is not the sync's time limit; the worker's own deadline is,
+ * and it sits at 80% of this. This is the emergency boundary.
+ *
+ * MUST equal PLATFORM_MAX_DURATION_SECONDS in `src/config/sync-runtime.ts`.
+ * Next.js requires a statically analysable literal here so it cannot import the
+ * constant; a unit test asserts the two have not drifted.
+ */
+export const maxDuration = 300;
 
 const bodySchema = z.object({
   mode: z.enum(['FULL', 'INCREMENTAL']).default('INCREMENTAL'),
@@ -36,8 +54,8 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     const context = await createBackendContext();
 
-    // The lease already stops two syncs overlapping. This stops a hundred
-    // running back to back, which is what would actually burn the Google quota.
+    // The lease stops two syncs overlapping. This stops a hundred running back
+    // to back, which is what would actually burn the Google quota.
     await enforceRateLimit(
       context.rateLimiter,
       user.id,
@@ -48,40 +66,41 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     const connection = await context.connections.snapshot(user.id);
 
-    const outcome = await context.sync.run({
+    // Claims the run and returns. Throws SYNC_ALREADY_RUNNING if one is live,
+    // which is a 409 and an honest answer rather than a second parallel sync.
+    const lease = await context.sync.start({
       userId: user.id,
       trigger: 'MANUAL',
       mode: parsed.data.mode,
-      googleUserId: connection?.googleUserId ?? null,
-      onSourceUserIdObserved: async (sourceUserId) => {
-        await context.connections.setGoogleUserId(user.id, sourceUserId);
-      },
     });
 
-    // 200 even for PARTIAL_SUCCESS and FAILED: the run completed and produced a
-    // structured result the caller needs to read. A bare 500 would discard the
-    // per-course breakdown that makes the outcome actionable.
-    return jsonOk({
-      syncRunId: outcome.syncRunId,
-      status: outcome.status,
-      mode: outcome.mode,
-      startedAt: outcome.startedAt.toISOString(),
-      finishedAt: outcome.finishedAt.toISOString(),
-      counts: outcome.counts,
-      courses: outcome.courses.map((course) => ({
-        sourceCourseId: course.sourceCourseId,
-        courseName: course.courseName,
-        status: course.status,
-        completeness: course.completeness,
-        counts: course.counts,
-        issueCount: course.issues.length,
-      })),
-      issues: outcome.issues.map((issue) => ({
-        code: issue.code,
-        scope: issue.scope,
-        message: issue.message,
-        retryable: issue.retryable,
-      })),
-    });
+    const workContext = {
+      userId: user.id,
+      trigger: 'MANUAL' as const,
+      mode: lease.mode,
+      googleUserId: connection?.googleUserId ?? null,
+      onSourceUserIdObserved: async (sourceUserId: string) => {
+        await context.connections.setGoogleUserId(user.id, sourceUserId);
+      },
+    };
+
+    // Continues after this response is sent. If the platform declines to keep
+    // the invocation alive, nothing is lost: the run is claimed and durable,
+    // and the first thing the worker does on any later trigger is resume it.
+    runInBackground(context.worker.runSlice(lease, workContext), 'sync.start');
+
+    // 202: accepted, not completed. The status of the work is a separate
+    // question with a separate endpoint, and conflating the two is what let a
+    // failed run be read as a successful one.
+    return jsonOk(
+      {
+        syncRunId: lease.syncRunId,
+        status: 'RUNNING' as const,
+        mode: lease.mode,
+        startedAt: lease.startedAt.toISOString(),
+        pollUrl: `/api/sync/${lease.syncRunId}`,
+      },
+      202,
+    );
   });
 }

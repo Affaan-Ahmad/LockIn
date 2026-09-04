@@ -4,7 +4,14 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
 
-import { BooksIcon, CalendarIcon, HomeIcon, ReviewIcon, SettingsIcon } from '@/components/icons';
+import {
+  BooksIcon,
+  CalendarIcon,
+  HomeIcon,
+  LockInMark,
+  ReviewIcon,
+  SettingsIcon,
+} from '@/components/icons';
 import { cx } from '@/lib/cx';
 
 /**
@@ -51,10 +58,12 @@ export function SidebarNav({ reviewCount = 0 }: SidebarNavProps) {
       // removed, which is what a CSS variant is for.
       className="flex h-full flex-col gap-1 px-2 py-4 lg:px-3"
     >
-      <div className="mb-5 flex items-center justify-center px-2 lg:justify-start">
-        {/* The monogram is the same mark as the app icon, so a tablet running
-            LockIn beside its own home-screen icon shows one identity. */}
-        <span className="text-base font-semibold tracking-[-0.03em] text-ink lg:hidden">L</span>
+      <div className="mb-5 flex items-center gap-2 px-2 max-lg:justify-center">
+        {/* The mark, not a typed "L". It is the same geometry as the app icon,
+            so a tablet running LockIn beside its own home-screen icon shows one
+            identity rather than two things that merely start with the same
+            letter. It inherits --ink, so it flips with the theme by itself. */}
+        <LockInMark className="size-[1.35rem] shrink-0 text-ink" />
         <span className="hidden text-base font-semibold tracking-[-0.03em] text-ink lg:inline">
           LockIn
         </span>
@@ -102,10 +111,10 @@ function Row({
         'text-sm transition-colors duration-[120ms]',
         // Weight as well as colour. In greyscale or forced colours the tint
         // vanishes and the active row must still be identifiable.
-        active ? 'bg-brand-soft font-semibold text-brand' : 'font-medium text-ink-soft hover:bg-sunken hover:text-ink',
+        active ? 'bg-brand-soft font-semibold text-brand-ink' : 'font-medium text-ink-soft hover:bg-sunken hover:text-ink',
       )}
     >
-      <item.Icon className={cx('size-[1.125rem] shrink-0', active ? 'text-brand' : '')} />
+      <item.Icon className={cx('size-[1.125rem] shrink-0', active ? 'text-brand-ink' : '')} />
       {/* sr-only rather than hidden when compact: the label is still the
           accessible name, so a screen reader reads "Upcoming" and not an
           unlabelled link. */}

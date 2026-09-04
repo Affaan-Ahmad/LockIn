@@ -4,7 +4,12 @@ import type {
   GoogleOAuthClient,
 } from '@/application/ports/google-credentials';
 import type { Clock } from '@/shared/clock';
-import { AuthorizationExpiredError, AuthenticationError, isAppError } from '@/shared/errors';
+import {
+  AuthorizationExpiredError,
+  AuthenticationError,
+  ConfigError,
+  isAppError,
+} from '@/shared/errors';
 import type { Logger } from '@/shared/logger';
 
 /**
@@ -134,6 +139,37 @@ export class GoogleTokenService implements GoogleCredentialProvider {
     if (connection.status === 'REVOKED') {
       throw new AuthorizationExpiredError(
         'Google Classroom access was revoked; the student must reconnect',
+        { context: { userId } },
+      );
+    }
+
+    // Already known to need a new consent. Re-deciding that on every call would
+    // let a stale-but-unexpired access token slip a request past a connection we
+    // have already declared unusable, and would rewrite the status -- and its
+    // error code -- on every attempt.
+    if (connection.status === 'NEEDS_RECONNECT') {
+      throw new AuthorizationExpiredError(
+        'Google Classroom access needs to be reconnected',
+        { context: { userId, lastErrorCode: connection.lastErrorCode } },
+      );
+    }
+
+    // Checked before anything is judged missing. A ciphertext we cannot decrypt
+    // is a deployment fault, not a revoked grant, and the two must not converge
+    // on the same remedy: marking the connection NEEDS_RECONNECT here would push
+    // every student through a consent flow to repair an environment variable --
+    // and would keep doing so after the key was put back, because the stored
+    // ciphertext is still perfectly good.
+    //
+    // So: fail loudly, change nothing. Restoring the correct
+    // GOOGLE_TOKEN_ENCRYPTION_KEY restores service with no user action at all.
+    if (connection.credentialsUnreadable) {
+      this.logger.error('stored google credentials could not be decrypted', {
+        errorCode: 'CREDENTIAL_DECRYPTION_FAILED',
+        userId,
+      });
+      throw new ConfigError(
+        'Stored Google credentials could not be decrypted. GOOGLE_TOKEN_ENCRYPTION_KEY does not match the key these rows were written with.',
         { context: { userId } },
       );
     }

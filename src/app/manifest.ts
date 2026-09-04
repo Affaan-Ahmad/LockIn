@@ -30,9 +30,18 @@ export default function manifest(): MetadataRoute.Manifest {
     orientation: 'portrait',
     // Matches --surface-ground so the splash screen and the first paint are the
     // same colour, rather than flashing white before the app renders.
-    background_color: '#f6f3ed',
-    theme_color: '#f6f3ed',
+    //
+    // The ground, not the lime. An install splash filled with a 90%-lightness
+    // brand colour is a flash of near-white with a tint, which reads as a
+    // rendering fault rather than as branding -- and it would not match the
+    // page that appears a moment later.
+    background_color: '#f4f4ef',
+    theme_color: '#f4f4ef',
     categories: ['education', 'productivity'],
+    // PNG, deliberately, even though the browser tab is served an SVG from
+    // `icon.svg`. Android's install prompt and splash screen have never handled
+    // SVG icons dependably, and an install with no icon is worse than a few
+    // kilobytes of raster.
     icons: [
       {
         src: '/icon',

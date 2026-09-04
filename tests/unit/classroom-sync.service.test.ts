@@ -3,6 +3,13 @@ import { describe, expect, it } from 'vitest';
 import { ClassroomSyncService } from '@/application/services/classroom-sync.service';
 import { CourseDiscoveryService } from '@/application/services/course-discovery.service';
 import { createRelevanceClassifier } from '@/domain/classification/registry';
+import type {
+  CourseSyncResult,
+  SyncCounts,
+  SyncIssue,
+  SyncRunStatus,
+} from '@/domain/sync/outcome';
+import { addCounts, EMPTY_SYNC_COUNTS } from '@/domain/sync/outcome';
 import { fixedClock } from '@/shared/clock';
 import { silentLogger } from '@/shared/logger';
 
@@ -36,7 +43,9 @@ function buildService(overrides: {
   tracking?: FakeCourseTrackingRepository;
   profiles?: FakeAcademicProfileRepository;
   syncRuns?: FakeSyncRunRepository;
-  courseConcurrency?: number;
+  invocationBudgetMs?: number;
+  checkoutReserveMs?: number;
+  initialUnitEstimateMs?: number;
 } = {}) {
   const source = overrides.source ?? new FakeSourceAdapter();
   const courses = overrides.courses ?? new FakeCourseRepository();
@@ -69,7 +78,15 @@ function buildService(overrides: {
     classifier: createRelevanceClassifier(),
     logger: silentLogger,
     clock,
-    config: { courseConcurrency: overrides.courseConcurrency ?? 4, leaseTtlSeconds: 900 },
+    config: {
+      leaseTtlSeconds: 90,
+      // Effectively unlimited unless a test narrows it, so the ordinary cases
+      // exercise one invocation and the handover tests opt in explicitly.
+      invocationBudgetMs: overrides.invocationBudgetMs ?? 3_600_000,
+      checkoutReserveMs: overrides.checkoutReserveMs ?? 3_000,
+      initialUnitEstimateMs: overrides.initialUnitEstimateMs ?? 1,
+      maxCourseAttempts: 3,
+    },
     // No real timers in tests.
     scheduleHeartbeat: () => () => undefined,
   });
@@ -103,6 +120,54 @@ function trackAll(harness: ReturnType<typeof buildService>): void {
 
 const RUN = { userId: 'user-1', trigger: 'MANUAL', mode: 'FULL' } as const;
 
+/**
+ * Starts a run and drives it to a terminal state, following handovers.
+ *
+ * Stands in for the continuation trigger: in production a handover provokes a
+ * fresh invocation, and here it provokes another `work` call. Everything else
+ * -- the queue, the fencing, the checkpoints -- is the real code path, which is
+ * the point. A test that skipped the handover would never exercise resumption.
+ *
+ * Returns the shape the old single-shot `run()` returned, so the assertions in
+ * this file continue to describe behaviour rather than plumbing.
+ */
+async function runSync(
+  harness: ReturnType<typeof buildService>,
+  input: { userId: string; trigger: 'MANUAL' | 'SCHEDULED' | 'ON_DEMAND'; mode: 'FULL' | 'INCREMENTAL' } = RUN,
+): Promise<{
+  syncRunId: string;
+  status: SyncRunStatus;
+  counts: SyncCounts;
+  courses: CourseSyncResult[];
+  issues: SyncIssue[];
+  invocations: number;
+}> {
+  const lease = await harness.service.start(input);
+  let outcome = await harness.service.work(lease, input);
+  let invocations = 1;
+
+  // Bounded: an unbounded loop here would turn a resumption bug into a hung
+  // test suite instead of a failing assertion.
+  while (outcome.kind === 'HANDED_OFF' && invocations < 50) {
+    const next = await harness.service.resume(input.userId);
+    if (next === null) break;
+    outcome = await harness.service.work(next, input);
+    invocations += 1;
+  }
+
+  const courses = harness.syncRuns.resultsOf(outcome.syncRunId);
+  const run = harness.syncRuns.runs.get(outcome.syncRunId);
+
+  return {
+    syncRunId: outcome.syncRunId,
+    status: run?.status ?? 'FAILED',
+    counts: courses.reduce<SyncCounts>((total, result) => addCounts(total, result.counts), EMPTY_SYNC_COUNTS),
+    courses,
+    issues: harness.syncRuns.issues,
+    invocations,
+  };
+}
+
 describe('happy path', () => {
   it('synchronises and classifies coursework', async () => {
     const harness = buildService();
@@ -119,7 +184,7 @@ describe('happy path', () => {
     );
 
     trackAll(harness);
-    const outcome = await harness.service.run(RUN);
+    const outcome = await runSync(harness);
 
     expect(outcome.status).toBe('SUCCESS');
     expect(outcome.counts.assignmentsCreated).toBe(3);
@@ -139,10 +204,11 @@ describe('happy path', () => {
     harness.source.courses = [courseRecord()];
 
     trackAll(harness);
-    await harness.service.run(RUN);
+    await runSync(harness);
 
-    expect(harness.syncRuns.courseResults).toHaveLength(1);
-    expect(harness.syncRuns.courseResults[0]).toMatchObject({
+    const recorded = harness.syncRuns.resultsOf('run-1');
+    expect(recorded).toHaveLength(1);
+    expect(recorded[0]).toMatchObject({
       sourceCourseId: 'c1',
       status: 'SUCCESS',
       completeness: 'COMPLETE',
@@ -169,7 +235,7 @@ describe('partial failure', () => {
     }
 
     trackAll(harness);
-    const outcome = await harness.service.run(RUN);
+    const outcome = await runSync(harness);
 
     // "Sync failed" would be a lie here and would throw away two courses of
     // real work.
@@ -189,7 +255,7 @@ describe('partial failure', () => {
     harness.source.failCourses.add('c1');
 
     trackAll(harness);
-    const outcome = await harness.service.run(RUN);
+    const outcome = await runSync(harness);
     expect(outcome.status).toBe('FAILED');
   });
 
@@ -198,18 +264,20 @@ describe('partial failure', () => {
     harness.source.listCoursesError = new Error('classroom unreachable');
 
     trackAll(harness);
-    const outcome = await harness.service.run(RUN);
+    const outcome = await runSync(harness);
 
     expect(outcome.status).toBe('FAILED');
-    // The lease must not be left held by a run stuck in RUNNING.
-    expect(harness.syncRuns.finalized).toHaveLength(1);
+    // The run must reach a terminal state and drop its lease. A run left
+    // RUNNING and owned by a worker that has gone is the exact condition the
+    // whole design exists to make impossible.
+    expect(harness.syncRuns.runs.get(outcome.syncRunId)?.owner).toBeNull();
     expect(harness.syncRuns.issues.some((issue) => issue.scope === 'RUN')).toBe(true);
   });
 
   it('treats a run with no courses as a success', async () => {
     const harness = buildService();
     trackAll(harness);
-    const outcome = await harness.service.run(RUN);
+    const outcome = await runSync(harness);
     expect(outcome.status).toBe('SUCCESS');
   });
 });
@@ -224,7 +292,7 @@ describe('disappearance handling', () => {
     );
 
     trackAll(harness);
-    await harness.service.run(RUN);
+    await runSync(harness);
     expect(harness.assignments.reconcileCalls).toHaveLength(1);
   });
 
@@ -239,7 +307,7 @@ describe('disappearance handling', () => {
     );
 
     trackAll(harness);
-    await harness.service.run(RUN);
+    await runSync(harness);
     expect(harness.assignments.reconcileCalls).toHaveLength(0);
   });
 
@@ -249,7 +317,7 @@ describe('disappearance handling', () => {
     harness.source.failCourses.add('c1');
 
     trackAll(harness);
-    await harness.service.run(RUN);
+    await runSync(harness);
     expect(harness.assignments.reconcileCalls).toHaveLength(0);
   });
 });
@@ -274,9 +342,9 @@ describe('manual overrides', () => {
     );
 
     trackAll(harness);
-    await harness.service.run(RUN);
+    await runSync(harness);
     trackAll(harness);
-    await harness.service.run(RUN);
+    await runSync(harness);
 
     const verdicts = harness.classifications.written.filter(
       (row) => row.assignmentId === 'assignment-w2',
@@ -303,11 +371,11 @@ describe('reclassification economy', () => {
     );
 
     trackAll(harness);
-    await harness.service.run(RUN);
+    await runSync(harness);
     const afterFirst = harness.classifications.written.length;
 
     trackAll(harness);
-    await harness.service.run(RUN);
+    await runSync(harness);
     expect(harness.classifications.written.length).toBe(afterFirst);
   });
 
@@ -319,7 +387,7 @@ describe('reclassification economy', () => {
       emptyCourseContent({ assignments: [assignmentRecord({ title: 'Quiz 1' })] }),
     );
     trackAll(harness);
-    await harness.service.run(RUN);
+    await runSync(harness);
 
     harness.source.contentByCourse.set(
       'c1',
@@ -328,7 +396,7 @@ describe('reclassification economy', () => {
       }),
     );
     trackAll(harness);
-    await harness.service.run(RUN);
+    await runSync(harness);
 
     const last = harness.classifications.written.at(-1);
     expect(last?.relevance).toBe('NOT_RELEVANT');
@@ -349,7 +417,7 @@ describe('incremental mode', () => {
     });
 
     trackAll(harness);
-    await harness.service.run({ ...RUN, mode: 'INCREMENTAL' });
+    await runSync(harness, { ...RUN, mode: 'INCREMENTAL' });
 
     expect(harness.source.fetchCalls[0]?.updatedSince?.toISOString()).toBe(
       '2026-02-01T00:00:00.000Z',
@@ -369,7 +437,7 @@ describe('incremental mode', () => {
     });
 
     trackAll(harness);
-    await harness.service.run({ ...RUN, mode: 'FULL' });
+    await runSync(harness, { ...RUN, mode: 'FULL' });
     expect(harness.source.fetchCalls[0]?.updatedSince).toBeNull();
   });
 
@@ -382,7 +450,7 @@ describe('incremental mode', () => {
     );
 
     trackAll(harness);
-    await harness.service.run(RUN);
+    await runSync(harness);
     expect(harness.courses.watermarks.get('course-c1')?.toISOString()).toBe(
       '2026-03-01T00:00:00.000Z',
     );
@@ -405,7 +473,7 @@ describe('incremental mode', () => {
     );
 
     trackAll(harness);
-    await harness.service.run(RUN);
+    await runSync(harness);
 
     // Rewinding it would re-read old coursework forever; worse, a bug that
     // rewound it far enough would look like nothing was ever synced.
@@ -426,7 +494,7 @@ describe('course tracking gates the expensive half', () => {
     harness.tracking.tracked.add('course-c1');
     harness.tracking.tracked.add('course-c3');
 
-    const outcome = await harness.service.run(RUN);
+    const outcome = await runSync(harness);
 
     // The whole point: an untracked course costs one row in a discovery listing
     // and not a single coursework or submission request.
@@ -442,7 +510,7 @@ describe('course tracking gates the expensive half', () => {
     ];
     harness.tracking.tracked.add('course-c1');
 
-    await harness.service.run(RUN);
+    await runSync(harness);
 
     // Discovery must stay complete: the student cannot choose a subject the
     // application never told them about.
@@ -453,7 +521,7 @@ describe('course tracking gates the expensive half', () => {
     const harness = buildService();
     harness.source.courses = [courseRecord({ sourceCourseId: 'c1' })];
 
-    const outcome = await harness.service.run(RUN);
+    const outcome = await runSync(harness);
 
     expect(harness.source.fetchCalls).toHaveLength(0);
     // Not a failure -- the student simply has not chosen yet, and saying so is
@@ -470,11 +538,11 @@ describe('course tracking gates the expensive half', () => {
       emptyCourseContent({ assignments: [assignmentRecord()] }),
     );
 
-    await harness.service.run(RUN);
+    await runSync(harness);
     expect(harness.source.fetchCalls).toHaveLength(0);
 
     harness.tracking.tracked.add('course-c1');
-    const second = await harness.service.run(RUN);
+    const second = await runSync(harness);
 
     expect(harness.source.fetchCalls).toHaveLength(1);
     expect(second.counts.assignmentsCreated).toBe(1);
@@ -485,11 +553,11 @@ describe('course tracking gates the expensive half', () => {
     harness.source.courses = [courseRecord({ sourceCourseId: 'c1' })];
     harness.tracking.tracked.add('course-c1');
 
-    await harness.service.run(RUN);
+    await runSync(harness);
     expect(harness.source.fetchCalls).toHaveLength(1);
 
     harness.tracking.tracked.delete('course-c1');
-    await harness.service.run(RUN);
+    await runSync(harness);
 
     // Still one: the second run discovered the course and skipped its content.
     expect(harness.source.fetchCalls).toHaveLength(1);
@@ -500,8 +568,8 @@ describe('course tracking gates the expensive half', () => {
     harness.source.courses = [courseRecord({ sourceCourseId: 'c1' })];
     harness.tracking.tracked.add('course-c1');
 
-    await harness.service.run(RUN);
-    await harness.service.run(RUN);
+    await runSync(harness);
+    await runSync(harness);
 
     // Same reasoning as classification overrides: the guarantee is structural,
     // not a convention that a future refactor could quietly break.
@@ -525,7 +593,7 @@ describe('scope is stored beside relevance', () => {
     );
     trackAll(harness);
 
-    await harness.service.run(RUN);
+    await runSync(harness);
 
     const byId = new Map(harness.classifications.written.map((row) => [row.assignmentId, row]));
 
@@ -570,9 +638,9 @@ describe('rule set changes', () => {
     });
 
     trackAll(harness);
-    const outcome = await harness.service.run({ ...RUN, mode: 'INCREMENTAL' });
+    await runSync(harness, { ...RUN, mode: 'INCREMENTAL' });
 
-    expect(outcome.mode).toBe('FULL');
+    expect(harness.syncRuns.runFor('user-1')?.mode).toBe('FULL');
     expect(harness.source.fetchCalls[0]?.updatedSince).toBeNull();
   });
 
@@ -592,57 +660,74 @@ describe('rule set changes', () => {
     });
 
     trackAll(harness);
-    const outcome = await harness.service.run({ ...RUN, mode: 'INCREMENTAL' });
+    await runSync(harness, { ...RUN, mode: 'INCREMENTAL' });
 
-    expect(outcome.mode).toBe('INCREMENTAL');
+    expect(harness.syncRuns.runFor('user-1')?.mode).toBe('INCREMENTAL');
     expect(harness.source.fetchCalls[0]?.updatedSince).not.toBeNull();
   });
 });
 
 describe('concurrency', () => {
   it('refuses a second run while one holds the lease', async () => {
-    const syncRuns = new FakeSyncRunRepository();
-    const harness = buildService({ syncRuns });
-    syncRuns.active = 'run-existing';
+    const harness = buildService();
+    await harness.service.start(RUN);
 
-    await expect(harness.service.run(RUN)).rejects.toMatchObject({
+    await expect(harness.service.start(RUN)).rejects.toMatchObject({
       code: 'SYNC_ALREADY_RUNNING',
     });
   });
 
   it('rejects before spending a single API call', async () => {
-    const syncRuns = new FakeSyncRunRepository();
-    const harness = buildService({ syncRuns });
-    syncRuns.active = 'run-existing';
+    const harness = buildService();
+    await harness.service.start(RUN);
 
-    await expect(harness.service.run(RUN)).rejects.toThrow();
+    await expect(harness.service.start(RUN)).rejects.toThrow();
     expect(harness.source.fetchCalls).toHaveLength(0);
   });
 
-  it('never exceeds the configured course concurrency', async () => {
+  it('refuses a second run while one is queued for continuation', async () => {
+    // A handed-over run is not idle. Treating QUEUED as "free" would let a
+    // second trigger start a parallel run over the same courses.
+    const harness = buildService({ invocationBudgetMs: 4_000, initialUnitEstimateMs: 3_000 });
+    harness.source.courses = [courseRecord({ sourceCourseId: 'c1' })];
+    trackAll(harness);
+
+    const lease = await harness.service.start(RUN);
+    const outcome = await harness.service.work(lease, RUN);
+    expect(outcome.kind).toBe('HANDED_OFF');
+
+    await expect(harness.service.start(RUN)).rejects.toMatchObject({
+      code: 'SYNC_ALREADY_RUNNING',
+    });
+  });
+
+  it('processes one course at a time rather than fanning out', async () => {
+    // The old model ran courses concurrently inside a single request, which is
+    // what made a run all-or-nothing: there was no point at which some courses
+    // were done and the rest were resumable. One at a time is slower per
+    // invocation and is what makes progress durable between them.
     const source = new FakeSourceAdapter();
     let inFlight = 0;
     let peak = 0;
 
-    source.courses = Array.from({ length: 12 }, (_, index) =>
-      courseRecord({ sourceCourseId: `c${String(index)}` }),
-    );
     source.fetchCourseContent = async () => {
       inFlight += 1;
       peak = Math.max(peak, inFlight);
-      await new Promise((resolve) => setTimeout(resolve, 5));
+      await new Promise((resolve) => setTimeout(resolve, 2));
       inFlight -= 1;
       return emptyCourseContent();
     };
 
-    const harness = buildService({ source, courseConcurrency: 3 });
+    const harness = buildService({ source });
+    source.courses = Array.from({ length: 6 }, (_, index) =>
+      courseRecord({ sourceCourseId: `c${String(index)}` }),
+    );
     trackAll(harness);
-    await harness.service.run(RUN);
 
-    // Promise.all over twelve courses would open twelve simultaneous Classroom
-    // conversations, each of which is several paginated requests.
-    expect(peak).toBeLessThanOrEqual(3);
-    expect(peak).toBeGreaterThan(1);
+    await runSync(harness);
+
+    expect(peak).toBe(1);
+    expect(harness.syncRuns.resultsOf('run-1')).toHaveLength(6);
   });
 });
 
@@ -659,7 +744,7 @@ describe('missing academic profile', () => {
     );
 
     trackAll(harness);
-    const outcome = await harness.service.run(RUN);
+    const outcome = await runSync(harness);
 
     expect(outcome.counts.assignmentsCreated).toBe(1);
     // Classifying without knowing the section would mean inventing every
@@ -681,13 +766,15 @@ describe('source user id discovery', () => {
     trackAll(harness);
 
     const observed: string[] = [];
-    await harness.service.run({
+    const input = {
       ...RUN,
-      onSourceUserIdObserved: (id) => {
+      onSourceUserIdObserved: (id: string) => {
         observed.push(id);
         return Promise.resolve();
       },
-    });
+    };
+    const lease = await harness.service.start(input);
+    await harness.service.work(lease, input);
 
     // Learning it here avoids a broader OAuth scope just to enable the
     // source-targeting rule.

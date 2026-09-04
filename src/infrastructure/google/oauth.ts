@@ -4,7 +4,12 @@ import type {
   GoogleOAuthClient,
   RefreshedCredentials,
 } from '@/application/ports/google-credentials';
-import { AuthorizationExpiredError, GoogleApiError, RateLimitError } from '@/shared/errors';
+import {
+  AuthorizationExpiredError,
+  ConfigError,
+  GoogleApiError,
+  RateLimitError,
+} from '@/shared/errors';
 import type { Logger } from '@/shared/logger';
 
 import { googleTokenErrorSchema, googleTokenResponseSchema } from './classroom.schemas';
@@ -134,11 +139,27 @@ export class GoogleOAuthHttpClient implements GoogleOAuthClient {
     const code = parsed.success ? parsed.data.error : 'unknown_error';
     const description = parsed.success ? (parsed.data.error_description ?? '') : '';
 
+    // invalid_client says *our* OAuth client is wrong -- a bad client id or
+    // secret, or a deleted client. It says nothing about the student's consent.
+    //
+    // It used to be folded in with invalid_grant below, which made a mistyped
+    // GOOGLE_OAUTH_CLIENT_SECRET catastrophic: the token service marks an
+    // AuthorizationExpiredError as REVOKED, and marking REVOKED nulls the
+    // stored ciphertexts. One wrong environment variable would therefore have
+    // destroyed every user's refresh token, irreversibly, and required all of
+    // them to grant consent again to repair a deployment mistake.
+    if (code === 'invalid_client') {
+      return new ConfigError(
+        `Google rejected this OAuth client (${code}): ${description}. Check GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET for this deployment.`,
+        { context: { status, code } },
+      );
+    }
+
     // invalid_grant is terminal. The user revoked access, changed their
     // password, the token expired from disuse, or the grant was deleted. Every
     // one of those requires a new consent flow, and retrying is pure noise
     // against a rate-limited endpoint.
-    if (code === 'invalid_grant' || code === 'invalid_client') {
+    if (code === 'invalid_grant') {
       return new AuthorizationExpiredError(
         `Google refused to refresh the credential (${code}): ${description}`,
         { context: { status, code } },

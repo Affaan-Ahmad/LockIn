@@ -79,7 +79,7 @@ export function AssignmentCard({
         'in-data-[density=pointer]:rounded-control',
         'in-data-[density=pointer]:shadow-none',
         'in-data-[density=pointer]:hover:shadow-raised',
-        selected ? 'in-data-[density=pointer]:ring-1 in-data-[density=pointer]:ring-brand' : '',
+        selected ? 'in-data-[density=pointer]:ring-1 in-data-[density=pointer]:ring-brand-ink' : '',
       ].join(' ')}
     >
       {/* Touch composition */}

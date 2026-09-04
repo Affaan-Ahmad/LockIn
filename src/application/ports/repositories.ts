@@ -346,8 +346,13 @@ export interface OverrideRepository {
 export interface SyncRunLease {
   readonly syncRunId: string;
   readonly userId: string;
+  /** Fencing token. Required by every write this worker makes. */
+  readonly owner: string;
   readonly startedAt: Date;
   readonly mode: SyncMode;
+  /** True when a previous invocation already enumerated the courses. */
+  readonly discoveryCompleted: boolean;
+  readonly resumeAttempts: number;
 }
 
 export interface SyncRunSummary {
@@ -380,35 +385,123 @@ export interface RateLimiter {
     ): Promise<{ readonly allowed: boolean; readonly retryAfterSeconds: number }>;
 }
 
+/**
+ * The durable store behind a synchronisation run.
+ *
+ * Every method here exists so that no part of a sync depends on one process
+ * staying alive. A worker claims a lease, pulls one unit at a time, records
+ * each unit as it finishes, and either finalises or hands the run back. If it
+ * dies at any point, everything it completed is already durable and the next
+ * worker resumes from the queue rather than from the beginning.
+ *
+ * `owner` is a fencing token, and it is not decoration. A worker that was
+ * declared dead can come back -- a paused instance, a socket that finally
+ * returned -- and without the token it would happily overwrite the state of the
+ * worker that replaced it. Every mutating method takes it, and the database
+ * refuses the write when it no longer matches.
+ */
 export interface SyncRunRepository {
   /**
-   * Claims the single active-run slot for this user.
+   * Starts a new run and claims it.
    *
-   * Throws SyncAlreadyRunningError when another run holds it. Reclaiming a
-   * lease whose heartbeat has expired happens inside the same transaction as
-   * the insert, so two callers cannot both reclaim and both insert.
+   * Throws SyncAlreadyRunningError when the user already has a QUEUED or
+   * RUNNING run. Reclaiming an expired lease happens inside the same
+   * transaction, so two callers cannot both decide the old run is theirs.
    */
-  acquire(
+  start(
     userId: string,
     trigger: SyncTrigger,
     mode: SyncMode,
     leaseTtlSeconds: number,
+    owner: string,
     ): Promise<SyncRunLease>;
 
-  heartbeat(syncRunId: string): Promise<void>;
+  /**
+   * Adopts an existing resumable run, or returns null if there is none.
+   *
+   * This is the method that makes the design independent of any single request.
+   */
+  resume(userId: string, leaseTtlSeconds: number, owner: string): Promise<SyncRunLease | null>;
 
-  recordCourseResult(syncRunId: string, result: CourseSyncResult): Promise<void>;
+  /** False when the lease has moved on; the caller must stop immediately. */
+  renewLease(syncRunId: string, owner: string, leaseTtlSeconds: number): Promise<boolean>;
+
+  /** Hands the run back as QUEUED so another invocation can continue it. */
+  releaseLease(syncRunId: string, owner: string): Promise<boolean>;
+
+  /** Idempotent: re-enqueueing cannot duplicate or reset a finished item. */
+  enqueueCourses(
+    syncRunId: string,
+    owner: string,
+    items: readonly SyncCourseQueueEntry[],
+    ): Promise<number>;
+
+  claimNextCourse(syncRunId: string, owner: string): Promise<SyncCourseWorkItem | null>;
+
+  completeCourse(
+    syncRunId: string,
+    owner: string,
+    result: CourseSyncResult,
+    errorCode: string | null,
+    ): Promise<boolean>;
 
   recordIssues(syncRunId: string, issues: readonly SyncIssue[]): Promise<void>;
 
+  /**
+   * Closes the run, returning the status the database derived from the queue.
+   *
+   * Null means it refused: either the lease moved on, or work is still pending.
+   * The status is deliberately not an argument -- it is computed from the work
+   * items, so no caller can report SUCCESS for a run that had a failed course.
+   */
   finalize(
     syncRunId: string,
-    status: SyncRunStatus,
-    counts: SyncCounts,
-    finishedAt: Date,
-    ): Promise<void>;
+    owner: string,
+    errorSummary: string | null,
+    ): Promise<SyncRunStatus | null>;
+
+  /** For faults no amount of resuming fixes: a revoked grant, a bad key. */
+  failRun(syncRunId: string, owner: string, errorSummary: string): Promise<boolean>;
+
+  progress(syncRunId: string, userId: string): Promise<SyncRunProgress | null>;
 
   latestForUser(userId: string): Promise<SyncRunSummary | null>;
 
+  /**
+   * When the data last became trustworthy *in full*.
+   *
+   * Only complete successes count. A PARTIAL run refreshed some courses and not
+   * others, and treating it as the moment everything became current is how a
+   * student is shown a course that failed to sync as though it were up to date.
+   * Per-course recency is reported separately.
+   */
   lastSuccessfulAt(userId: string): Promise<Date | null>;
+
+  /** Users with a run that can be picked up. Drives the recovery sweep. */
+  findResumableUserIds(limit: number): Promise<readonly string[]>;
+}
+
+export interface SyncCourseQueueEntry {
+  readonly sourceCourseId: string;
+  readonly courseId: string | null;
+  readonly courseName: string | null;
+}
+
+export interface SyncCourseWorkItem extends SyncCourseQueueEntry {
+  /** How many times this course has been claimed. Bounds pathological retries. */
+  readonly attempts: number;
+}
+
+export interface SyncRunProgress {
+  readonly syncRunId: string;
+  readonly status: SyncRunStatus;
+  readonly mode: SyncMode;
+  readonly startedAt: Date;
+  readonly finishedAt: Date | null;
+  readonly counts: SyncCounts | null;
+  readonly totalCourses: number;
+  readonly completedCourses: number;
+  readonly failedCourses: number;
+  readonly errorSummary: string | null;
+  readonly issueCodes: readonly string[];
 }
