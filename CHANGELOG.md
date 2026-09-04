@@ -13,6 +13,23 @@ came from.
 
 ---
 
+## [0.2.1] — 2026-09-05
+
+### Fixed
+
+- **A dead sync run locked the account out of syncing permanently.**
+  `app_start_sync_run` reclaims a run whose worker died into `QUEUED` — correct,
+  because the courses it finished are still worth keeping — and then refused to
+  start because a `QUEUED` run existed. It blocked on the row it had just
+  created, so every subsequent press answered "a sync is already running" about
+  a run nothing was working on. The only code that could clear it was the
+  continuation endpoint, reachable from a handing-over worker and the daily
+  sweep and from nowhere a person could press.
+
+  Pressing sync now adopts a queued run rather than refusing, which is also the
+  better behaviour on its own terms: the completed courses stay completed. A run
+  that genuinely holds a live lease is still refused.
+
 ## [0.2.0] — 2026-09-05
 
 ### Migration
@@ -100,4 +117,5 @@ Baseline: the first deployed version, before this changelog existed. Google
 Classroom sync, section-based relevance classification, the review queue, course
 tracking, and the account and legal surfaces.
 
+[0.2.1]: https://github.com/Affaan-Ahmad/LockIn/releases/tag/v0.2.1
 [0.2.0]: https://github.com/Affaan-Ahmad/LockIn/releases/tag/v0.2.0

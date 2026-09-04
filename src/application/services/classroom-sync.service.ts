@@ -144,6 +144,44 @@ export class ClassroomSyncService {
     );
   }
 
+  /**
+   * What a student pressing "sync" actually means: make my data current.
+   *
+   * Resume first, start second, and the order is the whole point.
+   *
+   * Starting alone deadlocks. `app_start_sync_run` reclaims a run whose worker
+   * died -- correctly, because that run's completed courses are still valuable
+   * -- which leaves it QUEUED, and then refuses because a QUEUED run exists. It
+   * blocks on the very row it just created. Every press after that gets
+   * SYNC_ALREADY_RUNNING about a run nothing is working on, and the only code
+   * that could clear it is the continuation endpoint, which is reachable from a
+   * handing-over worker and the daily sweep and from nowhere a person can
+   * touch. The account is locked out permanently.
+   *
+   * Adopting the queued run instead is also the better behaviour on its own
+   * terms: the courses it already finished stay finished, and the student's
+   * press does what they asked rather than starting the work over.
+   *
+   * A genuinely live run -- RUNNING with an unexpired lease -- is still
+   * refused, because that is a real answer and two syncs must not overlap.
+   */
+  async startOrResume(
+    input: StartSyncInput,
+  ): Promise<{ lease: SyncRunLease; resumed: boolean }> {
+    const existing = await this.resume(input.userId);
+    if (existing !== null) {
+      this.deps.logger.info('adopted a queued run instead of starting a new one', {
+        stage: 'start',
+        userId: input.userId,
+        syncRunId: existing.syncRunId,
+        resumeAttempt: existing.resumeAttempts,
+      });
+      return { lease: existing, resumed: true };
+    }
+
+    return { lease: await this.start(input), resumed: false };
+  }
+
   /** Adopts a run left QUEUED by a handover or a dead worker. */
   async resume(userId: string): Promise<SyncRunLease | null> {
     return this.deps.syncRuns.resume(

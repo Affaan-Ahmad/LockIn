@@ -66,9 +66,9 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     const connection = await context.connections.snapshot(user.id);
 
-    // Claims the run and returns. Throws SYNC_ALREADY_RUNNING if one is live,
-    // which is a 409 and an honest answer rather than a second parallel sync.
-    const lease = await context.sync.start({
+    // Adopts a run left queued by a worker that died, or starts a fresh one.
+    // Only a genuinely live run is refused with SYNC_ALREADY_RUNNING.
+    const { lease, resumed } = await context.sync.startOrResume({
       userId: user.id,
       trigger: 'MANUAL',
       mode: parsed.data.mode,
@@ -99,6 +99,9 @@ export async function POST(request: Request): Promise<NextResponse> {
         mode: lease.mode,
         startedAt: lease.startedAt.toISOString(),
         pollUrl: `/api/sync/${lease.syncRunId}`,
+        // True when this picked up work a previous invocation left behind. The
+        // client shows the same progress either way; this is for the logs.
+        resumed,
       },
       202,
     );

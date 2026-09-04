@@ -309,6 +309,75 @@ describe('when some courses fail', () => {
 // 6 & 7. Lease handover and fencing
 // ---------------------------------------------------------------------------
 
+describe('pressing sync after a worker died', () => {
+  it('adopts the queued run instead of refusing forever', async () => {
+    // The lockout this guards against, exactly as it happened in production:
+    // app_start_sync_run reclaims a dead worker's run into QUEUED -- correctly,
+    // its finished courses are still worth keeping -- and then refuses because
+    // a QUEUED run exists. It blocks on the row it just created, and the only
+    // code that could clear it is unreachable from any button. The account
+    // never syncs again.
+    const h = harness({ courseCount: 3 });
+    const first = await h.service.start(RUN);
+    await h.syncRuns.releaseLease(first.syncRunId, first.owner);
+
+    const { lease, resumed } = await h.service.startOrResume(RUN);
+
+    expect(resumed).toBe(true);
+    expect(lease.syncRunId).toBe(first.syncRunId);
+  });
+
+  it('keeps the work the dead worker finished', async () => {
+    const h = harness({ courseCount: 3 });
+    const first = await h.service.start(RUN);
+    await h.service.work(first, RUN);
+
+    // Simulate the worker dying after finishing, before finalising.
+    const run = h.syncRuns.runs.get(first.syncRunId);
+    run!.status = 'QUEUED';
+    run!.owner = null;
+    run!.finalStatus = null;
+
+    const { lease, resumed } = await h.service.startOrResume(RUN);
+    expect(resumed).toBe(true);
+
+    // Adopting, not restarting: every completed course is still completed.
+    const done = h.syncRuns.resultsOf(lease.syncRunId);
+    expect(done.filter((r) => r.status === 'SUCCESS')).toHaveLength(3);
+  });
+
+  it('still refuses while a run genuinely holds its lease', async () => {
+    // The lockout fix must not become a way to run two syncs at once.
+    const h = harness({ courseCount: 3 });
+    await h.service.start(RUN);
+
+    await expect(h.service.startOrResume(RUN)).rejects.toMatchObject({
+      code: 'SYNC_ALREADY_RUNNING',
+    });
+  });
+
+  it('starts a fresh run when there is nothing to adopt', async () => {
+    const h = harness({ courseCount: 2 });
+
+    const { resumed } = await h.service.startOrResume(RUN);
+
+    expect(resumed).toBe(false);
+  });
+
+  it('drives an adopted run to a terminal state', async () => {
+    // The end of the story: a stranded run does not merely become claimable,
+    // it finishes.
+    const h = harness({ courseCount: 2 });
+    const first = await h.service.start(RUN);
+    await h.syncRuns.releaseLease(first.syncRunId, first.owner);
+
+    const { lease } = await h.service.startOrResume(RUN);
+    const outcome = await h.service.work(lease, RUN);
+
+    expect(outcome).toMatchObject({ kind: 'COMPLETED', status: 'SUCCESS' });
+  });
+});
+
 describe('lease ownership', () => {
   it('lets another worker resume once the lease is released', async () => {
     const h = harness({ courseCount: 2 });
