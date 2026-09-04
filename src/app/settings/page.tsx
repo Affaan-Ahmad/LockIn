@@ -1,6 +1,7 @@
 import Link from 'next/link';
 
 import { AppShell } from '@/components/shell/AppShell';
+import { buildLabel } from '@/config/version';
 import { ProfileForm } from '@/features/onboarding/ProfileForm';
 import { DangerZone } from '@/features/settings/DangerZone';
 import { ThemeToggle } from '@/features/settings/ThemeToggle';
@@ -108,6 +109,16 @@ export default async function SettingsPage() {
         <p className="measure text-xs leading-relaxed text-ink-muted in-data-[density=pointer]:col-span-2">
           LockIn reads your Classroom courses and coursework. It never posts, submits or changes
           anything in Classroom, and it does not share your coursework with anyone.
+        </p>
+
+        {/* Which build this is.
+            
+            Deliberately here and not hidden behind a debug flag: the first
+            question worth asking about any bug report is "which version were
+            you on", and a number nobody can find is a number nobody quotes.
+            Quiet enough to ignore, present enough to read out. */}
+        <p className="px-0.5 text-2xs text-ink-muted in-data-[density=pointer]:col-span-2">
+          LockIn <span className="font-mono">{buildLabel()}</span>
         </p>
       </div>
     </AppShell>
