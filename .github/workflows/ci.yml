@@ -79,10 +79,12 @@ jobs:
       # to a student's browser, and mixing the two produces a number nobody
       # acts on.
       #
-      # Reports without failing the job, deliberately: there is a known high
-      # advisory in postcss reached through Next, whose only fix is a major
-      # upgrade. Failing here would turn CI red permanently, and a permanently
-      # red pipeline is one nobody reads. It is tracked as an open finding
-      # instead.
+      # This fails the job, and the `|| true` that used to follow it is gone.
+      # It was there for the postcss advisories reached through Next, described
+      # as needing a major upgrade -- which was wrong: Next pins postcss 8.4.31,
+      # the fix is 8.5.23 or later, and a scoped `next -> postcss` override in
+      # package.json lifts that one edge without moving the framework. With the
+      # standing exception removed there is nothing left to excuse, and a gate
+      # that cannot fail is not a gate.
       - name: Dependency audit
-        run: npm audit --omit=dev --audit-level=moderate || true
+        run: npm audit --omit=dev --audit-level=moderate
