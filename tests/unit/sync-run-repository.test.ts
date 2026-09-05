@@ -127,6 +127,33 @@ describe('resuming a run that does exist', () => {
   });
 });
 
+describe('failing a run outright', () => {
+  /**
+   * The fenced functions answer with a boolean, and only `true` means the
+   * database acted. Anything else -- `false` because the lease moved on, or the
+   * null PostgREST sends when a function returns nothing -- has to read as "this
+   * worker did not fail the run", because the caller uses that answer to decide
+   * whether the run has been closed by somebody.
+   */
+  it('reports refusal when the lease has moved to another worker', async () => {
+    const repo = new SupabaseSyncRunRepository(clientReturning(false));
+
+    await expect(repo.failRun(REAL_ROW.id, OWNER, 'AUTHORIZATION_EXPIRED')).resolves.toBe(false);
+  });
+
+  it('does not read a null answer as a run that was failed', async () => {
+    const repo = new SupabaseSyncRunRepository(clientReturning(null));
+
+    await expect(repo.failRun(REAL_ROW.id, OWNER, 'AUTHORIZATION_EXPIRED')).resolves.toBe(false);
+  });
+
+  it('confirms only an explicit true', async () => {
+    const repo = new SupabaseSyncRunRepository(clientReturning(true));
+
+    await expect(repo.failRun(REAL_ROW.id, OWNER, 'AUTHORIZATION_EXPIRED')).resolves.toBe(true);
+  });
+});
+
 describe('starting a run', () => {
   it('refuses to invent a lease from a composite null', async () => {
     // start() must never silently succeed with a null id either: the caller
