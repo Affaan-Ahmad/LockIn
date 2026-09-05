@@ -13,6 +13,71 @@ came from.
 
 ---
 
+## [0.5.0] — 2026-09-06
+
+### Added
+
+- **The Google connection now records the permissions actually granted, not the
+  ones LockIn asked for.** The consent screen lets you untick individual
+  permissions, and the callback used to write the full requested list into
+  `granted_scopes` regardless — so a partial consent was stored as a complete
+  one, every screen reported the account as connected, and the problem surfaced
+  later as an unexplained Google error in the middle of a sync. Supabase's
+  session carries the token but nothing about what it may do, so the grant is
+  now checked against Google directly and the answer is what gets saved.
+
+  Four outcomes, kept distinct because they need different things from you:
+  connected; connected but missing permissions; connected with nothing able to
+  renew it after about an hour; and *we could not ask Google*. The last writes
+  nothing at all — an outage says nothing about your consent, and must not
+  overwrite a connection that was working.
+
+- **Sync refuses an incomplete grant up front**, before a run is claimed and
+  before the rate limit is spent, and says which permission is missing. It used
+  to start, fail somewhere in the middle, and present a permissions problem as a
+  broken sync.
+
+### Fixed
+
+- **A resumed sync could be failed out from under itself.** `app_fail_sync_run`
+  checked that the caller held the lease and then ignored the answer, marking
+  every unfinished course FAILED for anyone who knew a run id. A worker that
+  stalled, was declared dead and came back did exactly the damage the check
+  existed to prevent: the worker that had legitimately taken over found its
+  queue emptied and finished a run that had never attempted those courses. You
+  were told your coursework could not be read when nothing had tried to read it.
+
+- **Connection messages reached a page nobody sees.** They were attached to `/`,
+  but a half-configured account is bounced from `/` to `/welcome` and the query
+  string is dropped on the way — so "couldn't connect" was written to a URL that
+  was never loaded. Every outcome now lands on `/welcome`.
+
+- **A Google refresh token that will not decrypt no longer destroys the row it
+  is stored in.** Treated as merely absent, it looked identical to never having
+  granted offline access, and the connection was overwritten as needing a
+  reconnect — for a fault no reconnection can fix, with the evidence gone.
+  Nothing is written now, and restoring the correct
+  `GOOGLE_TOKEN_ENCRYPTION_KEY` brings the account back with no action from you.
+
+### Changed
+
+- CI's dependency audit can fail the build again. It ended in `|| true`, excused
+  by a postcss advisory reached through Next and believed to need a major
+  framework upgrade — which was wrong. A scoped `next -> postcss` override lifts
+  that one edge, the audit reports zero vulnerabilities, and a gate that cannot
+  fail is not a gate.
+- `AGENTS.md` sets out how an orchestrating agent delegates implementation work
+  in this repository, including the caution areas each drawn from a real
+  incident here.
+
+### Migration
+
+- **Apply `supabase/migrations/0013_fail_run_fencing.sql`.** It is `create or
+  replace` and safe to run twice. Applying it is deliberate rather than forced,
+  because the function signature is unchanged: code from this release runs
+  perfectly happily against a database still on `0012`, with the race above
+  still open and no error to notice.
+
 ## [0.4.3] — 2026-09-05
 
 ### Fixed
