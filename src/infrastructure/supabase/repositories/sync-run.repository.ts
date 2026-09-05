@@ -485,19 +485,38 @@ export class SupabaseAcademicProfileRepository implements AcademicProfileReposit
  * either a single object or a one-element array depending on the call. Both are
  * handled rather than depending on which one today's client library picks.
  */
+/**
+ * Unwraps a `returns <composite>` RPC answer, or reports that there was none.
+ *
+ * Two shapes have to collapse to the same meaning, and missing either has now
+ * cost a production incident:
+ *
+ *   PostgREST returns a bare object for some call shapes and a one-element
+ *   array for others, so both are unwrapped.
+ *
+ *   A plpgsql function that returns SQL NULL does not arrive as `null`. It
+ *   arrives as an object whose every column is null -- truthy, and passing any
+ *   `!== null` check written against it. `app_resume_sync_run` returns NULL
+ *   whenever nothing is queued, which is most of the time.
+ *
+ * The guard is applied after unwrapping, not before, because the array form
+ * carries exactly the same all-null object inside it.
+ */
+function hasId(row: { id: string | null } | undefined): boolean {
+  return row !== undefined && row.id !== null;
+}
+
 function firstRow(data: SyncRunRow[] | SyncRunRow | null): SyncRunRow | null {
   if (data === null) return null;
-  if (Array.isArray(data)) return data[0] ?? null;
-  return data;
+  const row = Array.isArray(data) ? data[0] : data;
+  return hasId(row) ? (row as SyncRunRow) : null;
 }
 
 function firstCourseRow(
   data: SyncCourseResultRow[] | SyncCourseResultRow | null,
 ): SyncCourseResultRow | null {
   if (data === null) return null;
-  if (Array.isArray(data)) return data[0] ?? null;
-  // A plpgsql function returning a composite type yields a row of all-null
-  // columns rather than SQL NULL when it returns early. That is "no work left",
-  // not a work item whose id happens to be null.
-  return data.id === null ? null : data;
+  const row = Array.isArray(data) ? data[0] : data;
+  // Same trap: "no work left" arrives as a row of nulls, not as null.
+  return hasId(row) ? (row as SyncCourseResultRow) : null;
 }

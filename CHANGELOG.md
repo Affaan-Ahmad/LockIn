@@ -13,6 +13,29 @@ came from.
 
 ---
 
+## [0.4.3] — 2026-09-05
+
+### Fixed
+
+- **Sync stopped creating runs at all, and the button sat on "Still working".**
+  A plpgsql function declared `returns sync_runs` answers with SQL NULL when it
+  has nothing to return — `app_resume_sync_run` does exactly that whenever no
+  run is queued, which is most of the time. PostgREST does not render that as
+  `null`; it renders an object whose every column is null, which is truthy and
+  passes any `!== null` check written against it.
+
+  So `resume()` produced a lease with a null run id, `startOrResume` concluded
+  it had adopted a run and never called `start()` — no run was ever created —
+  and the endpoint still answered 202 with `syncRunId: null`, which the client
+  polled until it gave up. The rate limit was consumed each time, so repeated
+  attempts eventually exhausted it too.
+
+  Guarded in three places: the repository refuses to build a lease without an
+  id, `startOrResume` will not adopt one, and the client rejects a null id
+  rather than only a missing one. The same trap in the work-item unwrapper had
+  been guarded before but only on the object form, not the one-element-array
+  form PostgREST also uses — both now guard after unwrapping.
+
 ## [0.4.2] — 2026-09-05
 
 ### Fixed
@@ -270,6 +293,7 @@ Baseline: the first deployed version, before this changelog existed. Google
 Classroom sync, section-based relevance classification, the review queue, course
 tracking, and the account and legal surfaces.
 
+[0.4.3]: https://github.com/Affaan-Ahmad/LockIn/releases/tag/v0.4.3
 [0.4.2]: https://github.com/Affaan-Ahmad/LockIn/releases/tag/v0.4.2
 [0.4.1]: https://github.com/Affaan-Ahmad/LockIn/releases/tag/v0.4.1
 [0.4.0]: https://github.com/Affaan-Ahmad/LockIn/releases/tag/v0.4.0

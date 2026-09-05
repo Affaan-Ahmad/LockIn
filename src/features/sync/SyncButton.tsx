@@ -147,7 +147,7 @@ export function SyncButton({ mode = 'INCREMENTAL', label = 'Sync now' }: SyncBut
         body: JSON.stringify({ mode }),
       });
       const body = (await response.json()) as {
-        readonly syncRunId?: string;
+        readonly syncRunId?: string | null;
         readonly error?: { readonly code?: string; readonly message?: string };
       };
 
@@ -168,7 +168,11 @@ export function SyncButton({ mode = 'INCREMENTAL', label = 'Sync now' }: SyncBut
         return;
       }
 
-      if (body.syncRunId === undefined) {
+      // Both null and undefined, spelled out rather than leaning on loose
+      // equality, which the lint rule forbids. A strict undefined check let
+      // `syncRunId: null` through and the poll chased /api/sync/null until it
+      // timed out.
+      if (body.syncRunId === undefined || body.syncRunId === null || body.syncRunId === '') {
         setPresentation('FAILED');
         setMessage("Sync didn't start.");
         setRunning(false);

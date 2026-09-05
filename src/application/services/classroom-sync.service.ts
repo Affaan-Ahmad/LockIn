@@ -169,7 +169,12 @@ export class ClassroomSyncService {
     input: StartSyncInput,
   ): Promise<{ lease: SyncRunLease; resumed: boolean }> {
     const existing = await this.resume(input.userId);
-    if (existing !== null) {
+
+    // Checked rather than trusted. A lease is only a lease if it identifies a
+    // run, and a malformed one here is worse than none: adopting it skips
+    // start(), so no run is created at all and the caller is handed an id that
+    // resolves to nothing.
+    if (existing !== null && existing.syncRunId !== null && existing.syncRunId !== '') {
       this.deps.logger.info('adopted a queued run instead of starting a new one', {
         stage: 'start',
         userId: input.userId,
