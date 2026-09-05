@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useTransition } from 'react';
 
 import type { FreshnessLevel } from '@/domain/sync/freshness';
-import { cooldownElapsed, shouldAutoSync, wasReloaded } from '@/features/sync/auto-sync';
+import { consumeReloadGrant, cooldownElapsed, shouldAutoSync } from '@/features/sync/auto-sync';
 
 /**
  * Refreshes Classroom when the student opens a screen and the data is old.
@@ -95,9 +95,11 @@ export function AutoSync({ level }: AutoSyncProps) {
     if (attempted.current || !shouldAutoSync(level)) return;
 
     // Pull-to-refresh, Ctrl+R and the toolbar button all arrive as a reload,
-    // and all three mean "make this current now". Honour that over the
-    // anti-stampede cooldown, which exists for automatic triggers.
-    const explicit = wasReloaded(navigationType());
+    // and all three mean "make this current now". That beats the anti-stampede
+    // cooldown -- but only once per document load. Navigation Timing does not
+    // reset on a client-side route change, so without spending the grant every
+    // screen in the session would skip the cooldown and exhaust the rate limit.
+    const explicit = consumeReloadGrant(navigationType());
     if (!explicit && !cooldownElapsed(readLastAttempt(), Date.now())) return;
 
     attempted.current = true;

@@ -71,6 +71,7 @@ export function SyncButton({ mode = 'INCREMENTAL', label = 'Sync now' }: SyncBut
   const watch = useCallback(
     async (syncRunId: string) => {
       const deadline = Date.now() + MAX_POLL_MS;
+      let failures = 0;
 
       while (!cancelled.current && Date.now() < deadline) {
         await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
@@ -79,11 +80,22 @@ export function SyncButton({ mode = 'INCREMENTAL', label = 'Sync now' }: SyncBut
         let body: StatusResponse;
         try {
           const response = await fetch(`/api/sync/${syncRunId}`, { cache: 'no-store' });
-          if (!response.ok) continue;
+          if (!response.ok) {
+            failures += 1;
+            if (failures >= 4) {
+              // Four consecutive refusals is no longer a blip. The run may well
+              // be fine, but this screen has stopped being able to say so, and
+              // pretending otherwise is what makes a button look frozen.
+              setMessage('Still working. Refresh to see where it got to.');
+            }
+            continue;
+          }
+          failures = 0;
           body = (await response.json()) as StatusResponse;
         } catch {
           // A dropped poll says nothing about the run, which is running on the
           // server regardless. Keep watching.
+          failures += 1;
           continue;
         }
 
@@ -163,6 +175,12 @@ export function SyncButton({ mode = 'INCREMENTAL', label = 'Sync now' }: SyncBut
         return;
       }
 
+      // The run exists as soon as the POST answers. Saying so immediately
+      // matters because the poll below only updates the message on a *good*
+      // response: a refused or failing poll leaves the previous text on screen,
+      // and "Starting…" that never changes reads as a frozen button rather than
+      // as work in progress.
+      setMessage('Updating Classroom…');
       await watch(body.syncRunId);
     } catch {
       setPresentation('FAILED');

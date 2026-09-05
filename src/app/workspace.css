@@ -13,7 +13,18 @@ button, .button-link { white-space: nowrap; }
 .workspace-heading { min-width: 0; flex: 1; }
 .workspace-heading h1 { font-size: var(--text-xl); line-height: 1.3; font-weight: 600; }
 .workspace-heading p { margin-top: var(--space-xs); font-size: var(--text-sm); color: var(--ink-soft); max-width: 65ch; }
-.workspace-utilities { display: flex; align-items: center; gap: var(--space-sm); min-width: 0; }
+/* Pinned right, wrapped or not.
+ *
+ * The header is space-between, which puts the title left and these right while
+ * both fit on one line. The moment a long title forces a wrap they become the
+ * only item on the second row, and space-between has nothing to space them
+ * against -- so the settings control drifted inward. `margin-left: auto` is the
+ * rule that holds in both cases: on a shared row it does what space-between was
+ * already doing, and on a row of its own it still pushes to the right edge.
+ *
+ * Not solved with nowrap, which would truncate the page title to keep an icon
+ * company. */
+.workspace-utilities { display: flex; align-items: center; gap: var(--space-sm); min-width: 0; margin-left: auto; flex-shrink: 0; }
 .workspace-utilities .sync-inline { max-width: 10rem; }
 .mobile-settings { display: grid; place-items: center; width: var(--control-touch); height: var(--control-touch); border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface-raised); color: var(--ink-soft); box-shadow: var(--surface-elevation); }
 .workspace-main, .workspace-footer { width: 100%; max-width: var(--workspace-max); margin-inline: auto; padding-inline: max(var(--page-gutter), env(safe-area-inset-left)); }

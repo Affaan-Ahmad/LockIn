@@ -84,3 +84,38 @@ export function cooldownElapsed(lastAttemptAt: string | null, now: number): bool
 export function wasReloaded(navigationType: string | undefined): boolean {
   return navigationType === 'reload';
 }
+
+/**
+ * The reload grant, spendable once per document load.
+ *
+ * `wasReloaded` alone is not enough, and the gap between the two cost a student
+ * their rate limit. Navigation Timing describes the *document* load: a Next.js
+ * client-side route change creates no new entry, so once the app is opened with
+ * a reload, `wasReloaded()` keeps answering true for the entire session. Every
+ * screen that mounts AutoSync then skipped the cooldown, and moving Today ->
+ * Upcoming -> Courses -> Settings fired four syncs in a few seconds. Repeat that
+ * twice and the ten-per-ten-minutes budget is gone, which presents as sync
+ * simply refusing to start.
+ *
+ * A reload means "make this current now" exactly once. This spends the grant on
+ * the first screen that asks and denies it to the rest, so the cooldown governs
+ * everything after -- which is what it was always for.
+ *
+ * Module state, deliberately: it must outlive component mounts within one
+ * document session and reset on a genuine page load, which is precisely a
+ * module's lifetime.
+ */
+let reloadGrantAvailable = true;
+
+export function consumeReloadGrant(navigationType: string | undefined): boolean {
+  if (!reloadGrantAvailable) return false;
+  if (!wasReloaded(navigationType)) return false;
+
+  reloadGrantAvailable = false;
+  return true;
+}
+
+/** Test seam. Never called by application code. */
+export function resetReloadGrantForTests(): void {
+  reloadGrantAvailable = true;
+}

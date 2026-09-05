@@ -13,6 +13,29 @@ came from.
 
 ---
 
+## [0.4.2] — 2026-09-05
+
+### Fixed
+
+- **Automatic sync exhausted the rate limit, which presented as sync refusing to
+  start.** A reload was allowed to bypass the anti-stampede cooldown, but
+  Navigation Timing describes the *document* load and a client-side route change
+  creates no new entry — so after opening the app with a reload, every screen
+  for the rest of the session still saw `reload` and skipped the cooldown.
+  Moving Today → Upcoming → Courses → Settings fired four syncs in seconds; a
+  couple of passes exhausted the ten-per-ten-minutes budget and every further
+  request, manual ones included, was refused. The reload grant is now spendable
+  once per document load, after which the cooldown governs as intended.
+- The sync button no longer sits on "Starting…" indefinitely. It said so until a
+  status poll succeeded, and a poll that kept being refused left the text
+  unchanged — which reads as a frozen button rather than as work in progress. It
+  now reports the run as under way the moment it is claimed, and says so plainly
+  if it loses the ability to follow it.
+- The Settings control stays at the top right of the header on mobile and in the
+  installed app. A long page title wraps the header, leaving the control alone on
+  the second row where `space-between` had nothing to align it against, and it
+  drifted inward.
+
 ## [0.4.1] — 2026-09-05
 
 ### Added
@@ -247,6 +270,7 @@ Baseline: the first deployed version, before this changelog existed. Google
 Classroom sync, section-based relevance classification, the review queue, course
 tracking, and the account and legal surfaces.
 
+[0.4.2]: https://github.com/Affaan-Ahmad/LockIn/releases/tag/v0.4.2
 [0.4.1]: https://github.com/Affaan-Ahmad/LockIn/releases/tag/v0.4.1
 [0.4.0]: https://github.com/Affaan-Ahmad/LockIn/releases/tag/v0.4.0
 [0.3.2]: https://github.com/Affaan-Ahmad/LockIn/releases/tag/v0.3.2

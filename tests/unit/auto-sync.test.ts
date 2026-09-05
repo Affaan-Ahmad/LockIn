@@ -1,8 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
+import { beforeEach } from 'vitest';
+
 import {
   AUTO_SYNC_COOLDOWN_MS,
+  consumeReloadGrant,
   cooldownElapsed,
+  resetReloadGrantForTests,
   shouldAutoSync,
   wasReloaded,
 } from '@/features/sync/auto-sync';
@@ -106,5 +110,48 @@ describe('an explicit reload', () => {
     // thirty-second-old data worth re-fetching.
     expect(wasReloaded('reload')).toBe(true);
     expect(shouldAutoSync('FRESH')).toBe(false);
+  });
+});
+
+describe('the reload grant is spendable once', () => {
+  beforeEach(() => {
+    resetReloadGrantForTests();
+  });
+
+  it('is granted to the first screen that asks', () => {
+    expect(consumeReloadGrant('reload')).toBe(true);
+  });
+
+  it('is refused to every screen after it', () => {
+    // The bug this exists for, and it cost a real student their rate limit.
+    // Navigation Timing describes the *document* load, and a Next.js
+    // client-side route change creates no new entry -- so after opening the app
+    // with a reload, every subsequent screen still saw 'reload' and skipped the
+    // cooldown. Today -> Upcoming -> Courses -> Settings fired four syncs in
+    // seconds; twice through and the ten-per-ten-minutes budget was gone, which
+    // presents as sync refusing to start at all.
+    expect(consumeReloadGrant('reload')).toBe(true);
+    expect(consumeReloadGrant('reload')).toBe(false);
+    expect(consumeReloadGrant('reload')).toBe(false);
+    expect(consumeReloadGrant('reload')).toBe(false);
+  });
+
+  it('is never granted for an ordinary navigation', () => {
+    expect(consumeReloadGrant('navigate')).toBe(false);
+    // ...and refusing does not spend it, so a genuine reload later still counts.
+    expect(consumeReloadGrant('reload')).toBe(true);
+  });
+
+  it('is not granted when the browser will not say how the page loaded', () => {
+    expect(consumeReloadGrant(undefined)).toBe(false);
+  });
+
+  it('leaves the cooldown governing everything after the first screen', () => {
+    consumeReloadGrant('reload');
+
+    // Second screen, moments later: no grant, so the cooldown decides -- and it
+    // says no, which is the whole point.
+    expect(consumeReloadGrant('reload')).toBe(false);
+    expect(cooldownElapsed(String(Date.now() - 1_000), Date.now())).toBe(false);
   });
 });
