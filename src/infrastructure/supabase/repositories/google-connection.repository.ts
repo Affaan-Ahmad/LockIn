@@ -4,6 +4,8 @@ import type {
   GoogleConnectionRepository,
   GoogleConnectionSnapshot,
   GoogleConnectionStatus,
+  RefreshTokenState,
+  RefreshedConnectionWrite,
   StoredGoogleConnection,
   UpsertConnectionInput,
 } from '@/application/ports/google-credentials';
@@ -76,6 +78,10 @@ export class SupabaseGoogleConnectionRepository implements GoogleConnectionRepos
    * happens on every consent after the first unless prompt=consent was used. It
    * must leave the stored value untouched -- writing null would destroy the only
    * way to keep the connection alive and force the student to reconnect.
+   *
+   * The status arrives with the input rather than being assumed ACTIVE. Scopes
+   * and the status they imply are written in one statement, so there is no
+   * moment at which a partial grant is stored as a working connection.
    */
   async upsert(input: UpsertConnectionInput): Promise<void> {
     const base = {
@@ -84,8 +90,8 @@ export class SupabaseGoogleConnectionRepository implements GoogleConnectionRepos
       granted_scopes: [...input.grantedScopes],
       access_token_ct: bufferToPgHex(this.encrypt(input.accessToken, input.userId)),
       access_token_expires_at: input.accessTokenExpiresAt.toISOString(),
-      status: 'ACTIVE' as const,
-      last_error_code: null,
+      status: input.status,
+      last_error_code: input.errorCode,
       revoked_at: null,
     };
 
@@ -104,34 +110,100 @@ export class SupabaseGoogleConnectionRepository implements GoogleConnectionRepos
     if (error !== null) throw translatePostgrestError(error, 'googleConnections.upsert');
   }
 
-  async updateAccessToken(
-    userId: string,
-    accessToken: string,
-    expiresAt: Date,
-    rotatedRefreshToken: string | null,
-    ): Promise<void> {
-    const base = {
-      access_token_ct: bufferToPgHex(this.encrypt(accessToken, userId)),
-      access_token_expires_at: expiresAt.toISOString(),
+  /**
+   * Records the outcome of a refresh: credential, scopes and status at once.
+   *
+   * One statement, because a refresh that comes back with a narrower grant has
+   * to store a live access token *and* a non-ACTIVE status. Written separately,
+   * the moment between them is a connection that reads as working while holding
+   * permissions it does not have -- and a failure of the second write makes that
+   * moment permanent.
+   *
+   * Two fields are omitted rather than nulled when absent. A null rotated token
+   * means Google did not rotate, and writing that null would destroy the only
+   * credential that can renew the connection; a null scope list means the
+   * response said nothing about scopes, which is not evidence that the grant
+   * shrank.
+   *
+   * The `status` predicate is a fence, not a filter. A refresh reads the row,
+   * spends a round trip at Google's token endpoint, and writes afterwards; a
+   * student who disconnects during that window has the row set REVOKED and its
+   * ciphertexts nulled, and this write would otherwise restore a live access
+   * token, a rotated refresh token and an ACTIVE status over the top of it --
+   * reconnecting an account the student was told was disconnected, with no
+   * error anywhere to notice.
+   *
+   * One statement does both. Reading the status first and then updating would
+   * be the same race one step smaller, so the check is the UPDATE's own WHERE
+   * clause and the answer is how many rows it touched. `select()` makes that an
+   * `UPDATE ... RETURNING`, so the count comes from the statement itself rather
+   * than from a second query that could see a different row. Only `user_id` is
+   * returned: this method has no reason to read a credential back out.
+   *
+   * Returns false when the fence lost, in which case nothing was written.
+   */
+  async recordRefresh(input: RefreshedConnectionWrite): Promise<boolean> {
+    const payload = {
+      access_token_ct: bufferToPgHex(this.encrypt(input.accessToken, input.userId)),
+      access_token_expires_at: input.accessTokenExpiresAt.toISOString(),
       last_refreshed_at: new Date().toISOString(),
-      status: 'ACTIVE' as const,
-      last_error_code: null,
+      status: input.status,
+      last_error_code: input.errorCode,
+      ...(input.rotatedRefreshToken === null
+        ? {}
+        : {
+            refresh_token_ct: bufferToPgHex(
+              this.encrypt(input.rotatedRefreshToken, input.userId),
+            ),
+          }),
+      ...(input.grantedScopes === null ? {} : { granted_scopes: [...input.grantedScopes] }),
     };
 
-    const payload =
-      rotatedRefreshToken === null
-        ? base
-        : {
-            ...base,
-            refresh_token_ct: bufferToPgHex(this.encrypt(rotatedRefreshToken, userId)),
-          };
-
-    const { error } = await this.db
+    const { data, error } = await this.db
       .from('google_connections')
       .update(payload)
-      .eq('user_id', userId);
+      .eq('user_id', input.userId)
+      // The fence. Anything that is not ACTIVE has been decided by something
+      // newer than this refresh -- a disconnection, or a grant already found
+      // insufficient -- and this write must lose to it.
+      .eq('status', 'ACTIVE')
+      .select('user_id');
 
-    if (error !== null) throw translatePostgrestError(error, 'googleConnections.updateAccessToken');
+    if (error !== null) throw translatePostgrestError(error, 'googleConnections.recordRefresh');
+
+    return (data ?? []).length > 0;
+  }
+
+  /**
+   * What this account's stored refresh token is: absent, usable, or unreadable.
+   *
+   * Returns a state and nothing else. The caller needs to decide whether a
+   * connection is durable, not to hold the credential that makes it so, and
+   * neither the plaintext nor the ciphertext leaves this method.
+   *
+   * Three states rather than a boolean because the two failing ones are not the
+   * same incident. A ciphertext written with a different
+   * GOOGLE_TOKEN_ENCRYPTION_KEY cannot be exchanged with Google -- so it is not
+   * USABLE -- but it is emphatically not ABSENT either: the credential is still
+   * there, still good, and reporting it as missing invites the caller to write
+   * over it while repairing a fault that was never the student's.
+   */
+  async refreshTokenState(userId: string): Promise<RefreshTokenState> {
+    const { data, error } = await this.db
+      .from('google_connections')
+      .select('refresh_token_ct')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (error !== null) {
+      throw translatePostgrestError(error, 'googleConnections.refreshTokenState');
+    }
+    // No row at all: this account has never connected. Absent, not unreadable.
+    if (data === null) return 'ABSENT';
+
+    const refresh = this.decryptOrNull(data.refresh_token_ct, userId, 'refresh');
+    if (refresh.unreadable) return 'UNREADABLE';
+    return refresh.value === null ? 'ABSENT' : 'USABLE';
   }
 
   async markStatus(
@@ -232,7 +304,7 @@ export class SupabaseGoogleConnectionRepository implements GoogleConnectionRepos
         this.logger.error('stored google credential could not be decrypted', {
           errorCode: 'CREDENTIAL_DECRYPTION_FAILED',
           userId,
-          credential: label,
+          materialKind: label,
           // AUTH_FAILED here means the envelope is intact but this key did not
           // produce it: check GOOGLE_TOKEN_ENCRYPTION_KEY for this deployment
           // before concluding anything about the student's Google grant.

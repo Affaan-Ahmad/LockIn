@@ -164,6 +164,25 @@ export const googleTokenErrorSchema = z.object({
   error_description: z.string().optional(),
 });
 
+/**
+ * The tokeninfo response.
+ *
+ * `scope` and `expires_in` are required here, unlike almost everything else in
+ * this file, because a tokeninfo answer without them tells us nothing: the
+ * whole reason for the call is to learn what the token may do and for how long.
+ * Treating an absent `scope` as "no scopes" would read a malformed response as
+ * a revoked grant; treating it as "all scopes" would be worse. Missing means
+ * unverified, and the caller must say so rather than guess.
+ *
+ * Everything else Google sends -- `aud`, `sub`, `email`, `azp`, `exp` -- is
+ * deliberately not modelled. It is not needed, and parsing an identifier we do
+ * not use is an invitation to start storing it.
+ */
+export const googleTokenInfoSchema = z.object({
+  scope: z.string(),
+  expires_in: looseInt,
+});
+
 export type GoogleCourse = z.infer<typeof googleCourseSchema>;
 export type GoogleCourseWork = z.infer<typeof googleCourseWorkSchema>;
 export type GoogleStudentSubmission = z.infer<typeof googleStudentSubmissionSchema>;

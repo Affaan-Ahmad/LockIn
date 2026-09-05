@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { cache } from 'react';
 
 import { buildStudentSectionProfile } from '@/domain/academic/alias-generation';
+import { missingClassroomScopes } from '@/domain/google/scopes';
 import { createBackendContext, type BackendContext } from '@/infrastructure/composition';
 import { createUserScopedClient } from '@/infrastructure/supabase/clients';
 
@@ -330,6 +331,16 @@ export const loadProfile = cache(async (userId: string): Promise<ProfileView | n
 export interface SetupState {
   readonly hasConnection: boolean;
   readonly connectionStatus: string | null;
+  /** Why the connection is unusable, when it is. Null when nothing is wrong. */
+  readonly connectionErrorCode: string | null;
+  /**
+   * Required scopes the stored grant does not carry.
+   *
+   * Read from what Google reported at consent, not from what was requested, so
+   * the connect screen can name the permission that is actually missing instead
+   * of asking the student to guess which box they unticked.
+   */
+  readonly missingScopes: readonly string[];
   readonly hasProfile: boolean;
   readonly primarySection: string | null;
   readonly matchedAliases: readonly string[];
@@ -360,6 +371,8 @@ export const loadSetupState = cache(async (userId: string): Promise<SetupState> 
   return {
     hasConnection: connection !== null && connection.status === 'ACTIVE',
     connectionStatus: connection?.status ?? null,
+    connectionErrorCode: connection?.lastErrorCode ?? null,
+    missingScopes: connection === null ? [] : missingClassroomScopes(connection.grantedScopes),
     hasProfile: profile !== null,
     primarySection: profile?.identity.primarySection ?? null,
     matchedAliases: aliases,

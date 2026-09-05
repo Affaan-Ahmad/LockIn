@@ -429,6 +429,16 @@ export type Database = {
         Args: { p_user_id: string; p_lease_ttl_seconds: number; p_owner: string };
         Returns: SyncRunRow[];
       };
+      /**
+       * Declared for completeness even though the application never calls it --
+       * app_start_sync_run and app_resume_sync_run both invoke it internally.
+       * The integration suite calls it directly to put a run into the exact
+       * state a dead worker leaves behind.
+       */
+      app_reclaim_expired_sync_runs: {
+        Args: { p_user_id: string; p_max_resumes?: number };
+        Returns: undefined;
+      };
       app_renew_sync_lease: {
         Args: { p_sync_run_id: string; p_owner: string; p_lease_ttl_seconds: number };
         Returns: boolean;

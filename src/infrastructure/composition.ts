@@ -3,6 +3,7 @@ import 'server-only';
 import { ClassroomSyncService } from '@/application/services/classroom-sync.service';
 import { AccountService } from '@/application/services/account.service';
 import { CourseDiscoveryService } from '@/application/services/course-discovery.service';
+import { GoogleConnectionService } from '@/application/services/google-connection.service';
 import { GoogleTokenService } from '@/application/services/google-token.service';
 import { SyncWorker, type ContinuationTrigger } from '@/application/services/sync-worker';
 import { getServerEnv } from '@/config/env';
@@ -40,11 +41,13 @@ import { createLogger, type Logger } from '@/shared/logger';
  * dependencies, which is what keeps the services testable: every one of them
  * takes its collaborators as constructor arguments and can be handed fakes.
  *
- * Note which client each repository receives. The sync pipeline gets a
- * user-scoped client, so row-level security applies to every statement it runs
- * -- a bug in a repository filter is caught by a policy rather than becoming a
- * data leak. Only the Google connection repository gets the service role, and
- * only because its table denies every other role by design.
+ * Note which client each repository receives. In a request, the sync pipeline
+ * gets a user-scoped client, so row-level security applies to every statement it
+ * runs -- a bug in a repository filter is caught by a policy rather than
+ * becoming a data leak. The Google connection repository always gets the service
+ * role, because its table denies every other role by design; and the background
+ * worker context gets it for everything, because a continuation has no session
+ * to run as. See `createWorkerContext` for what holds the boundary there.
  */
 
 export function createRootLogger(): Logger {
@@ -79,6 +82,31 @@ export function createGoogleConnectionRepository(
     env.GOOGLE_TOKEN_ENCRYPTION_KEY,
     logger,
     );
+}
+
+/**
+ * Stores a freshly-granted Google credential, having asked Google what it is.
+ *
+ * Wired here rather than in the callback route so the route keeps its one job.
+ * It gets the same HTTP client the token service uses -- one place that talks to
+ * Google's OAuth endpoints -- but only through the narrow inspector port, which
+ * cannot refresh or revoke anything.
+ */
+export function createGoogleConnectionService(logger: Logger): GoogleConnectionService {
+  const env = getServerEnv();
+
+  return new GoogleConnectionService({
+    connections: createGoogleConnectionRepository(logger),
+    inspector: new GoogleOAuthHttpClient({
+      clientId: env.GOOGLE_OAUTH_CLIENT_ID,
+      clientSecret: env.GOOGLE_OAUTH_CLIENT_SECRET,
+      logger,
+      // The configured timeout, not the client's 15s fallback. This call sits
+      // in the OAuth callback, where the student is watching a blank redirect.
+      timeoutMs: env.GOOGLE_REQUEST_TIMEOUT_MS,
+    }),
+    logger,
+    });
 }
 
 export interface BackendContext {

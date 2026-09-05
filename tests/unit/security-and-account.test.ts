@@ -6,6 +6,7 @@ import type {
   GoogleConnectionRepository,
   GoogleConnectionSnapshot,
   GoogleConnectionStatus,
+  RefreshTokenState,
   RefreshedCredentials,
   StoredGoogleConnection,
 } from '@/application/ports/google-credentials';
@@ -130,8 +131,13 @@ class FakeConnections implements GoogleConnectionRepository {
   upsert(): Promise<void> {
     return Promise.resolve();
   }
-  updateAccessToken(): Promise<void> {
-    return Promise.resolve();
+  recordRefresh(): Promise<boolean> {
+    return Promise.resolve(true);
+  }
+  refreshTokenState(): Promise<RefreshTokenState> {
+    if (this.connection === null) return Promise.resolve('ABSENT');
+    if (this.connection.credentialsUnreadable) return Promise.resolve('UNREADABLE');
+    return Promise.resolve(this.connection.refreshToken === null ? 'ABSENT' : 'USABLE');
   }
   markStatus(_u: string, status: GoogleConnectionStatus, errorCode: string | null): Promise<void> {
     this.statusChanges.push({ status, errorCode });

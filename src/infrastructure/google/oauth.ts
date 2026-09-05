@@ -2,6 +2,8 @@ import 'server-only';
 
 import type {
   GoogleOAuthClient,
+  GoogleTokenInfo,
+  GoogleTokenInspector,
   RefreshedCredentials,
 } from '@/application/ports/google-credentials';
 import {
@@ -12,25 +14,21 @@ import {
 } from '@/shared/errors';
 import type { Logger } from '@/shared/logger';
 
-import { googleTokenErrorSchema, googleTokenResponseSchema } from './classroom.schemas';
+import {
+  googleTokenErrorSchema,
+  googleTokenInfoSchema,
+  googleTokenResponseSchema,
+} from './classroom.schemas';
 
 const TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token';
 const REVOKE_ENDPOINT = 'https://oauth2.googleapis.com/revoke';
-
 /**
- * The minimum read-only scopes this application needs.
- *
- * Least privilege is not just policy here -- Google's consent screen shows every
- * scope, and asking a student for roster or profile access to read their own
- * deadlines is both unnecessary and a reason not to grant consent at all. The
- * student's Classroom user id is instead learned from their own submissions.
+ * Google's own client library posts here with the token in an Authorization
+ * header and nothing in the URL. That detail is not cosmetic: the older
+ * `?access_token=` form puts a live credential into every proxy log, browser
+ * history and error report along the way.
  */
-export const REQUIRED_CLASSROOM_SCOPES = [
-  'https://www.googleapis.com/auth/classroom.courses.readonly',
-  'https://www.googleapis.com/auth/classroom.coursework.me.readonly',
-  'https://www.googleapis.com/auth/classroom.student-submissions.me.readonly',
-  'https://www.googleapis.com/auth/classroom.topics.readonly',
-] as const;
+const TOKEN_INFO_ENDPOINT = 'https://oauth2.googleapis.com/tokeninfo';
 
 export interface GoogleOAuthClientOptions {
   readonly clientId: string;
@@ -48,7 +46,7 @@ export interface GoogleOAuthClientOptions {
  * `invalid_grant` response -- the signal that consent is gone and no retry will
  * ever help.
  */
-export class GoogleOAuthHttpClient implements GoogleOAuthClient {
+export class GoogleOAuthHttpClient implements GoogleOAuthClient, GoogleTokenInspector {
   private readonly clientId: string;
   private readonly clientSecret: string;
   private readonly logger: Logger;
@@ -71,7 +69,7 @@ export class GoogleOAuthHttpClient implements GoogleOAuthClient {
       grant_type: 'refresh_token',
     });
 
-    const response = await this.post(TOKEN_ENDPOINT, body, 'google.oauth.refresh');
+    const response = await this.post(TOKEN_ENDPOINT, 'google.oauth.refresh', { body });
     const text = await response.text();
 
     if (!response.ok) {
@@ -100,7 +98,7 @@ export class GoogleOAuthHttpClient implements GoogleOAuthClient {
 
   async revoke(token: string): Promise<void> {
     const body = new URLSearchParams({ token });
-    const response = await this.post(REVOKE_ENDPOINT, body, 'google.oauth.revoke');
+    const response = await this.post(REVOKE_ENDPOINT, 'google.oauth.revoke', { body });
     if (!response.ok && response.status !== 400) {
       // 400 means the token was already invalid, which is the desired end state.
       this.logger.warn('token revocation returned an unexpected status', {
@@ -109,21 +107,91 @@ export class GoogleOAuthHttpClient implements GoogleOAuthClient {
     }
   }
 
+  /**
+   * What Google says this access token actually carries.
+   *
+   * The shape of the request follows Google's own auth library: POST, the token
+   * in an Authorization header, a form content type, and nothing in the URL or
+   * the body. The alternative -- `GET /tokeninfo?access_token=...` -- is still
+   * accepted by Google and still a mistake, because a URL is the one part of a
+   * request that gets written down everywhere.
+   *
+   * Nothing here logs the token, the headers, or the raw response. The scopes
+   * are the answer; the payload they arrived in is a credential envelope.
+   */
+  async getTokenInfo(accessToken: string): Promise<GoogleTokenInfo> {
+    const response = await this.post(TOKEN_INFO_ENDPOINT, 'google.oauth.tokeninfo', {
+      bearerToken: accessToken,
+    });
+    const text = await response.text();
+
+    if (!response.ok) {
+      throw this.translateTokenInfoError(response.status, text);
+    }
+
+    const parsed = googleTokenInfoSchema.safeParse(safeJson(text));
+    if (!parsed.success) {
+      throw new GoogleApiError('Google tokeninfo returned an unexpected payload', {
+        status: response.status,
+        retryable: false,
+        cause: parsed.error,
+      });
+    }
+
+    const scopes = parsed.data.scope.split(' ').filter((scope) => scope !== '');
+    if (scopes.length === 0) {
+      // A 200 with an empty scope string is not "the student granted nothing" --
+      // a token with no scopes could not have been issued. It is a response we
+      // do not understand, and the caller must treat it as unverified rather
+      // than as a grant of nothing.
+      throw new GoogleApiError('Google tokeninfo reported no scopes for a live token', {
+        status: response.status,
+        retryable: false,
+      });
+    }
+
+    if (parsed.data.expires_in <= 0) {
+      throw new GoogleApiError('Google tokeninfo reported an already-expired token', {
+        status: response.status,
+        retryable: false,
+      });
+    }
+
+    return {
+      scopes,
+      // The same minute of headroom the refresh path applies: a token that
+      // expires while a request is in flight produces a spurious 401 that looks
+      // exactly like revoked consent.
+      expiresAt: new Date(Date.now() + Math.max(0, parsed.data.expires_in - 60) * 1000),
+    };
+  }
+
   private async post(
     url: string,
-    body: URLSearchParams,
     operation: string,
+    init: { body?: URLSearchParams; bearerToken?: string },
     ): Promise<Response> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+
+    const headers: Record<string, string> = {
+      // Charset spelled out because Google's own client sends it that way, and
+      // this endpoint is old enough that matching it exactly costs nothing.
+      'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+    };
+    if (init.bearerToken !== undefined) {
+      headers['Authorization'] = `Bearer ${init.bearerToken}`;
+    }
+
     try {
       return await this.fetchImpl(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body,
+        headers,
+        ...(init.body === undefined ? {} : { body: init.body }),
         signal: controller.signal,
       });
     } catch (cause) {
+      // The operation label only. Never the headers, which carry the credential.
       throw new GoogleApiError(`Network failure calling ${operation}`, {
         retryable: true,
         cause,
@@ -132,6 +200,41 @@ export class GoogleOAuthHttpClient implements GoogleOAuthClient {
     } finally {
       clearTimeout(timer);
     }
+  }
+
+  /**
+   * Errors from tokeninfo, kept away from the refresh error taxonomy.
+   *
+   * Deliberately never AuthorizationExpiredError. That is the code the token
+   * service reads as "the grant is gone", and its response is to mark the
+   * connection REVOKED -- which nulls the stored ciphertexts. A tokeninfo call
+   * that fails means we could not verify the grant, which is a different and far
+   * weaker claim than knowing it was withdrawn, and acting on the stronger one
+   * would destroy a working credential over a bad minute at Google.
+   */
+  private translateTokenInfoError(status: number, body: string): Error {
+    const parsed = googleTokenErrorSchema.safeParse(safeJson(body));
+    const code = parsed.success ? parsed.data.error : 'unknown_error';
+
+    if (status === 429) {
+      return new RateLimitError('Google rate limited the tokeninfo endpoint', {
+        context: { status, code },
+      });
+    }
+
+    if (status >= 500) {
+      return new GoogleApiError(`Google tokeninfo server error (${code})`, {
+        status,
+        retryable: true,
+        context: { code },
+      });
+    }
+
+    return new GoogleApiError(`Google would not describe this access token (${code})`, {
+      status,
+      retryable: false,
+      context: { code },
+    });
   }
 
   private translateTokenError(status: number, body: string): Error {

@@ -2,7 +2,13 @@ import type {
   GoogleConnectionRepository,
   GoogleCredentialProvider,
   GoogleOAuthClient,
+  RefreshedCredentials,
 } from '@/application/ports/google-credentials';
+import {
+  INSUFFICIENT_SCOPES,
+  NO_REFRESH_TOKEN,
+  missingClassroomScopes,
+} from '@/domain/google/scopes';
 import type { Clock } from '@/shared/clock';
 import {
   AuthorizationExpiredError,
@@ -121,6 +127,10 @@ export class GoogleTokenService implements GoogleCredentialProvider {
 
     // markStatus('REVOKED') also nulls the stored ciphertexts, so nothing
     // usable survives locally whether or not Google accepted the revocation.
+    //
+    // And nothing puts them back. A refresh already in flight writes through a
+    // statement fenced on the row still being ACTIVE, so this is the last word
+    // on the connection even when it lands mid-sync.
     await this.connections.markStatus(userId, 'REVOKED', 'USER_DISCONNECTED');
 
     this.logger.info('google connection disconnected by user', { userId, revokedAtGoogle });
@@ -174,6 +184,26 @@ export class GoogleTokenService implements GoogleCredentialProvider {
       );
     }
 
+    // A credential can be perfectly valid and still not permit the work.
+    //
+    // Google's consent screen lets a student untick individual permissions, so
+    // a token that cannot list courses is a normal outcome of a normal consent
+    // flow. Handing it out anyway turns a missing permission into a 403 in the
+    // middle of a sync -- which the sync then reports as a Google failure, and
+    // which no amount of retrying fixes because the student was never asked
+    // again. This is the gate: incomplete grants do not reach Google at all.
+    const missing = missingClassroomScopes(connection.grantedScopes);
+    if (missing.length > 0) {
+      // NEEDS_RECONNECT, never REVOKED: the stored credentials are real and
+      // must survive, because reconnecting reuses the same row and a repeat
+      // consent often carries no new refresh token.
+      await this.connections.markStatus(userId, 'NEEDS_RECONNECT', INSUFFICIENT_SCOPES);
+      throw new AuthorizationExpiredError(
+        'The Google connection is missing Classroom permissions it needs; reconnect and accept all of them',
+        { context: { userId, missingScopeCount: missing.length } },
+      );
+    }
+
     if (this.isUsable(connection.accessToken, connection.accessTokenExpiresAt)) {
       return connection.accessToken as string;
     }
@@ -182,7 +212,7 @@ export class GoogleTokenService implements GoogleCredentialProvider {
       // Without a refresh token there is no path back to a working credential.
       // This happens when Google was not asked for offline access, or when a
       // prior consent was reused without prompt=consent.
-      await this.connections.markStatus(userId, 'NEEDS_RECONNECT', 'NO_REFRESH_TOKEN');
+      await this.connections.markStatus(userId, 'NEEDS_RECONNECT', NO_REFRESH_TOKEN);
       throw new AuthorizationExpiredError(
         'No Google refresh token is stored; the student must reconnect with offline access',
         { context: { userId } },
@@ -195,20 +225,15 @@ export class GoogleTokenService implements GoogleCredentialProvider {
   private async refresh(userId: string, refreshToken: string): Promise<string> {
     this.logger.info('refreshing google access token', { userId });
 
+    let refreshed: RefreshedCredentials;
+
+    // Only the exchange itself is guarded. What follows must not be, because
+    // this handler reads AuthorizationExpiredError as "the grant is gone" and
+    // marks the connection REVOKED -- which nulls the stored ciphertexts. A
+    // scope problem raised below is a different fault with a different remedy,
+    // and letting it fall in here would destroy a credential that still works.
     try {
-      const refreshed = await this.oauth.refreshAccessToken(refreshToken);
-
-      // Google rotates refresh tokens occasionally. Persisting the rotated one
-      // is mandatory: keeping the old value means the next refresh fails with
-      // invalid_grant and the student is told to reconnect for nothing.
-      await this.connections.updateAccessToken(
-        userId,
-        refreshed.accessToken,
-        refreshed.expiresAt,
-        refreshed.refreshToken,
-      );
-
-      return refreshed.accessToken;
+      refreshed = await this.oauth.refreshAccessToken(refreshToken);
     } catch (caught) {
       if (caught instanceof AuthorizationExpiredError) {
         await this.connections.markStatus(userId, 'REVOKED', 'INVALID_GRANT');
@@ -226,6 +251,82 @@ export class GoogleTokenService implements GoogleCredentialProvider {
       });
       throw caught;
     }
+
+    // Google reports the scopes attached to the token it just issued. When it
+    // says the grant has shrunk, that is newer information than the stored row,
+    // and continuing would mean syncing against permissions we no longer hold.
+    // Acted on only when Google actually said something: a refresh response
+    // without a scope field is not evidence of anything.
+    const narrowed =
+      refreshed.scopes !== null && missingClassroomScopes(refreshed.scopes).length > 0;
+
+    // One write, and it happens on both paths -- including the one that is about
+    // to throw.
+    //
+    // What Google just returned is real regardless of what it permits. The
+    // access token is the newest we will ever hold for this user, and a rotated
+    // refresh token is the *only* one that still works: dropping it because the
+    // scopes came back short would guarantee invalid_grant on the next attempt
+    // and turn a fixable permissions problem into a dead connection that no
+    // reconnect can repair without a fresh consent. The scopes are stored as
+    // reported so the connect screen names what is actually missing instead of
+    // repeating a stale list.
+    //
+    // NEEDS_RECONNECT, never REVOKED: the credential is alive and the
+    // permissions are not sufficient, and only the second of those justifies
+    // throwing stored tokens away. This sits outside the invalid_grant handler
+    // above for exactly that reason.
+    //
+    // The write is fenced on the row still being ACTIVE and says whether it
+    // won, because the row this decision was made from was read before the
+    // round trip to Google and may have been disconnected since.
+    const stored = await this.connections.recordRefresh({
+      userId,
+      accessToken: refreshed.accessToken,
+      accessTokenExpiresAt: refreshed.expiresAt,
+      // Null means Google did not rotate it; the stored value must survive.
+      rotatedRefreshToken: refreshed.refreshToken,
+      grantedScopes: refreshed.scopes,
+      status: narrowed ? 'NEEDS_RECONNECT' : 'ACTIVE',
+      errorCode: narrowed ? INSUFFICIENT_SCOPES : null,
+    });
+
+    // The write lost its fence: the connection stopped being ACTIVE while this
+    // refresh was at Google's token endpoint. In practice that is a student
+    // disconnecting mid-sync, which nulls the stored ciphertexts and marks the
+    // row REVOKED.
+    //
+    // Nothing was written, and nothing may be written now. Returning the access
+    // token would hand out a credential for an account that has just been
+    // disconnected; marking any status would overwrite the disconnection's own
+    // result with a conclusion drawn from a row that no longer exists as read.
+    // The one honest response is to fail the way every other lost-authorization
+    // path fails, and to leave the newer decision standing.
+    //
+    // Checked before the narrowed-grant branch below, because that branch
+    // reports a write that did not happen.
+    if (!stored) {
+      this.logger.warn('google connection changed during refresh; refreshed credential discarded', {
+        userId,
+      });
+      throw new AuthorizationExpiredError(
+        'The Google connection changed while its access token was being refreshed; reconnect to continue',
+        { context: { userId } },
+      );
+    }
+
+    if (narrowed) {
+      this.logger.warn('google reports a narrower grant than the connection recorded', {
+        userId,
+        grantedScopeCount: refreshed.scopes?.length ?? 0,
+      });
+      throw new AuthorizationExpiredError(
+        'Google no longer grants all the Classroom permissions this connection needs',
+        { context: { userId } },
+      );
+    }
+
+    return refreshed.accessToken;
   }
 
   private isUsable(token: string | null, expiresAt: Date | null): boolean {

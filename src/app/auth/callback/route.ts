@@ -1,9 +1,16 @@
 import { NextResponse } from 'next/server';
 
+import type { ConnectionResult } from '@/application/services/google-connection.service';
 import { getServerEnv } from '@/config/env';
-import { REQUIRED_CLASSROOM_SCOPES } from '@/infrastructure/google/oauth';
-import { createGoogleConnectionRepository, createRootLogger } from '@/infrastructure/composition';
+import {
+  CONNECTION_FEEDBACK,
+  connectionFeedbackPath,
+  connectionRedirectPath,
+  type ConnectionFeedbackCode,
+} from '@/features/connection/connection-feedback';
+import { createGoogleConnectionService, createRootLogger } from '@/infrastructure/composition';
 import { createUserScopedClient } from '@/infrastructure/supabase/clients';
+import { isAppError } from '@/shared/errors';
 
 /**
  * OAuth callback.
@@ -17,6 +24,15 @@ import { createUserScopedClient } from '@/infrastructure/supabase/clients';
  * The capture happens server-side and the tokens go straight into an encrypted
  * column. They are never rendered, never returned in a body, never placed in a
  * cookie, and never logged.
+ *
+ * What the token *permits* is not in that session either, so this route no
+ * longer decides. It hands the grant to the connection service, which asks
+ * Google and stores the answer; this file only turns the outcome into a
+ * redirect.
+ *
+ * Every failure lands on `/welcome`, not `/`. The dashboard redirects a
+ * half-configured account to `/welcome` and drops the query string doing it, so
+ * a message attached to `/` was written to a URL nobody would ever read.
  */
 
 export const runtime = 'nodejs';
@@ -30,13 +46,18 @@ export async function GET(request: Request): Promise<NextResponse> {
   const code = url.searchParams.get('code');
   const oauthError = url.searchParams.get('error');
 
+  const back = (feedback: ConnectionFeedbackCode): NextResponse =>
+    NextResponse.redirect(
+      new URL(connectionFeedbackPath(feedback), env.NEXT_PUBLIC_SITE_URL),
+    );
+
   if (oauthError !== null) {
     logger.warn('google returned an oauth error', { error: oauthError });
-    return NextResponse.redirect(new URL('/?connection=denied', env.NEXT_PUBLIC_SITE_URL));
+    return back(CONNECTION_FEEDBACK.denied);
   }
 
   if (code === null) {
-    return NextResponse.redirect(new URL('/?connection=missing_code', env.NEXT_PUBLIC_SITE_URL));
+    return back(CONNECTION_FEEDBACK.missingCode);
   }
 
   const db = await createUserScopedClient();
@@ -44,7 +65,7 @@ export async function GET(request: Request): Promise<NextResponse> {
 
   if (error !== null || data.session === null) {
     logger.error('code exchange failed', { message: error?.message ?? 'no session returned' });
-    return NextResponse.redirect(new URL('/?connection=failed', env.NEXT_PUBLIC_SITE_URL));
+    return back(CONNECTION_FEEDBACK.failed);
   }
 
   const session = data.session;
@@ -57,29 +78,35 @@ export async function GET(request: Request): Promise<NextResponse> {
     logger.warn('no provider token in session; classroom access unavailable', {
       userId: session.user.id,
     });
-    return NextResponse.redirect(new URL('/?connection=no_provider_token', env.NEXT_PUBLIC_SITE_URL));
+    return back(CONNECTION_FEEDBACK.noProviderToken);
   }
 
-  const connections = createGoogleConnectionRepository(logger);
+  const connections = createGoogleConnectionService(logger);
 
-  await connections.upsert({
-    userId: session.user.id,
-    googleSub: session.user.user_metadata['sub'] as string | undefined ?? session.user.id,
-    grantedScopes: [...REQUIRED_CLASSROOM_SCOPES],
-    accessToken: providerToken,
-    // Supabase does not report the provider token's expiry, so assume Google's
-    // standard hour and let the token service refresh early rather than trust
-    // a value we were not given.
-    accessTokenExpiresAt: new Date(Date.now() + 55 * 60 * 1000),
-    // Null means "keep what is stored". Google omits the refresh token on
-    // repeat consents, and overwriting with null would break the connection.
-    refreshToken: providerRefreshToken,
+  let result: ConnectionResult;
+  try {
+    result = await connections.storeProviderGrant({
+      userId: session.user.id,
+      googleSub: (session.user.user_metadata['sub'] as string | undefined) ?? session.user.id,
+      accessToken: providerToken,
+      // Null means "keep what is stored". Google omits the refresh token on
+      // repeat consents, and overwriting with null would break the connection.
+      refreshToken: providerRefreshToken,
     });
-
-  logger.info('google classroom connection stored', {
-    userId: session.user.id,
-    hasRefreshToken: providerRefreshToken !== null,
+  } catch (caught) {
+    // A storage failure after a successful consent must not become a 500 page
+    // at the end of an OAuth flow. Nothing partial was written -- the write is
+    // a single statement -- so the student can simply try again.
+    logger.error('storing the google connection failed', {
+      userId: session.user.id,
+      errorCode: isAppError(caught) ? caught.code : 'UNKNOWN',
     });
+    return back(CONNECTION_FEEDBACK.failed);
+  }
 
-  return NextResponse.redirect(new URL('/?connection=ok', env.NEXT_PUBLIC_SITE_URL));
+  // The mapping from outcome to destination is pure and lives with the wording,
+  // so it can be tested without standing up Supabase and env validation here.
+  return NextResponse.redirect(
+    new URL(connectionRedirectPath(result.kind), env.NEXT_PUBLIC_SITE_URL),
+  );
 }

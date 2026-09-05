@@ -108,6 +108,19 @@ export default async function SettingsPage() {
                     : 'Review and your answers'}
                 </Link>
               </li>
+              {/* A plain anchor, not next/link: this is a file download from a
+                  route handler, and client-side navigation to it would try to
+                  render JSON as a page. The privacy policy says this link is
+                  here, so the two are checked against each other. */}
+              <li>
+                <a
+                  href="/api/account/export"
+                  download
+                  className="font-semibold text-brand-ink hover:underline"
+                >
+                  Download a copy of your data (JSON)
+                </a>
+              </li>
             </ul>
           </div>
         </section>

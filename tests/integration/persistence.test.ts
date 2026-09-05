@@ -657,6 +657,177 @@ describeIntegration('persistence invariants', () => {
     });
   });
 
+  /**
+   * The fence on app_fail_sync_run, which 0013 made effective.
+   *
+   * 0012 checked the owner on the sync_runs UPDATE and read the row count right
+   * after it, but never branched on that count -- it went on to mark every
+   * PENDING and RUNNING work item FAILED regardless, and used the count only as
+   * the return value. A stalled worker that came back therefore emptied the
+   * queue of the successor that had replaced it, which then finalised a run
+   * reporting courses as failed that nothing had attempted.
+   *
+   * These assertions are deliberately about the work queue rather than the
+   * return value. `false` was already returned correctly by the broken version,
+   * which is precisely why the bug survived -- the damage was in a table nobody
+   * was looking at.
+   */
+  describe('failing a run is fenced by the lease', () => {
+    const FIRST = '33333333-3333-4333-8333-333333333333';
+    const SECOND = '44444444-4444-4444-8444-444444444444';
+
+    async function startWithQueue(owner: string): Promise<string> {
+      const run = await alice.db.rpc('app_start_sync_run', {
+        p_user_id: alice.id,
+        p_trigger: 'MANUAL',
+        p_mode: 'FULL',
+        p_lease_ttl_seconds: 90,
+        p_owner: owner,
+      });
+      expect(run.error).toBeNull();
+      const runId = firstRow(run.data).id;
+
+      const queued = await alice.db.rpc('app_enqueue_sync_courses', {
+        p_sync_run_id: runId,
+        p_owner: owner,
+        p_courses: [
+          { source_course_id: 'f1', course_id: null, course_name: 'First' },
+          { source_course_id: 'f2', course_id: null, course_name: 'Second' },
+        ],
+      });
+      expect(queued.data).toBe(2);
+
+      return runId;
+    }
+
+    async function courseStatuses(runId: string): Promise<Record<string, string>> {
+      const { data, error } = await alice.db
+        .from('sync_course_results')
+        .select('source_course_id, status')
+        .eq('sync_run_id', runId);
+
+      expect(error).toBeNull();
+      return Object.fromEntries((data ?? []).map((row) => [row.source_course_id, row.status]));
+    }
+
+    it('leaves the successor queue untouched when a stale owner fails the run', async () => {
+      const runId = await startWithQueue(FIRST);
+
+      // What a reclaim followed by a resume leaves behind: the run is live and
+      // somebody else holds it. FIRST is the worker that stalled and came back.
+      await harness.admin.from('sync_runs').update({ lease_owner: SECOND }).eq('id', runId);
+
+      const refused = await alice.db.rpc('app_fail_sync_run', {
+        p_sync_run_id: runId,
+        p_owner: FIRST,
+        p_error_summary: 'AUTHORIZATION_EXPIRED',
+      });
+      expect(refused.data).toBe(false);
+
+      // The successor's work is still queued, and its run is still running.
+      expect(await courseStatuses(runId)).toEqual({ f1: 'PENDING', f2: 'PENDING' });
+
+      const stored = await alice.db
+        .from('sync_runs')
+        .select('status, error_summary, lease_owner')
+        .eq('id', runId)
+        .single();
+      expect(stored.data!.status).toBe('RUNNING');
+      expect(stored.data!.error_summary).toBeNull();
+      expect(stored.data!.lease_owner).toBe(SECOND);
+
+      await alice.db.rpc('app_fail_sync_run', {
+        p_sync_run_id: runId,
+        p_owner: SECOND,
+        p_error_summary: 'cleanup',
+      });
+    });
+
+    it('refuses to fail a run that has been reclaimed back to the queue', async () => {
+      const runId = await startWithQueue(FIRST);
+
+      // The lease lapsed and the run was reclaimed, so it is resumable and owned
+      // by nobody. A run nobody owns is not this worker's to fail.
+      await harness.admin
+        .from('sync_runs')
+        .update({ lease_expires_at: new Date(Date.now() - 60_000).toISOString() })
+        .eq('id', runId);
+      await alice.db.rpc('app_reclaim_expired_sync_runs', { p_user_id: alice.id });
+
+      const refused = await alice.db.rpc('app_fail_sync_run', {
+        p_sync_run_id: runId,
+        p_owner: FIRST,
+        p_error_summary: 'AUTHORIZATION_EXPIRED',
+      });
+      expect(refused.data).toBe(false);
+
+      const stored = await alice.db.from('sync_runs').select('status').eq('id', runId).single();
+      expect(stored.data!.status).toBe('QUEUED');
+      // Still resumable, with everything it had left to do intact.
+      expect(await courseStatuses(runId)).toEqual({ f1: 'PENDING', f2: 'PENDING' });
+
+      const resumed = await alice.db.rpc('app_resume_sync_run', {
+        p_user_id: alice.id,
+        p_lease_ttl_seconds: 90,
+        p_owner: SECOND,
+      });
+      expect(firstRow(resumed.data).id).toBe(runId);
+      await alice.db.rpc('app_fail_sync_run', {
+        p_sync_run_id: runId,
+        p_owner: SECOND,
+        p_error_summary: 'cleanup',
+      });
+    });
+
+    it('still lets the rightful owner fail the run and close its queue', async () => {
+      const runId = await startWithQueue(FIRST);
+
+      const failed = await alice.db.rpc('app_fail_sync_run', {
+        p_sync_run_id: runId,
+        p_owner: FIRST,
+        p_error_summary: 'AUTHORIZATION_EXPIRED',
+      });
+      expect(failed.data).toBe(true);
+
+      const stored = await alice.db
+        .from('sync_runs')
+        .select('status, error_summary, finished_at, lease_owner')
+        .eq('id', runId)
+        .single();
+      expect(stored.data!.status).toBe('FAILED');
+      expect(stored.data!.error_summary).toBe('AUTHORIZATION_EXPIRED');
+      expect(stored.data!.finished_at).not.toBeNull();
+      expect(stored.data!.lease_owner).toBeNull();
+
+      // Unfinished work is closed, so nothing is left looking resumable.
+      expect(await courseStatuses(runId)).toEqual({ f1: 'FAILED', f2: 'FAILED' });
+    });
+
+    it('preserves a course that had already finished', async () => {
+      const runId = await startWithQueue(FIRST);
+
+      await alice.db.rpc('app_complete_sync_course', {
+        p_sync_run_id: runId,
+        p_owner: FIRST,
+        p_source_course_id: 'f1',
+        p_status: 'SUCCESS',
+        p_completeness: 'COMPLETE',
+        p_counts: { assignmentsCreated: 1 },
+        p_error_code: null,
+      });
+
+      await alice.db.rpc('app_fail_sync_run', {
+        p_sync_run_id: runId,
+        p_owner: FIRST,
+        p_error_summary: 'CREDENTIAL_DECRYPTION_FAILED',
+      });
+
+      // A course that really was imported keeps saying so. Rewriting it would
+      // destroy the only record of what the run managed before it died.
+      expect(await courseStatuses(runId)).toEqual({ f1: 'SUCCESS', f2: 'FAILED' });
+    });
+  });
+
   describe('course tracking', () => {
     let untrackedCourseId: string;
 

@@ -1,6 +1,7 @@
 import type { NextResponse } from 'next/server';
 import { z } from 'zod';
 
+import { assertClassroomScopesGranted } from '@/application/services/google-connection.service';
 import { createBackendContext } from '@/infrastructure/composition';
 import { InvalidInputError } from '@/shared/errors';
 
@@ -14,10 +15,10 @@ import { enforceRateLimit, handleRoute, jsonOk, requireUser, runInBackground } f
  * multi-course sync, so the platform's request timeout was the sync's timeout,
  * and losing the connection lost the work.
  *
- * Now the request does three cheap things -- authenticate, rate limit, claim a
- * run -- and hands back an id. The synchronisation itself proceeds in the
- * background and survives this response, this connection, and if necessary this
- * invocation.
+ * Now the request does four cheap things -- authenticate, check the stored
+ * grant, rate limit, claim a run -- and hands back an id. The synchronisation
+ * itself proceeds in the background and survives this response, this
+ * connection, and if necessary this invocation.
  */
 
 export const runtime = 'nodejs';
@@ -54,6 +55,24 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     const context = await createBackendContext();
 
+    const connection = await context.connections.snapshot(user.id);
+
+    // Refused before a run exists, and before the rate limit is spent.
+    //
+    // A grant missing a Classroom permission cannot produce anything but a
+    // failure, and letting it start would spend a lease and a run record to
+    // record that failure -- then show the student a failed sync rather than the
+    // one thing that would fix it.
+    //
+    // Ahead of the limiter, because this request cannot use the quota it would
+    // consume. An incomplete grant that pressed the button often enough would
+    // exhaust its own window and start being told to wait instead of being told
+    // what to grant -- the same request answered two different ways depending on
+    // how many times it had already been refused, and the useful answer being
+    // the one it stopped getting. Authentication stays first: nothing is read
+    // for a caller we have not identified.
+    assertClassroomScopesGranted(connection);
+
     // The lease stops two syncs overlapping. This stops a hundred running back
     // to back, which is what would actually burn the Google quota.
     await enforceRateLimit(
@@ -63,8 +82,6 @@ export async function POST(request: Request): Promise<NextResponse> {
       context.limits.sync.limit,
       context.limits.sync.windowSeconds,
     );
-
-    const connection = await context.connections.snapshot(user.id);
 
     // Adopts a run left queued by a worker that died, or starts a fresh one.
     // Only a genuinely live run is refused with SYNC_ALREADY_RUNNING.

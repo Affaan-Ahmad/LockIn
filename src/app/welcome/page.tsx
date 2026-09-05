@@ -4,6 +4,11 @@ import { redirect } from 'next/navigation';
 
 import { Footer } from '@/components/shell/Footer';
 import { ButtonLink } from '@/components/ui/Button';
+import { describeScopes } from '@/domain/google/scopes';
+import {
+  describeConnectionFeedback,
+  type ConnectionFeedback,
+} from '@/features/connection/connection-feedback';
 import { LandingPage } from '@/features/marketing/LandingPage';
 import { ProfileForm } from '@/features/onboarding/ProfileForm';
 import { getSessionUser, loadSetupState } from '@/lib/queries';
@@ -36,6 +41,12 @@ export default async function WelcomePage({
   readonly searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const user = await getSessionUser();
+  const params = await searchParams;
+
+  // The OAuth callback cannot render, so it says what happened here. This is
+  // the screen it redirects to precisely because it is the one screen that is
+  // never redirected away from.
+  const feedback = describeConnectionFeedback(params['connection']);
 
   if (user === null) {
     // A stranger gets the explanation; someone who clicked "sign in" gets the
@@ -43,13 +54,30 @@ export default async function WelcomePage({
     // consent prompt asks for read access to their coursework before saying
     // what the product is, which is the most suspicious thing a page can do --
     // and it is the page Google's OAuth reviewers land on.
-    const params = await searchParams;
-    return params['signin'] === '1' ? <SignInScreen /> : <LandingPage />;
+    //
+    // A failed attempt counts as asking: someone who just came back from Google
+    // is owed an explanation rather than the marketing page they started on.
+    if (params['signin'] === '1' || feedback !== null) return <SignInScreen feedback={feedback} />;
+    return <LandingPage />;
   }
 
   const setup = await loadSetupState(user.id);
 
-  if (!setup.hasConnection) return <ConnectStep status={setup.connectionStatus} />;
+  if (!setup.hasConnection) {
+    return (
+      <ConnectStep
+        status={setup.connectionStatus}
+        missingScopes={setup.missingScopes}
+        feedback={feedback}
+      />
+    );
+  }
+
+  // Something went wrong reconnecting an account that is otherwise fine. Sending
+  // it onwards would drop the message, and the student would be left assuming
+  // the attempt worked.
+  if (feedback !== null) return <ReconnectFailedStep feedback={feedback} />;
+
   if (!setup.hasProfile) return <SectionStep />;
 
   // Course selection has a screen of its own, and it is the same screen a
@@ -57,6 +85,41 @@ export default async function WelcomePage({
   if (!setup.hasTrackedCourses) redirect('/courses?setup=1');
 
   redirect('/');
+}
+
+/**
+ * What the callback reported, said where it can be read.
+ *
+ * Reuses the sync notice treatment rather than introducing a second way to show
+ * a problem. Both are "something about your Classroom connection needs your
+ * attention", and two visual languages for that would be one too many.
+ */
+function ConnectionNotice({ feedback }: { readonly feedback: ConnectionFeedback }) {
+  return (
+    <div role="status" className="sync-notice" data-tone={feedback.tone}>
+      <div>
+        <p className="text-sm font-medium text-ink">{feedback.title}</p>
+        <p className="mt-1 text-sm text-ink-soft">{feedback.detail}</p>
+      </div>
+    </div>
+  );
+}
+
+/** The permissions that are missing, named rather than counted. */
+function MissingPermissions({ scopes }: { readonly scopes: readonly string[] }) {
+  const labels = describeScopes(scopes);
+  if (labels.length === 0) return null;
+
+  return (
+    <div className="measure mt-5">
+      <p className="text-sm font-medium text-ink">Still needed</p>
+      <ul className="mt-2 flex list-disc flex-col gap-1 pl-5 text-sm text-ink-soft">
+        {labels.map((label) => (
+          <li key={label}>{label}</li>
+        ))}
+      </ul>
+    </div>
+  );
 }
 
 /**
@@ -77,13 +140,15 @@ export default async function WelcomePage({
  * they are about to grant access, rather than the moment they were reading
  * about the product.
  */
-function SignInScreen() {
+function SignInScreen({ feedback }: { readonly feedback: ConnectionFeedback | null }) {
   return (
     <StepFrame
       step="LockIn"
       title="Sign in with Google"
       intro="LockIn reads your Classroom coursework and shows you the work that is for your section."
     >
+      {feedback === null ? null : <ConnectionNotice feedback={feedback} />}
+
       <ButtonLink href="/api/auth/google" className="block" variant="primary" fullWidth>
           Continue with Google
         </ButtonLink>
@@ -161,24 +226,73 @@ function StepFrame({
   );
 }
 
-function ConnectStep({ status }: { readonly status: string | null }) {
-  const expired = status === 'REVOKED' || status === 'EXPIRED';
+function ConnectStep({
+  status,
+  missingScopes,
+  feedback,
+}: {
+  readonly status: string | null;
+  readonly missingScopes: readonly string[];
+  readonly feedback: ConnectionFeedback | null;
+}) {
+  const returning = status !== null;
+  const incomplete = missingScopes.length > 0;
 
   return (
     <StepFrame
       step="Step 1 of 3"
-      title="Connect Google Classroom"
+      title={incomplete ? 'Grant the remaining permissions' : 'Connect Google Classroom'}
       intro={
-        expired
-          ? 'Your Classroom access has expired. Reconnecting restores it, and nothing you have already decided is lost.'
-          : 'LockIn needs read access to your courses and coursework. Nothing is posted, submitted or changed.'
+        incomplete
+          ? 'Google Classroom is connected, but not with everything LockIn needs. Connecting again with every permission ticked is all it takes, and nothing you have already decided is lost.'
+          : returning
+            ? 'Your Classroom access needs setting up again. Reconnecting restores it, and nothing you have already decided is lost.'
+            : 'LockIn needs read access to your courses and coursework. Nothing is posted, submitted or changed.'
       }
     >
+      {feedback === null ? null : <ConnectionNotice feedback={feedback} />}
+
       <ButtonLink href="/api/auth/google" className="block" variant="primary" fullWidth>
-          {status === null ? 'Connect Classroom' : 'Reconnect Classroom'}
+          {returning ? 'Reconnect Classroom' : 'Connect Classroom'}
         </ButtonLink>
 
+      <MissingPermissions scopes={missingScopes} />
+
       <GoogleAccessDisclosure />
+    </StepFrame>
+  );
+}
+
+/**
+ * A reconnect that failed on an account that already has a connection stored.
+ *
+ * Deliberately not the connect step: telling somebody to connect Classroom when
+ * they are connected is how a temporary failure reads as data loss. The message
+ * is the point, and the way back out is right underneath it.
+ *
+ * The intro says what this screen can actually see -- that a connection is on
+ * record -- and stops there. It used to add that nothing had stopped working,
+ * which is a claim about the stored credential's health that nothing on this
+ * path checks.
+ */
+function ReconnectFailedStep({ feedback }: { readonly feedback: ConnectionFeedback }) {
+  return (
+    <StepFrame
+      step="LockIn"
+      title="That did not finish"
+      intro="Your Google Classroom connection is still on record. Here is what happened to this attempt."
+    >
+      <ConnectionNotice feedback={feedback} />
+
+      <ButtonLink href="/" className="block" variant="primary" fullWidth>
+          Back to today
+        </ButtonLink>
+
+      <div className="mt-3">
+        <ButtonLink href="/api/auth/google" className="block" variant="secondary" fullWidth>
+          Try connecting again
+        </ButtonLink>
+      </div>
     </StepFrame>
   );
 }

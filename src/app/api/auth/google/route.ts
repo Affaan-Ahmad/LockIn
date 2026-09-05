@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server';
 
 import { getServerEnv } from '@/config/env';
-import { REQUIRED_CLASSROOM_SCOPES } from '@/infrastructure/google/oauth';
+import { REQUIRED_CLASSROOM_SCOPES } from '@/domain/google/scopes';
+import {
+  CONNECTION_FEEDBACK,
+  connectionFeedbackPath,
+} from '@/features/connection/connection-feedback';
 import { createUserScopedClient } from '@/infrastructure/supabase/clients';
 
 import { handleRoute } from '../../_lib/handler';
@@ -41,7 +45,16 @@ export async function GET(): Promise<NextResponse> {
     });
 
     if (error !== null || data.url === '') {
-      return NextResponse.redirect(new URL('/?connection=failed', env.NEXT_PUBLIC_SITE_URL));
+      // `/welcome`, not `/`. The dashboard redirects a half-configured account
+      // to `/welcome` and drops the query string on the way, so a message
+      // attached to `/` is written to a URL nobody ever reads -- the same fault
+      // the callback route was fixed for.
+      return NextResponse.redirect(
+        new URL(
+          connectionFeedbackPath(CONNECTION_FEEDBACK.failed),
+          env.NEXT_PUBLIC_SITE_URL,
+        ),
+      );
     }
 
     return NextResponse.redirect(data.url);

@@ -15,14 +15,22 @@ export type AppSupabaseClient = SupabaseClient<Database>;
  * each is to reach.
  *
  * `createUserScopedClient` carries the signed-in user's JWT, so every query it
- * makes is filtered by row-level security. This is what almost all backend code
- * uses -- including the sync pipeline, which runs inside an authenticated
- * request and therefore never needs elevated rights to write a user's own rows.
+ * makes is filtered by row-level security. This is what backend code uses
+ * whenever there is a request to belong to -- including a sync started by the
+ * student, which therefore never needs elevated rights to write their own rows.
  *
- * `createServiceRoleClient` bypasses RLS entirely. It exists for exactly two
- * callers: the Google token service and the OAuth callback, both of which must
- * read a table that denies every client role. Every other use is a bug, and the
- * name is long and the comment is loud for that reason.
+ * `createServiceRoleClient` bypasses RLS entirely, and has three callers:
+ *
+ *   - the Google token service and the OAuth callback, which must read
+ *     `google_connections`, a table that denies every client role;
+ *   - the durable sync worker, which continues a run after the request that
+ *     started it is gone. There is no session there to run as, so RLS has no
+ *     identity to enforce. See `createWorkerContext` in composition.ts for what
+ *     holds the boundary instead: explicit user_id filters, an HMAC-derived
+ *     worker token, and an owner-fenced lease per run.
+ *
+ * Any fourth caller is a bug, and the name is long and this comment is loud for
+ * that reason.
  */
 
 export async function createUserScopedClient(): Promise<AppSupabaseClient> {
@@ -58,6 +66,9 @@ export async function createUserScopedClient(): Promise<AppSupabaseClient> {
  * Permitted callers:
  *   - GoogleTokenService, via SupabaseGoogleConnectionRepository
  *   - the OAuth callback route, to store the initial credential
+ *   - the background sync worker (`createWorkerContext`), which runs with no
+ *     user session and is bounded by user_id filters, worker-token
+ *     authentication and the run's lease instead
  *
  * Anything else must use createUserScopedClient. A service-role client that
  * forgets a `.eq('user_id', ...)` filter returns every user's rows, and no
