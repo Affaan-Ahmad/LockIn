@@ -13,6 +13,29 @@ came from.
 
 ---
 
+## [0.5.1] — 2026-09-06
+
+### Fixed
+
+- **The status bar was an off-white strip above the app in dark mode, on the
+  installed Android app.** The page itself was never the problem: the inline
+  boot script corrects the `theme-color` meta tag before the first paint, and
+  the pinned CSP hash still matches, so it was running. The manifest was the
+  one colour nothing could reach — it declared the *light* ground as
+  `theme_color`, and Chrome bakes that value into the installed app, where the
+  meta tag does not govern the system status bar.
+
+  A manifest carries a single `theme_color` with no dark variant, so it is now
+  the dark ground for both themes. That is a deliberate trade: a dark status bar
+  above a light app is what most Android apps look like, whereas an off-white
+  strip above a near-black one reads as a rendering fault. Both manifest
+  colours now come from the same constants the boot script uses, and a test
+  fails if either is written as a bare hex literal again.
+
+  **This one is not instant.** Android refreshes an installed app's baked
+  colours on its own schedule, usually within a day or so. Reinstalling from the
+  browser applies it immediately.
+
 ## [0.5.0] — 2026-09-06
 
 ### Added

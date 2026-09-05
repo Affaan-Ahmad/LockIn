@@ -1,8 +1,10 @@
 import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import { describe, expect, it } from 'vitest';
 
-import { THEME_BOOT, THEME_BOOT_SHA256 } from '@/shared/theme-boot';
+import manifest from '@/app/manifest';
+import { THEME_BOOT, THEME_BOOT_SHA256, THEME_COLORS } from '@/shared/theme-boot';
 
 describe('theme boot script', () => {
   it.each([
@@ -47,5 +49,37 @@ describe('theme boot script', () => {
     // blocked. An unguarded throw here runs before anything else on the page.
     expect(THEME_BOOT.startsWith('try{')).toBe(true);
     expect(THEME_BOOT).toContain('catch');
+  });
+});
+
+describe('installed app chrome', () => {
+  /**
+   * The Android status bar is the one surface the boot script cannot reach.
+   *
+   * Everywhere else, `<meta name="theme-color">` is corrected before first
+   * paint. An installed PWA is different: Chrome bakes the manifest's
+   * theme_color into the WebAPK, so whatever is written here is what the
+   * student's status bar shows, in both themes, until the WebAPK is updated.
+   *
+   * It was the light ground, which is how a near-black app in dark mode came to
+   * have an off-white strip along the top of the screen.
+   */
+  it('paints the installed status bar with the dark ground', () => {
+    expect(manifest().theme_color).toBe(THEME_COLORS.dark);
+  });
+
+  it('keeps the splash on the light ground', () => {
+    // Deliberately not the same value. background_color fills the splash, which
+    // is shown before any of the app's own colour exists; theme_color is the
+    // system chrome around it.
+    expect(manifest().background_color).toBe(THEME_COLORS.light);
+  });
+
+  it('uses the shared constants rather than its own copies of them', () => {
+    // The two were duplicated hex literals, and duplicated literals are how one
+    // of them ends up wrong without the other moving.
+    const source = readFileSync('src/app/manifest.ts', 'utf8');
+    expect(source).toContain("from '@/shared/theme-boot'");
+    expect(source).not.toMatch(/(background|theme)_color: '#/);
   });
 });

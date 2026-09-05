@@ -1,5 +1,7 @@
 import type { MetadataRoute } from 'next';
 
+import { THEME_COLORS } from '@/shared/theme-boot';
+
 /**
  * The web app manifest.
  *
@@ -28,15 +30,29 @@ export default function manifest(): MetadataRoute.Manifest {
     scope: '/',
     display: 'standalone',
     orientation: 'portrait',
-    // Matches --surface-ground so the splash screen and the first paint are the
-    // same colour, rather than flashing white before the app renders.
+    // Both come from THEME_COLORS rather than being typed out, so they cannot
+    // drift from the values the boot script writes into the theme-color meta
+    // tag. They were duplicated hex literals before, and one of them was wrong.
     //
     // The ground, not the lime. An install splash filled with a 90%-lightness
     // brand colour is a flash of near-white with a tint, which reads as a
     // rendering fault rather than as branding -- and it would not match the
     // page that appears a moment later.
-    background_color: '#f4f4ef',
-    theme_color: '#f4f4ef',
+    background_color: THEME_COLORS.light,
+    // The dark ground, even though the app is not dark by default.
+    //
+    // This is the Android status bar, and it is the one colour on the page that
+    // no script can correct. A manifest carries a single theme_color with no
+    // dark variant -- the standards issue asking for one is still open -- and
+    // Chrome bakes the value into the installed WebAPK, where the meta tag that
+    // governs every other surface does not reach it. So it is one colour for
+    // both themes, and the only question is which way to be wrong.
+    //
+    // Dark, because the two failures are not equally bad. A dark status bar
+    // above a light app is what most Android apps look like and reads as
+    // deliberate. An off-white strip above a near-black app reads as a
+    // rendering fault -- which is exactly how it was reported.
+    theme_color: THEME_COLORS.dark,
     categories: ['education', 'productivity'],
     // PNG, deliberately, even though the browser tab is served an SVG from
     // `icon.svg`. Android's install prompt and splash screen have never handled
