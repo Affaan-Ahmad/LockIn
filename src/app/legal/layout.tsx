@@ -12,7 +12,7 @@ import { LEGAL_PAGES, LEGAL_STATUS } from './content';
  */
 export default function LegalLayout({ children }: { readonly children: ReactNode }) {
   return (
-    <div className="min-h-dvh">
+    <div className="min-h-dvh pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]">
       <header className="border-b border-line px-5 py-4">
         <div className="mx-auto flex max-w-[52rem] items-center justify-between gap-3">
           <Link href="/" className="text-lg font-semibold tracking-[-0.02em] text-ink">

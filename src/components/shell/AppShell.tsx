@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import Link from 'next/link';
 
 import { SettingsIcon } from '@/components/icons';
+import { PageEntrance } from '@/components/ui/Motion';
 import { Footer } from './Footer';
 import { Nav } from './Nav';
 import { SidebarNav } from './SidebarNav';
@@ -38,7 +39,7 @@ export function AppShell({
         </header>
         <main id="main-content" className="workspace-main">
           <div className={rail === undefined ? 'workspace-content' : 'workspace-layout'}>
-            <div className="workspace-content">{children}</div>
+            <PageEntrance>{children}</PageEntrance>
             {rail === undefined ? null : (
               <aside className="workspace-context" aria-label="Coursework context">{rail}</aside>
             )}

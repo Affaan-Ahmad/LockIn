@@ -1,4 +1,7 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react';
+'use client';
+
+import type { ReactNode } from 'react';
+import { motion, useReducedMotion, type HTMLMotionProps } from 'framer-motion';
 
 import { cx } from '@/lib/cx';
 import Link from 'next/link';
@@ -25,7 +28,7 @@ export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 
 const BASE =
   'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-control font-medium ' +
-  'cursor-pointer select-none press active:translate-y-px ' +
+  'cursor-pointer select-none transition-colors ' +
   // Focus is not styled here. globals.css defines one :focus-visible outline
   // for the whole product; a ring on top of it drew two indicators, and the
   // `outline-none` that came with the ring suppressed the global rule.
@@ -44,7 +47,7 @@ const VARIANT: Record<ButtonVariant, string> = {
   danger: 'bg-danger text-on-fill shadow-clay hover:brightness-[0.94]',
 };
 
-export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+export interface ButtonProps extends HTMLMotionProps<'button'> {
   readonly variant?: ButtonVariant;
   readonly size?: 'md' | 'sm';
   readonly fullWidth?: boolean;
@@ -63,11 +66,15 @@ export function Button({
   children,
   ...rest
 }: ButtonProps) {
+  const reduce = useReducedMotion();
+  const inert = disabled === true || busy;
   return (
-    <button
+    <motion.button
       type="button"
       {...rest}
-      disabled={disabled === true || busy}
+      disabled={inert}
+      whileHover={inert || reduce ? {} : { y: -1 }}
+      whileTap={inert || reduce ? {} : { scale: 0.97, y: 0 }}
       // Announces the pending state to assistive tech, which a spinner alone
       // does not.
       aria-busy={busy || undefined}
@@ -86,7 +93,7 @@ export function Button({
         />
       ) : null}
       {children}
-    </button>
+    </motion.button>
   );
 }
 

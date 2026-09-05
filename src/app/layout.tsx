@@ -2,6 +2,8 @@ import type { ReactNode } from 'react';
 import { GeistSans } from 'geist/font/sans';
 
 import { THEME_BOOT } from '@/shared/theme-boot';
+import { ThemeChrome } from '@/components/shell/ThemeChrome';
+import { MotionProvider } from '@/components/ui/Motion';
 
 import './globals.css';
 
@@ -26,21 +28,13 @@ import './globals.css';
 export const metadata = {
   title: 'LockIn',
   description: 'Your coursework, filtered to what is actually yours.',
+  appleWebApp: { capable: true, title: 'LockIn', statusBarStyle: 'black-translucent' },
 };
 
 export const viewport = {
   width: 'device-width',
   initialScale: 1,
-  // Colour of the browser chrome on mobile. Matches the ground so the app does
-  // not look like it is sitting inside a differently coloured frame.
-  themeColor: [
-    // The exact sRGB conversions of --surface-ground in each mode, not
-    // approximations. Both were eyeballed before and both were wrong, which
-    // showed as browser chrome a shade off the page below it.
-    { media: '(prefers-color-scheme: light)', color: '#f4f4ef' },
-    { media: '(prefers-color-scheme: dark)', color: '#080b08' },
-    ],
-    // Zoom stays enabled. Locking it is an accessibility failure that mostly
+  // Zoom stays enabled. Locking it is an accessibility failure that mostly
   // hurts people who need to magnify text.
   viewportFit: 'cover' as const,
 };
@@ -53,13 +47,15 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={GeistSans.variable} suppressHydrationWarning>
       <head>
+        {/* Owned here so the synchronous boot script can update it before paint. */}
+        <meta name="theme-color" content="#f4f4ef" suppressHydrationWarning />
         {/* No nonce, and therefore nothing for React to compare across
             hydration. The CSP authorises this script by SHA-256 instead; see
             src/shared/theme-boot.ts for why that is both the fix and the
             stricter policy. */}
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOT }} />
       </head>
-      <body>{children}</body>
+      <body><ThemeChrome /><MotionProvider>{children}</MotionProvider></body>
     </html>
   );
 }

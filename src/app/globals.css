@@ -771,6 +771,7 @@
 
   html {
     -webkit-text-size-adjust: 100%;
+    background: var(--surface-ground);
   }
 
   body {
@@ -847,7 +848,7 @@
    dependency for four keyframes on one component is a poor trade, so the
    utilities are defined here instead.
 
-   This is the only automatic motion in the product. It earns its place because
+   Dialog motion earns its place because
    it is a state transition, not decoration: a modal that appears with no
    transition reads as a page replacement rather than as a layer over the page,
    and on the delete-account dialog that misreading matters.

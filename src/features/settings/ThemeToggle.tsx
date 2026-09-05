@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useId, useState } from 'react';
+import { motion } from 'framer-motion';
 
 import { cx } from '@/lib/cx';
 
@@ -86,7 +87,7 @@ export function ThemeToggle() {
               // visually hidden; :has keeps that tied to the real focus state
               // rather than a manually tracked one.
               'has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-brand-ink',
-              active ? 'bg-raised font-semibold text-ink shadow-raised' : 'text-ink-muted hover:text-ink',
+              active ? 'font-semibold text-ink' : 'text-ink-muted hover:text-ink',
             )}
           >
             <input
@@ -99,7 +100,15 @@ export function ThemeToggle() {
               }}
               className="sr-only"
             />
-            {option.label}
+            {active ? (
+              <motion.span
+                aria-hidden="true"
+                layoutId={`theme-selection-${name}`}
+                className="absolute inset-0 rounded-control bg-raised shadow-raised"
+                transition={{ type: 'spring', stiffness: 450, damping: 35 }}
+              />
+            ) : null}
+            <span className="relative">{option.label}</span>
           </label>
         );
       })}

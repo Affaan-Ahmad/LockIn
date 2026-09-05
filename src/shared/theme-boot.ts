@@ -24,12 +24,14 @@
  * script is a compile-time constant, its hash is stable, so the CSP can pin it
  * by content instead. No nonce attribute means nothing for React to compare,
  * and the policy gets stricter rather than looser: a nonce authorises whatever
- * happens to carry it, while a hash authorises exactly these 138 bytes and
+ * happens to carry it, while a hash authorises exactly these script bytes and
  * nothing else.
  * ---------------------------------------------------------------------------
  */
+export const THEME_COLORS = { light: '#f4f4ef', dark: '#080b08' } as const;
+
 export const THEME_BOOT =
-  `try{var t=localStorage.getItem('lockin-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t)}catch(e){}`;
+  `try{var t=localStorage.getItem('lockin-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t)}catch(e){}try{var d=document.documentElement.getAttribute('data-theme'),m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute('content',d==='dark'||(d!=='light'&&matchMedia('(prefers-color-scheme: dark)').matches)?'${THEME_COLORS.dark}':'${THEME_COLORS.light}')}catch(e){}`;
 
 /**
  * The base64 SHA-256 of `THEME_BOOT`, for `script-src`.
@@ -44,4 +46,4 @@ export const THEME_BOOT =
  * recomputes the digest and fails if the two ever disagree, so the constant
  * cannot rot unnoticed.
  */
-export const THEME_BOOT_SHA256 = 'sha256-S88J5Ji9kSKovYRMLfyEf3n8fUCTlTFD4ITZ5AEkiXE=';
+export const THEME_BOOT_SHA256 = 'sha256-1fmIzO9MXOBackvAH5cV5HN19W/zoQ6PkYBTh0wKQeA=';

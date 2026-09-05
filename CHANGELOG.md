@@ -13,6 +13,32 @@ came from.
 
 ---
 
+## [0.4.1] — 2026-09-05
+
+### Added
+
+- Page and control motion, via `framer-motion`, honouring `prefers-reduced-motion`
+  through `MotionConfig reducedMotion="user"`.
+- The browser and installed-app chrome colour now follows the theme. The
+  synchronous boot script sets it before first paint and `ThemeChrome` keeps it
+  in step with an explicit theme choice or a system change afterwards.
+
+### Changed
+
+- `themeColor` moved out of Next's metadata export and into a single mutable
+  `<meta name="theme-color">`. The metadata API emits media-query variants,
+  which a script cannot update; one tag can be corrected before paint.
+- The theme boot script's CSP hash is regenerated. It is pinned by content, so a
+  stale hash would have the script blocked outright — a test recomputes the
+  digest from the constant and fails if the two drift.
+
+### Note
+
+- `framer-motion` adds roughly **40 kB** to the first load of every interactive
+  page (`/welcome` 109 → 149 kB, `/courses` 112 → 152 kB, `/settings` 137 → 176
+  kB). The static legal pages are unaffected. The provider sits in the root
+  layout, so the cost is paid everywhere the app is interactive.
+
 ## [0.4.0] — 2026-09-05
 
 ### Changed
@@ -221,6 +247,7 @@ Baseline: the first deployed version, before this changelog existed. Google
 Classroom sync, section-based relevance classification, the review queue, course
 tracking, and the account and legal surfaces.
 
+[0.4.1]: https://github.com/Affaan-Ahmad/LockIn/releases/tag/v0.4.1
 [0.4.0]: https://github.com/Affaan-Ahmad/LockIn/releases/tag/v0.4.0
 [0.3.2]: https://github.com/Affaan-Ahmad/LockIn/releases/tag/v0.3.2
 [0.3.1]: https://github.com/Affaan-Ahmad/LockIn/releases/tag/v0.3.1

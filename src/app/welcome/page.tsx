@@ -149,7 +149,7 @@ function StepFrame({
   readonly children: ReactNode;
 }) {
   return (
-    <main className="mx-auto flex min-h-dvh max-w-[34rem] flex-col justify-center px-5 py-12">
+    <main className="mx-auto flex min-h-dvh max-w-[34rem] flex-col justify-center pl-[max(1.25rem,env(safe-area-inset-left))] pr-[max(1.25rem,env(safe-area-inset-right))] pt-[calc(3rem+env(safe-area-inset-top))] pb-[calc(3rem+env(safe-area-inset-bottom))]">
       <p className="text-sm font-semibold text-brand-ink">{step}</p>
       <h1 className="mt-2 text-2xl font-semibold text-balance text-ink">
         {title}
