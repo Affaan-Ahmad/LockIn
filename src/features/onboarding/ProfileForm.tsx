@@ -194,9 +194,9 @@ export function ProfileForm({ initial, nextHref, submitLabel }: ProfileFormProps
           </ul>
         )}
         <p className="measure mt-3 text-xs leading-relaxed text-ink-muted">
-          A post that mentions none of these is treated as being for everyone. Anything LockIn
-          cannot read confidently goes to Review for you to decide. It is never guessed
-          at.
+          These spellings help LockIn recognise your section. They are a preview, not an
+          assignment verdict. The saved profile is applied by the backend on the next sync;
+          ambiguous coursework goes to Review for you to decide.
         </p>
       </div>
 

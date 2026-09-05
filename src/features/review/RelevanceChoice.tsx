@@ -92,21 +92,21 @@ export function RelevanceChoice({ assignmentId, current, title }: RelevanceChoic
   }
 
   return (
-    <div className="mt-3 border-t border-line pt-3 in-data-[density=pointer]:flex in-data-[density=pointer]:items-center in-data-[density=pointer]:justify-between in-data-[density=pointer]:gap-3">
+    <div className="mt-3 border-t border-line pt-3 md:flex md:items-center md:justify-between md:gap-3">
       <p className="text-sm font-medium text-ink">Is this yours?</p>
       {/* Stacked under the question on a phone, where width is the scarce
           thing. Beside it on desktop, where prompt and decision on one line is
           faster to work a queue through. */}
-      <div className="mt-2 flex flex-wrap items-center gap-2 in-data-[density=pointer]:mt-0 in-data-[density=pointer]:shrink-0">
+      <div className="mt-2 flex flex-wrap items-center gap-2 md:mt-0 md:shrink-0">
         <Choice
-          label="Yes, it's mine"
+          label="This is for me"
           tone="brand"
           disabled={pending}
           onClick={() => void choose('RELEVANT')}
           describedBy={title}
         />
         <Choice
-          label="No, not my section"
+          label="Not for me"
           tone="plain"
           disabled={pending}
           onClick={() => void choose('NOT_RELEVANT')}
@@ -143,7 +143,7 @@ function Choice({
       aria-label={`${label}: ${describedBy}`}
       className={cx(
         'press min-h-11 rounded-control px-4 text-sm font-medium active:translate-y-px',
-        'in-data-[density=pointer]:min-h-8 in-data-[density=pointer]:px-3',
+        'md:min-h-8 md:px-3',
         'disabled:opacity-50',
         tone === 'brand'
           ? 'bg-brand text-on-brand shadow-clay hover:bg-brand-hover'

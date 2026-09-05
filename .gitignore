@@ -14,3 +14,6 @@ coverage/
 !.env.example
 .DS_Store
 .vercel
+
+# Design-tool run metadata. Records of when the generator ran, not product.
+.hallmark/

@@ -109,7 +109,7 @@ export function DeadlineDisplay({
 }
 
 export function SubmissionStatus({ item }: { readonly item: AssignmentView }) {
-  const submission = submissionPresentation(item.submissionState as never);
+  const submission = submissionPresentation(item.submissionState);
   if (!submission.show) return null;
   return <Badge tone={submission.tone}>{submission.label}</Badge>;
 }
@@ -155,8 +155,8 @@ export function ScopeExplanation({ item }: { readonly item: AssignmentView }) {
       : item.scopeType === 'ALL_SECTIONS_EXCEPT'
         ? `Looks like it is for everyone except section ${sections}.`
         : item.scopeType === 'ALL_SECTIONS'
-          ? 'No section was mentioned, so this looks like it is for everyone.'
-          : 'The post mentions sections, but not clearly enough to be sure.';
+          ? 'The source was classified as applying to all sections.'
+          : 'The source could not be matched confidently to a section.';
 
   return <p className="text-sm text-ink-soft">{explanation}</p>;
 }

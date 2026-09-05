@@ -13,6 +13,48 @@ came from.
 
 ---
 
+## [0.4.0] — 2026-09-05
+
+### Changed
+
+- **Frontend redesign.** A workspace layout for desktop and a more tactile
+  mobile presentation, built on the existing OKLCH palette rather than replacing
+  it. Design tokens and layout primitives moved into `src/app/tokens.css` and
+  `src/app/workspace.css`; `design.md` and `docs/frontend-audit.md` record the
+  system and the audit behind it.
+- **Sync status now says what actually happened.** The banner previously read
+  "Couldn't refresh Classroom" whenever data was merely old, which is what made
+  the original incident so hard to diagnose — a stale banner and a failed one
+  were the same sentence. A failed or abandoned run, a partial run, a run in
+  progress and simply-old data now each say so. Extracted to
+  `status-presentation.ts` with tests.
+- The Review badge counts what the Review screen actually shows. It previously
+  counted only upcoming uncertain work while the screen also listed overdue and
+  undated items, so the number and the page disagreed.
+
+### Legal
+
+- **Privacy policy corrected against the implementation.** The scope disclosure
+  said LockIn asks Google for "four things and nothing else"; signing in also
+  uses the basic Google identity permissions, which is how the email this same
+  policy says it stores is obtained, and which the consent screen displays.
+- Added the Google API Services User Data Policy Limited Use statement to the
+  privacy policy and the public landing page.
+- Added a pre-OAuth disclosure at both points where the Google flow starts,
+  naming the four Classroom permissions, what they are used for, and that the
+  access is read-only.
+- Retention no longer claims a 90-day sync-history window: the pruning function
+  exists but nothing schedules it.
+- The export no longer claims to contain "everything"; the categories it omits
+  are named.
+- Deletion now distinguishes removal from the live database — immediate — from
+  provider backups and request logs, which expire on their own schedules.
+- Absolute claims softened where the code cannot prove them: "never shared"
+  became "does not disclose", "nobody buys it" became "does not sell your
+  personal data", and Google revocation on deletion is described as attempted
+  rather than guaranteed, which is what the code does.
+- Cookie policy corrected: local storage holds two values, not one.
+
 ## [0.3.2] — 2026-09-05
 
 ### Added
@@ -179,6 +221,7 @@ Baseline: the first deployed version, before this changelog existed. Google
 Classroom sync, section-based relevance classification, the review queue, course
 tracking, and the account and legal surfaces.
 
+[0.4.0]: https://github.com/Affaan-Ahmad/LockIn/releases/tag/v0.4.0
 [0.3.2]: https://github.com/Affaan-Ahmad/LockIn/releases/tag/v0.3.2
 [0.3.1]: https://github.com/Affaan-Ahmad/LockIn/releases/tag/v0.3.1
 [0.3.0]: https://github.com/Affaan-Ahmad/LockIn/releases/tag/v0.3.0

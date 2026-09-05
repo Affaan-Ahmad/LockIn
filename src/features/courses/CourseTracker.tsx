@@ -4,7 +4,6 @@ import { useRouter } from 'next/navigation';
 import { useMemo, useState, useTransition } from 'react';
 
 import { Button } from '@/components/ui/Button';
-import { cx } from '@/lib/cx';
 import type { CourseView } from '@/lib/queries';
 
 /**
@@ -32,6 +31,8 @@ export function CourseTracker({ courses, setupMode = false }: CourseTrackerProps
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [saving, setSaving] = useState(false);
+  const [search, setSearch] = useState('');
+  const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const initial = useMemo(
@@ -46,6 +47,7 @@ export function CourseTracker({ courses, setupMode = false }: CourseTrackerProps
   const selectedCount = courses.filter((course) => tracked.get(course.courseId) === true).length;
 
   function toggle(courseId: string) {
+    setSaved(false);
     setTracked((current) => {
       const next = new Map(current);
       next.set(courseId, !(current.get(courseId) ?? false));
@@ -57,6 +59,7 @@ export function CourseTracker({ courses, setupMode = false }: CourseTrackerProps
     if (changed.length === 0) return;
     setSaving(true);
     setError(null);
+    setSaved(false);
 
     try {
       const response = await fetch('/api/courses', {
@@ -77,6 +80,7 @@ export function CourseTracker({ courses, setupMode = false }: CourseTrackerProps
         return;
       }
 
+      setSaved(true);
       startTransition(() => {
         // Tracking a course does not fetch its coursework. Saying so beats a
         // student waiting for assignments that will not arrive until a sync.
@@ -98,97 +102,59 @@ export function CourseTracker({ courses, setupMode = false }: CourseTrackerProps
     );
   }
 
+  const visible = courses.filter((course) =>
+    `${course.name} ${course.section ?? ''}`.toLocaleLowerCase().includes(search.toLocaleLowerCase()),
+  );
+
   return (
     <div>
-      <ul className="flex flex-col gap-2 in-data-[density=pointer]:grid in-data-[density=pointer]:grid-cols-2 in-data-[density=pointer]:gap-2">
-        {courses.map((course) => {
+      <div className="course-toolbar">
+        <label className="course-search">
+          <span className="mb-1 block text-xs font-medium text-ink-soft">Find a course</span>
+          <input type="search" value={search} onChange={(event) => setSearch(event.target.value)}
+            placeholder="Course name or section" />
+        </label>
+        <p className="text-sm text-ink-soft" aria-live="polite">{visible.length} courses shown</p>
+      </div>
+      <ul className="course-list">
+        {visible.map((course) => {
           const on = tracked.get(course.courseId) === true;
           const dirty = on !== course.isTracked;
-
           return (
             <li key={course.courseId}>
-              <label
-                className={cx(
-                  'press flex h-full cursor-pointer items-start gap-3 rounded-control border p-3.5',
-                  'in-data-[density=pointer]:items-center in-data-[density=pointer]:p-2.5',
-                  'has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-brand-ink',
-                  // Tracked courses are raised; untracked ones sit flat on the
-                  // ground. The state is the elevation, so the list can be read
-                  // at a glance without inspecting twenty checkboxes.
-                  on
-                    ? 'surface-raised border-brand-ink/30'
-                    : 'border-line bg-transparent hover:bg-sunken',
-                )}
-              >
-                <input
-                  type="checkbox"
-                  checked={on}
-                  onChange={() => {
-                    toggle(course.courseId);
-                  }}
-                  // A real checkbox, styled. A div with role="checkbox" would
-                  // have to reimplement focus, space-to-toggle and the forced
-                  // colours mode that a native input gets for free.
-                  className="mt-1 size-5 shrink-0 accent-[var(--color-brand)]"
-                />
-                <span className="min-w-0 flex-1">
-                  <span className="block text-base leading-snug font-medium text-ink in-data-[density=pointer]:text-sm">
-                    {course.name}
-                  </span>
-                  <span className="mt-1 block text-sm text-ink-muted">
-                    {/* Google's own course-level section field, shown as-is.
-                        It is frequently useless ("A,B,C,D,E,F,G", "Fall 2026"),
-                        which is exactly why LockIn classifies per assignment
-                        instead of trusting it. */}
-                    {course.section === null || course.section.trim() === ''
-                      ? 'No section listed'
-                      : course.section}
+              <label className="course-choice">
+                <input type="checkbox" checked={on} disabled={saving || isPending}
+                  onChange={() => toggle(course.courseId)} />
+                <span className="min-w-0">
+                  <span className="course-name">{course.name}</span>
+                  <span className="course-section">
+                    {course.section?.trim() || 'No section listed'}
                     {course.courseState === 'ARCHIVED' ? ' · Archived' : ''}
+                    {course.courseState !== null && !['ACTIVE', 'ARCHIVED'].includes(course.courseState)
+                      ? ` · ${course.courseState.replaceAll('_', ' ').toLowerCase()}` : ''}
                   </span>
                 </span>
-                {dirty ? (
-                  <span className="shrink-0 self-center text-xs font-semibold text-brand-ink">
-                    {on ? 'Adding' : 'Removing'}
-                  </span>
-                ) : null}
+                <span className="course-state" data-tracked={on}>
+                  {dirty ? (on ? 'Adding' : 'Removing') : on ? 'Tracked' : 'Not tracked'}
+                </span>
               </label>
             </li>
           );
         })}
       </ul>
-
-      <div
-        className={cx(
-          // Sticks to the bottom so the action is reachable without scrolling
-          // back up a list of twenty courses.
-          // The offset clears the mobile tab bar. Desktop has no tab bar, so
-          // the same offset would strand the save bar above the viewport edge.
-          'sticky bottom-[calc(var(--nav-h)+env(safe-area-inset-bottom))] z-10 mt-6',
-          'in-data-[density=pointer]:bottom-4 in-data-[density=pointer]:py-2.5',
-          'surface-raised flex flex-wrap items-center justify-between gap-3 px-4 py-3',
-          'in-data-[density=pointer]:bottom-4 in-data-[density=pointer]:py-2.5',
-        )}
-      >
-        <p className="text-sm tabular-nums text-ink-soft">
-          {selectedCount} of {courses.length} tracked
-          {changed.length > 0 ? ` · ${String(changed.length)} unsaved` : ''}
+      {visible.length === 0 ? <p className="py-8 text-sm text-ink-soft">No courses match. Try another name or clear your search.</p> : null}
+      <div className="course-save">
+        <p className="text-sm text-ink-soft">
+          {selectedCount} of {courses.length} selected
+          {changed.length > 0 ? ` · ${changed.length} unsaved` : ''}
         </p>
-        <Button
-          variant="primary"
-          size="sm"
-          busy={saving || isPending}
-          disabled={changed.length === 0}
-          onClick={() => void save()}
-        >
+        <Button variant="primary" size="sm" busy={saving || isPending}
+          disabled={changed.length === 0} onClick={() => void save()}>
           {setupMode ? 'Save and continue' : 'Save changes'}
         </Button>
       </div>
-
-      {error === null ? null : (
-        <p role="alert" className="mt-3 text-sm font-medium text-danger">
-          {error}
-        </p>
-      )}
+      {saved && changed.length === 0 ? <p role="status" className="mt-3 text-sm text-ink-soft">Course choices saved. New coursework appears after the next sync.</p> : null}
+      {error === null ? null : <p role="alert" className="mt-3 text-sm font-medium text-danger">{error}</p>}
     </div>
   );
 }

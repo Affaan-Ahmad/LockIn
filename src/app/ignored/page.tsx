@@ -1,8 +1,7 @@
-import Link from 'next/link';
 
 import { CheckIcon } from '@/components/icons';
 import { AppShell } from '@/components/shell/AppShell';
-import { Button } from '@/components/ui/Button';
+import { ButtonLink } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { AssignmentCard } from '@/features/assignments/AssignmentCard';
 import { IgnoreButton } from '@/features/assignments/IgnoreButton';
@@ -20,6 +19,7 @@ import { loadIgnored, loadReviewCount, requireSessionUser } from '@/lib/queries'
  * listed, exactly as it was, with one button to bring it back.
  */
 export const dynamic = 'force-dynamic';
+export const metadata = { robots: { index: false, follow: false } };
 
 export default async function IgnoredPage() {
   const user = await requireSessionUser();
@@ -49,9 +49,7 @@ export default async function IgnoredPage() {
           title="Nothing is hidden"
           body="Overdue work you have already dealt with can be hidden from Today. It will always be listed here, and you can bring it back at any time."
           action={
-            <Link href="/">
-              <Button variant="secondary">Back to Today</Button>
-            </Link>
+            <ButtonLink href="/" variant="secondary">Back to Today</ButtonLink>
           }
         />
       ) : (

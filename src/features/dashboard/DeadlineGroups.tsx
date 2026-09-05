@@ -54,7 +54,7 @@ export function DeadlineGroups({
   }
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="deadline-groups">
       {GROUP_ORDER.map((band) => {
         const group = grouped.get(band);
         if (group === undefined || group.length === 0) return null;
@@ -68,7 +68,7 @@ export function DeadlineGroups({
                 instead, and the count sits in a quieter tone beside it. */}
             <h2
               id={`group-${band}`}
-              className="mb-3 flex items-baseline gap-2 px-0.5 text-sm font-semibold text-ink-soft"
+              className="deadline-group-heading"
             >
               {GROUP_LABEL[band]}
               {/* The count is information, not emphasis, so it sits back a
@@ -76,7 +76,7 @@ export function DeadlineGroups({
                   heavier than the cards it introduces. */}
               <span className="font-normal text-ink-muted">{group.length}</span>
             </h2>
-            <ul className="flex flex-col gap-3">
+            <ul className="assignment-list">
               {group.map((item) => (
                 <li key={item.assignmentId}>
                   <AssignmentCard

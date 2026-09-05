@@ -22,7 +22,9 @@ export default function CookiesPage() {
         <p>
           LockIn sets cookies for one purpose: keeping you signed in. There are no analytics
           cookies, no advertising cookies and no third-party trackers, which is why you are not
-          being asked to accept anything.
+          being asked to accept anything. The product carries no analytics service, no session
+          recording and no error-reporting service, so there is nothing here for a consent banner to
+          ask about.
         </p>
       </Section>
 
@@ -40,9 +42,14 @@ export default function CookiesPage() {
 
       <Section heading="Storage on your device">
         <p>
-          One preference is kept in your browser&rsquo;s local storage rather than in a cookie: your
-          choice of light or dark theme. It never leaves your device and is never sent to the
-          server.
+          Two small values are kept in your browser&rsquo;s local storage rather than in a cookie:
+          your choice of light or dark theme, and the time of the last automatic refresh, which
+          stops LockIn from starting a new sync every time you move between screens.
+        </p>
+        <p>
+          Neither is sent to the server and neither identifies you. Clearing site data removes both;
+          the theme returns to following your system setting and the next screen you open may
+          refresh once.
         </p>
       </Section>
 

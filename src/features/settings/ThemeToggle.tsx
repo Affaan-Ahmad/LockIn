@@ -72,7 +72,7 @@ export function ThemeToggle() {
   }
 
   return (
-    <fieldset className="surface-sunken flex shrink-0 gap-1 rounded-pill p-1">
+    <fieldset className="surface-sunken flex shrink-0 gap-1 rounded-control p-1">
       <legend className="sr-only">Colour theme</legend>
       {OPTIONS.map((option) => {
         const active = theme === option.value;
@@ -80,7 +80,7 @@ export function ThemeToggle() {
           <label
             key={option.value}
             className={cx(
-              'relative flex min-h-9 cursor-pointer items-center rounded-pill px-3.5',
+              'relative flex min-h-11 cursor-pointer items-center rounded-control px-3.5',
               'text-sm font-medium transition-colors duration-[120ms]',
               // Focus is drawn on the label because the input itself is
               // visually hidden; :has keeps that tied to the real focus state

@@ -32,8 +32,9 @@ export default function TermsPage() {
       <Section heading="Your account">
         <p>
           You sign in with Google, so your account is only as secure as your Google account, and
-          keeping that secure is your responsibility. You must be old enough to hold a Google
-          account and to enter an agreement in your own country.
+          keeping that secure is your responsibility. LockIn is intended for university students.
+          You must be old enough to hold a Google account and to enter an agreement in your own
+          country; LockIn does not ask your age and cannot verify it.
         </p>
       </Section>
 
@@ -59,9 +60,28 @@ export default function TermsPage() {
           inconsistently, and sometimes not at all.
         </p>
         <p>
-          It will sometimes hide work that was yours, and sometimes show work that was not. Where it
-          cannot tell, it says so on the Review screen rather than guessing. You remain responsible
-          for your own deadlines, and Google Classroom remains the authoritative source.
+          A post that names no section at all is treated as being for everyone, which is usually
+          right and occasionally not. Where the text names sections but LockIn cannot tell whether
+          yours is among them, the assignment goes to the Review screen and you are asked instead of
+          being handed a guess.
+        </p>
+        <p>
+          It will sometimes hide work that was yours, and sometimes show work that was not. You
+          remain responsible for your own deadlines, and Google Classroom remains the authoritative
+          source.
+        </p>
+      </Section>
+
+      <Section heading="Google and other services">
+        <p>
+          LockIn depends on Google Classroom, and on Supabase and Vercel to run. Their terms apply
+          to their own services, and LockIn cannot control their availability or their decisions.
+          Google may withdraw or change API access at any time, which would stop synchronisation
+          working regardless of anything done here.
+        </p>
+        <p>
+          LockIn requests read-only Classroom permissions and cannot change anything in your
+          Classroom account. Google Classroom remains the authoritative record of your coursework.
         </p>
       </Section>
 
@@ -75,8 +95,15 @@ export default function TermsPage() {
 
       <Section heading="Ending it">
         <p>
-          You can stop using LockIn whenever you like and delete your account from Settings, which
-          removes your data immediately. Access may be suspended for anyone doing the things listed
+          You can stop using LockIn whenever you like. Settings has two controls: disconnecting
+          Google stops future synchronisation and removes the stored credentials while leaving the
+          coursework already imported in place, and deleting your account removes your data from the
+          live database and asks Google to revoke the grant.
+        </p>
+        <p>
+          Deletion from the application database is immediate and cannot be undone. Backups and
+          server logs held by the hosting and database providers expire on their own schedules; the
+          privacy policy sets that out. Access may be suspended for anyone doing the things listed
           above.
         </p>
       </Section>

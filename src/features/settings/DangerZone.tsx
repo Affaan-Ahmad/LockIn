@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
-import { Button } from '@/components/ui/Button';
+import { Button, ButtonLink } from '@/components/ui/Button';
 import {
   Dialog,
   DialogContent,
@@ -99,16 +99,14 @@ function DisconnectCard({ connected }: { readonly connected: boolean }) {
       <h3 className="text-base font-semibold text-ink">Google Classroom</h3>
       <p className="measure mt-1 text-sm leading-relaxed text-ink-soft">
         {connected
-          ? 'LockIn reads your courses and coursework. Disconnecting stops all syncing. Your existing deadlines stay, and stop updating.'
+          ? 'LockIn reads your courses and coursework. Disconnecting stops future synchronisation and removes the stored Google credentials, and asks Google to revoke the grant. Coursework already imported stays and stops updating; deleting your account below is what removes it.'
           : 'Not connected. LockIn cannot see any coursework until you connect.'}
       </p>
 
       {!connected ? (
-        <a href="/api/auth/google" className="mt-3 inline-block">
-          <Button variant="primary" size="sm">
+        <ButtonLink href="/api/auth/google" className="mt-3" variant="primary">
             Connect Google Classroom
-          </Button>
-        </a>
+        </ButtonLink>
       ) : confirming ? (
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <Button variant="danger" size="sm" busy={busy} onClick={() => void disconnect()}>
@@ -254,6 +252,7 @@ function DeleteCard() {
               Delete permanently
             </Button>
           </DialogFooter>
+          {error === null ? null : <p role="alert" className="text-sm font-medium text-danger">{error}</p>}
         </DialogContent>
       </Dialog>
 

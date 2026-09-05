@@ -106,7 +106,7 @@ function Row({
       aria-current={active ? 'page' : undefined}
       title={item.label}
       className={cx(
-        'group relative flex h-[2.125rem] items-center gap-2.5 rounded-control',
+        'sidebar-link group relative flex min-h-10 items-center gap-2.5 rounded-control',
         'justify-center px-0 lg:justify-start lg:px-2',
         'text-sm transition-colors duration-[120ms]',
         // Weight as well as colour. In greyscale or forced colours the tint

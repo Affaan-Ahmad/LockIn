@@ -71,7 +71,7 @@ export function MonthCalendar({
   ];
 
   return (
-    <section aria-label="Deadlines by date" className="surface-flat p-3.5">
+    <section id="deadline-calendar" aria-label="Deadlines by date" className="calendar-panel surface-flat scroll-mt-24 p-3.5">
       <header className="mb-3 flex items-center justify-between gap-2">
         <Link
           href={hrefFor({ month: shiftMonth(year, monthIndex, -1), day: null })}

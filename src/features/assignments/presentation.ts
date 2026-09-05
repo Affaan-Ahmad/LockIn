@@ -83,7 +83,7 @@ export const SUBMISSION: Readonly<Record<string, StatusPresentation>> = {
   UNSPECIFIED: { label: '', tone: 'neutral', show: false },
 };
 
-export function submissionPresentation(state: SubmissionState): StatusPresentation {
+export function submissionPresentation(state: string | null): StatusPresentation {
   if (state === null) return { label: '', tone: 'neutral', show: false };
   return SUBMISSION[state] ?? { label: '', tone: 'neutral', show: false };
 }
@@ -114,6 +114,7 @@ export const GROUP_ORDER: readonly UrgencyBand[] = [
   'tomorrow',
   'thisWeek',
   'later',
+  'none',
 ];
 
 export const GROUP_LABEL: Readonly<Record<UrgencyBand, string>> = {

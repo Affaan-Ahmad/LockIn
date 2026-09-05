@@ -17,6 +17,7 @@ import { loadCourses, loadReviewCount, requireSessionUser } from '@/lib/queries'
  * identical either way; only the copy and where Save goes change.
  */
 export const dynamic = 'force-dynamic';
+export const metadata = { robots: { index: false, follow: false } };
 
 export default async function CoursesPage({
   searchParams,

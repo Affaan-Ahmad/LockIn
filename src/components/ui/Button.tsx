@@ -1,6 +1,8 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 
 import { cx } from '@/lib/cx';
+import Link from 'next/link';
+import type { ComponentProps } from 'react';
 
 /**
  * The only button in the application. Similar actions look similar; there is no
@@ -22,7 +24,7 @@ import { cx } from '@/lib/cx';
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 
 const BASE =
-  'inline-flex items-center justify-center gap-2 rounded-control font-medium ' +
+  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-control font-medium ' +
   'cursor-pointer select-none press active:translate-y-px ' +
   // Focus is not styled here. globals.css defines one :focus-visible outline
   // for the whole product; a ring on top of it drew two indicators, and the
@@ -72,7 +74,7 @@ export function Button({
       className={cx(
         BASE,
         VARIANT[variant],
-        size === 'sm' ? 'min-h-9 px-3.5 text-sm' : 'min-h-11 px-5 text-base',
+        size === 'sm' ? 'min-h-[var(--control-h)] px-3.5 text-sm' : 'min-h-11 px-5 text-base',
         fullWidth ? 'w-full' : '',
         className,
       )}
@@ -86,4 +88,14 @@ export function Button({
       {children}
     </button>
   );
+}
+
+/** Navigation uses an anchor, never a button nested inside one. */
+export function ButtonLink({ variant = 'secondary', size: _size, fullWidth = false, className, ...props }: ComponentProps<typeof Link> & {
+  readonly variant?: ButtonVariant;
+  readonly size?: 'md' | 'sm';
+  readonly fullWidth?: boolean;
+}) {
+  void _size;
+  return <Link {...props} data-variant={variant} className={cx('button-link', fullWidth && 'w-full', className)} />;
 }

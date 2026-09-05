@@ -210,3 +210,11 @@ describe('focus rings', () => {
     );
   });
 });
+
+describe('deadline and status text', () => {
+  it.each(['success', 'warning', 'danger', 'review'] as const)('%s remains readable in both themes', (name) => {
+    expect(contrast(token(name), token('surface-raised'))).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(token(name), token('surface-ground'))).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(token(`dark-${name}`), token('dark-surface-raised'))).toBeGreaterThanOrEqual(4.5);
+  });
+});

@@ -1,4 +1,6 @@
 @import 'tailwindcss';
+@import './tokens.css';
+@import './workspace.css';
 
 /* ==========================================================================
    LockIn design system
@@ -123,9 +125,9 @@
   --brand-soft: oklch(94% 0.055 118);
   --brand-ring: oklch(55% 0.160 128);
 
-  --success: oklch(58% 0.14 155);
+  --success: oklch(48% 0.12 155);
   --success-soft: oklch(94% 0.045 155);
-  --warning: oklch(66% 0.14 70);
+  --warning: oklch(50% 0.12 70);
   --warning-soft: oklch(95% 0.055 80);
   --danger: oklch(55% 0.19 25);
   --danger-soft: oklch(95% 0.040 25);
@@ -228,9 +230,9 @@
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 0.75rem;
-  --space-4: 1.125rem;
-  --space-5: 1.75rem;
-  --space-6: 2.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2.5rem;
 
   --dur-fast: 120ms;
   --dur-base: 200ms;
@@ -553,7 +555,7 @@
   --text-xs--line-height: 1.45;
   --text-xs--letter-spacing: 0.005em;
 
-  --text-sm: 0.8125rem;
+  --text-sm: 0.875rem;
   --text-sm--line-height: 1.55;
 
   --text-base: 0.9375rem;

@@ -2,7 +2,7 @@ import Link from 'next/link';
 
 import { CheckIcon } from '@/components/icons';
 import { AppShell } from '@/components/shell/AppShell';
-import { Button } from '@/components/ui/Button';
+import { Button, ButtonLink } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { DeadlineGroups } from '@/features/dashboard/DeadlineGroups';
 import { MonthCalendar } from '@/features/dashboard/MonthCalendar';
@@ -32,6 +32,7 @@ import { loadDashboard, requireSessionUser } from '@/lib/queries';
  * is a misleading picture of the month.
  */
 export const dynamic = 'force-dynamic';
+export const metadata = { robots: { index: false, follow: false } };
 
 export default async function UpcomingPage({
   searchParams,
@@ -55,7 +56,7 @@ export default async function UpcomingPage({
 
   const listed =
     selectedDay === null
-      ? data.upcoming
+      ? [...data.upcoming, ...data.undated]
       : calendarItems.filter((item) => deadlineDayKey(item.deadline, timeZone) === selectedDay);
 
   function hrefFor({ month: m, day }: { month?: string; day?: string | null }): string {
@@ -89,6 +90,10 @@ export default async function UpcomingPage({
     >
       <SyncStatus freshness={data.freshness} variant="banner" />
       <AutoSync level={data.freshness.level} />
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-xl font-semibold text-ink">Plan what comes next</h2>
+        <a href="#deadline-calendar" className="button-link text-brand-ink xl:hidden">Browse dates</a>
+      </div>
 
       {listed.length === 0 ? (
         <EmptyState
@@ -103,9 +108,7 @@ export default async function UpcomingPage({
           }
           action={
             selectedDay !== null ? (
-              <Link href="/upcoming">
-                <Button variant="secondary">Show every date</Button>
-              </Link>
+              <ButtonLink href="/upcoming" variant="secondary">Show every date</ButtonLink>
             ) : (
               <Link href={data.overdue.length > 0 ? '/' : '/courses'}>
                 <Button variant="secondary">

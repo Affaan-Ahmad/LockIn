@@ -1,6 +1,6 @@
 import { CheckIcon } from '@/components/icons';
 import { AppShell } from '@/components/shell/AppShell';
-import { Button } from '@/components/ui/Button';
+import { ButtonLink } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { AssignmentDetail } from '@/features/assignments/AssignmentDetail';
 import { DeadlineGroups } from '@/features/dashboard/DeadlineGroups';
@@ -8,10 +8,10 @@ import { RailPanel } from '@/features/dashboard/RailPanel';
 import { WorkloadHeader } from '@/features/dashboard/WorkloadHeader';
 import { AutoSync } from '@/features/sync/AutoSync';
 import { SyncStatus } from '@/features/sync/SyncStatus';
+import { SyncButton } from '@/features/sync/SyncButton';
 import { urgencyBand } from '@/lib/format';
 import { loadDashboard, loadSetupState, requireSessionUser } from '@/lib/queries';
 import { redirect } from 'next/navigation';
-import Link from 'next/link';
 
 /**
  * Today. The screen the product exists for.
@@ -25,6 +25,7 @@ import Link from 'next/link';
  * failure the product is built to prevent.
  */
 export const dynamic = 'force-dynamic';
+export const metadata = { robots: { index: false, follow: false } };
 
 export default async function TodayPage({
   searchParams,
@@ -65,7 +66,7 @@ export default async function TodayPage({
 
   // Overdue first, deliberately. It is the most urgent thing a student has, and
   // burying it under future work is how it gets missed twice.
-  const items = [...data.overdue, ...data.upcoming];
+  const items = [...data.overdue, ...data.upcoming, ...data.undated];
 
   // Detail selection lives in the URL, so the panel costs no client state and
   // the back button closes it. An id that matches nothing simply shows the
@@ -83,6 +84,12 @@ export default async function TodayPage({
           <AssignmentDetail item={selected} now={now} timeZone={timeZone} closeHref="/" />
         ) : (
         <>
+          <section className="flex flex-col gap-3" aria-label="Classroom connection">
+            <h2 className="context-heading">Classroom connection</h2>
+            <SyncStatus freshness={data.freshness} />
+            <p className="text-xs text-ink-soft">Refresh before you plan. A recent update does not guarantee every course is current.</p>
+            <SyncButton />
+          </section>
           {data.reviewCount > 0 ? (
             <RailPanel
               title="Needs a decision"
@@ -117,18 +124,18 @@ export default async function TodayPage({
         hour={hour}
         overdueCount={data.overdue.length}
         todayCount={todayCount}
-        upcomingCount={data.upcoming.length}
+        upcomingCount={data.upcoming.length - todayCount}
+        reviewCount={data.reviewCount}
+        undatedCount={data.undated.length}
       />
 
       {items.length === 0 ? (
         <EmptyState
           icon={<CheckIcon className="size-6" />}
-          title="You're all caught up"
-          body="Nothing is due right now. LockIn will show new coursework here after the next sync."
+          title="Nothing due in this view"
+          body="No relevant coursework is listed here. Check review items and sync status before calling it a day."
           action={
-            <Link href="/courses">
-              <Button variant="secondary">Manage courses</Button>
-            </Link>
+            <ButtonLink href="/courses" variant="secondary">Manage courses</ButtonLink>
           }
         />
       ) : (
@@ -137,7 +144,7 @@ export default async function TodayPage({
           now={now}
           timeZone={timeZone}
           allowHideOverdue
-          detailHrefFor={(id) => `/?assignment=${id}`}
+          detailHrefFor={(id) => `/?assignment=${encodeURIComponent(id)}#assignment-details`}
           selectedId={selectedId}
         />
       )}

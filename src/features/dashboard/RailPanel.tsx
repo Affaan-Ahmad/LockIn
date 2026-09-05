@@ -29,11 +29,11 @@ export interface RailPanelProps {
 export function RailPanel({ title, value, hint, href, tone = 'neutral', children }: RailPanelProps) {
   const body = (
     <>
-      <p className="text-xs font-semibold text-ink-muted">{title}</p>
+      <p className="text-sm font-medium text-ink">{title}</p>
       {value === undefined ? null : (
         <p
           className={cx(
-            'mt-1 text-xl font-semibold',
+            'text-base font-semibold',
             tone === 'review' ? 'text-review' : 'text-ink',
           )}
         >
@@ -52,7 +52,7 @@ export function RailPanel({ title, value, hint, href, tone = 'neutral', children
   return (
     <Link
       href={href}
-      className="surface-flat press block p-3.5 transition-colors duration-[120ms] hover:bg-overlay"
+      className="context-link"
     >
       {body}
     </Link>

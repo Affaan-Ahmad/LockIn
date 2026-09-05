@@ -1,8 +1,9 @@
 import type { ReactNode } from 'react';
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
 import { Footer } from '@/components/shell/Footer';
-import { Button } from '@/components/ui/Button';
+import { ButtonLink } from '@/components/ui/Button';
 import { LandingPage } from '@/features/marketing/LandingPage';
 import { ProfileForm } from '@/features/onboarding/ProfileForm';
 import { getSessionUser, loadSetupState } from '@/lib/queries';
@@ -23,6 +24,11 @@ import { getSessionUser, loadSetupState } from '@/lib/queries';
  * makes it feel like one decision rather than a page to survey.
  */
 export const dynamic = 'force-dynamic';
+export const metadata = {
+  title: 'LockIn — Your coursework, your section',
+  description: 'See the Google Classroom coursework that applies to your section, track deadlines, and review unclear posts.',
+  alternates: { canonical: 'https://lockinapp.tech/welcome' },
+};
 
 export default async function WelcomePage({
   searchParams,
@@ -78,17 +84,56 @@ function SignInScreen() {
       title="Sign in with Google"
       intro="LockIn reads your Classroom coursework and shows you the work that is for your section."
     >
-      <a href="/api/auth/google" className="block">
-        <Button variant="primary" fullWidth>
+      <ButtonLink href="/api/auth/google" className="block" variant="primary" fullWidth>
           Continue with Google
-        </Button>
-      </a>
+        </ButtonLink>
 
-      <p className="measure mt-5 text-xs leading-relaxed text-ink-muted">
-        Read-only access to your Classroom courses and coursework. LockIn never posts, submits or
-        changes anything, and you can disconnect or delete everything at any time.
-      </p>
+      <GoogleAccessDisclosure />
     </StepFrame>
+  );
+}
+
+/**
+ * What Google access is about to be requested, said before it is requested.
+ *
+ * Both buttons that start OAuth render this, and it sits with the button rather
+ * than behind a link, because a disclosure a person has to go looking for is not
+ * a disclosure. Google's verification review looks for exactly this: the
+ * requested scopes described in the product, in plain language, at the moment
+ * consent is asked for.
+ *
+ * Every clause is checkable against `REQUIRED_CLASSROOM_SCOPES` and the code
+ * that uses it. The claim that LockIn cannot submit or edit is not a promise of
+ * restraint -- the four scopes it requests are read-only, so the capability is
+ * absent rather than declined. Sign-in scopes are named too: the consent screen
+ * will show them, and a disclosure that omits what the next screen displays
+ * reads as concealment.
+ */
+function GoogleAccessDisclosure() {
+  return (
+    <div className="measure mt-5 flex flex-col gap-2 text-xs leading-relaxed text-ink-muted">
+      <p>
+        LockIn will read your Google Classroom <strong className="text-ink-soft">courses</strong>,{' '}
+        <strong className="text-ink-soft">coursework</strong>,{' '}
+        <strong className="text-ink-soft">topics</strong> and{' '}
+        <strong className="text-ink-soft">your own submission status</strong>, so it can list your
+        courses, organise deadlines, work out which work applies to your section, and stop showing
+        work you have already turned in.
+      </p>
+      <p>
+        The access is read-only: LockIn cannot submit, edit, grade or delete anything in Classroom.
+        Signing in also uses your Google email address and account id, which is how it knows whose
+        coursework to show. Google returns your grades with your submissions and LockIn discards
+        them without storing them.
+      </p>
+      <p>
+        You can disconnect Google or delete everything from Settings at any time. See the{' '}
+        <Link href="/legal/privacy" className="font-medium text-brand-ink hover:underline">
+          privacy policy
+        </Link>{' '}
+        for what is stored and for how long.
+      </p>
+    </div>
   );
 }
 
@@ -129,11 +174,11 @@ function ConnectStep({ status }: { readonly status: string | null }) {
           : 'LockIn needs read access to your courses and coursework. Nothing is posted, submitted or changed.'
       }
     >
-      <a href="/api/auth/google" className="block">
-        <Button variant="primary" fullWidth>
+      <ButtonLink href="/api/auth/google" className="block" variant="primary" fullWidth>
           {status === null ? 'Connect Classroom' : 'Reconnect Classroom'}
-        </Button>
-      </a>
+        </ButtonLink>
+
+      <GoogleAccessDisclosure />
     </StepFrame>
   );
 }

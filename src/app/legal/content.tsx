@@ -37,7 +37,7 @@ export const SECURITY_CONTACT = 'contact@lockinapp.tech';
 export const JURISDICTION = 'Pakistan';
 
 /** Bumped whenever a document changes materially. */
-export const LAST_UPDATED = '31 August 2026';
+export const LAST_UPDATED = '5 September 2026';
 
 /**
  * The honest status of these documents.

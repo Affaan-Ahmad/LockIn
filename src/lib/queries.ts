@@ -8,6 +8,7 @@ import { createBackendContext, type BackendContext } from '@/infrastructure/comp
 import { createUserScopedClient } from '@/infrastructure/supabase/clients';
 
 import type { ApiDeadline } from './format';
+import type { SyncRunStatus } from '@/domain/sync/outcome';
 
 /**
  * Read queries for Server Components.
@@ -94,6 +95,8 @@ export interface AssignmentView {
 }
 
 export interface FreshnessView {
+  readonly lastRunStatus?: SyncRunStatus | null;
+  readonly connectionUsable?: boolean;
   readonly level: 'FRESH' | 'AGEING' | 'STALE' | 'PARTIAL' | 'UNAVAILABLE';
   readonly reason: string;
   readonly ageMs: number | null;
@@ -110,6 +113,7 @@ export interface FreshnessView {
  * a student opens most.
  */
 export interface DashboardData {
+  readonly undated: readonly AssignmentView[];
   readonly upcoming: readonly AssignmentView[];
   readonly overdue: readonly AssignmentView[];
   readonly reviewCount: number;
@@ -122,7 +126,7 @@ export async function loadDashboard(userId: string): Promise<DashboardData> {
   const backend = await context();
   const now = new Date();
 
-  const [upcoming, overdue, review, ignored, courses, freshness] = await Promise.all([
+  const [upcoming, overdue, review, ignored, courses, freshness, undated] = await Promise.all([
     backend.assignments.findUpcoming({
       userId,
       to: null,
@@ -139,22 +143,18 @@ export async function loadDashboard(userId: string): Promise<DashboardData> {
       includeSubmitted: false,
       limit: 50,
     }),
-    backend.assignments.findUpcoming({
-      userId,
-      to: null,
-      relevance: ['UNCERTAIN'],
-      includeSubmitted: false,
-      limit: 100,
-    }),
+    loadReviewCount(userId),
     backend.assignments.findIgnored(userId, 200),
     cachedCourses(userId),
     loadFreshnessView(userId, now),
+    backend.assignments.findUndated({ userId, relevance: ['RELEVANT'], limit: 100 }),
     ]);
 
   return {
     upcoming: upcoming.map(toView),
     overdue: overdue.map(toView),
-    reviewCount: review.length,
+    reviewCount: review,
+    undated: undated.map(toUndatedView),
     ignoredCount: ignored.length,
     freshness,
     trackedCourseCount: courses.filter((course) => course.decision === 'TRACKED').length,
@@ -162,10 +162,10 @@ export async function loadDashboard(userId: string): Promise<DashboardData> {
 }
 
 /** Items the backend could not confidently place. Never hidden, always askable. */
-export async function loadReviewQueue(userId: string): Promise<{
+export const loadReviewQueue = cache(async (userId: string): Promise<{
   readonly items: readonly AssignmentView[];
   readonly freshness: FreshnessView;
-}> {
+}> => {
   const backend = await context();
   const now = new Date();
 
@@ -196,7 +196,7 @@ export async function loadReviewQueue(userId: string): Promise<{
     ],
     freshness,
     };
-}
+});
 
 /**
  * Everything the student has personally decided.
@@ -260,14 +260,7 @@ export async function loadIgnored(userId: string): Promise<{
  * second freshness computation to produce a single digit.
  */
 export const loadReviewCount = cache(async (userId: string): Promise<number> => {
-  const backend = await context();
-  const items = await backend.assignments.findUpcoming({
-    userId,
-    to: null,
-    relevance: ['UNCERTAIN'],
-    includeSubmitted: false,
-    limit: 100,
-    });
+  const { items } = await loadReviewQueue(userId);
   return items.length;
 });
 
@@ -398,6 +391,8 @@ async function loadFreshnessView(userId: string, now: Date): Promise<FreshnessVi
 
   return {
     level: report.level,
+    lastRunStatus: report.lastRunStatus,
+    connectionUsable: connection !== null && connection.status === 'ACTIVE',
     reason: report.reason,
     ageMs: report.ageMs,
     lastSuccessfulSyncAt: report.lastSuccessfulSyncAt?.toISOString() ?? null,

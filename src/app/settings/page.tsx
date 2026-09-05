@@ -20,6 +20,7 @@ import { loadDashboard, loadProfile, loadSetupState, requireSessionUser } from '
  * deadline.
  */
 export const dynamic = 'force-dynamic';
+export const metadata = { robots: { index: false, follow: false } };
 
 export default async function SettingsPage() {
   const user = await requireSessionUser();
@@ -36,7 +37,15 @@ export default async function SettingsPage() {
       <SyncStatus freshness={data.freshness} variant="banner" />
       <AutoSync level={data.freshness.level} />
 
-      <div className="flex flex-col gap-8 in-data-[density=pointer]:grid in-data-[density=pointer]:grid-cols-2 in-data-[density=pointer]:items-start in-data-[density=pointer]:gap-x-8 in-data-[density=pointer]:gap-y-7">
+      <div className="settings-layout">
+        <nav className="settings-navigation" aria-label="Settings sections">
+          <a href="#account">Account</a>
+          <a href="#section">Your section</a>
+          <a href="#appearance">Appearance</a>
+          <a href="#data">Your data</a>
+          <a href="#connection">Connection</a>
+        </nav>
+        <div className="settings-panels">
         <section aria-labelledby="account">
           <SectionHeading id="account">Account</SectionHeading>
           <div className="surface-raised p-4">
@@ -47,7 +56,7 @@ export default async function SettingsPage() {
           </div>
         </section>
 
-        <section aria-labelledby="section" className="in-data-[density=pointer]:col-span-2">
+        <section aria-labelledby="section" className="md:col-span-2">
           <SectionHeading id="section">Your section</SectionHeading>
           <p className="measure mb-3 text-sm leading-relaxed text-ink-soft">
             Changing this re-checks every assignment on the next sync, so verdicts you see now may
@@ -103,12 +112,12 @@ export default async function SettingsPage() {
           </div>
         </section>
 
-        <section aria-labelledby="connection" className="in-data-[density=pointer]:col-span-2">
+        <section aria-labelledby="connection" className="md:col-span-2">
           <SectionHeading id="connection">Connection and deletion</SectionHeading>
           <DangerZone connected={setup.hasConnection} />
         </section>
 
-        <p className="measure text-xs leading-relaxed text-ink-muted in-data-[density=pointer]:col-span-2">
+        <p className="measure text-xs leading-relaxed text-ink-muted md:col-span-2">
           LockIn reads your Classroom courses and coursework. It never posts, submits or changes
           anything in Classroom, and it does not share your coursework with anyone.
         </p>
@@ -119,9 +128,10 @@ export default async function SettingsPage() {
             question worth asking about any bug report is "which version were
             you on", and a number nobody can find is a number nobody quotes.
             Quiet enough to ignore, present enough to read out. */}
-        <p className="px-0.5 text-2xs text-ink-muted in-data-[density=pointer]:col-span-2">
+        <p className="px-0.5 text-2xs text-ink-muted md:col-span-2">
           LockIn <span className="font-mono">{buildLabel()}</span>
         </p>
+        </div>
       </div>
     </AppShell>
   );

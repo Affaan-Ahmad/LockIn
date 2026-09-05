@@ -1,8 +1,7 @@
-import Link from 'next/link';
 
 import { CheckIcon } from '@/components/icons';
 import { AppShell } from '@/components/shell/AppShell';
-import { Button } from '@/components/ui/Button';
+import { ButtonLink } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { AssignmentCard } from '@/features/assignments/AssignmentCard';
 import { RelevanceChoice } from '@/features/review/RelevanceChoice';
@@ -23,6 +22,7 @@ import { loadDecisions, loadReviewQueue, requireSessionUser } from '@/lib/querie
  * coursework permanently and unrecoverably.
  */
 export const dynamic = 'force-dynamic';
+export const metadata = { robots: { index: false, follow: false } };
 
 export default async function ReviewPage() {
   const user = await requireSessionUser();
@@ -46,22 +46,24 @@ export default async function ReviewPage() {
     >
       <SyncStatus freshness={freshness} variant="banner" />
       <AutoSync level={freshness.level} />
+      <div className="review-guidance">
+        <p className="text-sm text-ink-soft"><strong className="font-medium text-ink">This is for me</strong> keeps the assignment in your relevant coursework.</p>
+        <p className="text-sm text-ink-soft"><strong className="font-medium text-ink">Not for me</strong> removes it from your relevant coursework. You can undo either answer below.</p>
+      </div>
 
       {items.length === 0 ? (
         <EmptyState
           icon={<CheckIcon className="size-6" />}
           title="Nothing to review"
-          body="Every assignment LockIn has read was clear enough to place. Anything ambiguous will appear here."
+          body="No assignments are waiting for a decision in this view. New or ambiguous coursework appears here after a sync."
           action={
-            <Link href="/">
-              <Button variant="secondary">Back to Today</Button>
-            </Link>
+            <ButtonLink href="/" variant="secondary">Back to Today</ButtonLink>
           }
         />
       ) : (
         <ul className="flex flex-col gap-3">
           {items.map((item) => (
-            <li key={item.assignmentId}>
+            <li key={item.assignmentId} className="review-item">
               <AssignmentCard
                 item={item}
                 now={now}
@@ -71,7 +73,7 @@ export default async function ReviewPage() {
                 // instead of being asked to trust an invisible rule.
                 showScope
               />
-              <div className="px-4">
+              <div className="review-decision">
                 <RelevanceChoice
                   assignmentId={item.assignmentId}
                   current={null}
@@ -96,9 +98,9 @@ export default async function ReviewPage() {
           </h2>
           <ul className="flex flex-col gap-3">
             {decisions.map((item) => (
-              <li key={item.assignmentId}>
+              <li key={item.assignmentId} className="review-item">
                 <AssignmentCard item={item} now={now} timeZone={freshness.timeZone} />
-                <div className="px-4">
+                <div className="review-decision">
                   <RelevanceChoice
                     assignmentId={item.assignmentId}
                     // An override can only be one of two values; the feed

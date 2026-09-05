@@ -1,7 +1,7 @@
 import Link from 'next/link';
 
 import { CloseIcon, ExternalIcon } from '@/components/icons';
-import { Button } from '@/components/ui/Button';
+import { ButtonLink } from '@/components/ui/Button';
 import { formatDeadline } from '@/lib/format';
 import type { AssignmentView } from '@/lib/queries';
 
@@ -37,8 +37,9 @@ export function AssignmentDetail({ item, now, timeZone, closeHref }: AssignmentD
 
   return (
     <section
+      id="assignment-details"
       aria-label={`Details for ${item.title}`}
-      className="surface-flat sticky top-20 flex flex-col gap-4 p-4"
+      className="surface-flat scroll-mt-24 flex flex-col gap-4 p-4"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
@@ -90,12 +91,10 @@ export function AssignmentDetail({ item, now, timeZone, closeHref }: AssignmentD
       </dl>
 
       {item.link === null ? null : (
-        <a href={item.link} target="_blank" rel="noopener noreferrer" className="block">
-          <Button variant="secondary" size="sm" fullWidth>
+        <ButtonLink href={item.link} target="_blank" rel="noopener noreferrer" className="block" variant="secondary" size="sm" fullWidth>
             <ExternalIcon className="size-3.5" aria-hidden="true" />
             Open in Classroom
-          </Button>
-        </a>
+          </ButtonLink>
       )}
     </section>
   );

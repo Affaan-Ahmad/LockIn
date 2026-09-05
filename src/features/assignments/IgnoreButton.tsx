@@ -29,8 +29,10 @@ export function IgnoreButton({ assignmentId, ignored, title }: IgnoreButtonProps
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   async function toggle() {
+    setSaving(true);
     setError(null);
     try {
       const response = await fetch('/api/ignored', {
@@ -53,10 +55,12 @@ export function IgnoreButton({ assignmentId, ignored, title }: IgnoreButtonProps
       });
     } catch {
       setError('Network problem. Try again.');
+    } finally {
+      setSaving(false);
     }
   }
 
-  const busy = isPending;
+  const busy = saving || isPending;
 
   return (
     <span className="inline-flex items-center gap-2">
