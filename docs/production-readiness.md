@@ -37,8 +37,10 @@ Verified against the codebase on 2026-08-30. This is a development snapshot, not
 ### Controls already built in
 
 These were designed in rather than retrofitted, and are the reason a later launch is feasible at
-all. Every one is implemented and unit-tested, and as of 2026-08-31 the database-enforced ones are
-verified against a live Postgres by 27 passing integration tests.
+all. Every one is implemented and covered by the 555 passing unit tests. As of 2026-08-31 the
+database-enforced ones were verified against a live Postgres by 27 passing integration tests; the
+suite has since grown to 48 cases, and **the 21 added since — including the `0013` fencing
+regressions — have NOT been run against a database.**
 
 | Control | Where |
 | --- | --- |
@@ -46,14 +48,19 @@ verified against a live Postgres by 27 passing integration tests.
 | `google_connections` denies every client role — RLS on, zero policies, `FORCE` | `0003_rls.sql` |
 | Google tokens encrypted at rest, AES-256-GCM, user id as AAD | `shared/crypto.ts` |
 | Refresh tokens reachable only through `GoogleCredentialProvider.getAccessToken(userId)`; no `getRefreshToken` exists anywhere | `ports/google-credentials.ts` |
-| Service-role client confined to two call sites, both server-only | `infrastructure/composition.ts` |
-| Sync pipeline runs as the signed-in user, so RLS applies to its every statement | `composition.ts` |
+| Granted scopes read from Google's `tokeninfo` at consent rather than assumed from the request; a partial grant is stored truthfully and non-ACTIVE in the same write | `services/google-connection.service.ts`, `google/oauth.ts` |
+| A grant missing a required scope cannot start a sync and cannot obtain an access token | `api/sync/route.ts`, `services/google-token.service.ts` |
+| Service-role client confined to three call sites, all server-only: the token service, the OAuth callback, and the background sync worker | `infrastructure/composition.ts`, `supabase/clients.ts` |
+| Sync started in a request runs as the signed-in user, so RLS applies to its every statement | `composition.ts` |
+| Every repository method filters on an explicit `user_id`, so the service-role worker path never relies on RLS alone | all repositories |
+| The continuation endpoint authenticates callers with an HMAC derived from the service-role key, compared in constant time, and acts only on that user's own resumable run | `config/sync-runtime.ts`, `api/sync/continue/route.ts` |
+| Sync-run **coordination** mutations — claim, renew, release, fail, finalise, and the work queue those touch — are fenced by the run's lease owner, so a worker cannot advance a run it does not hold. Ordinary data writes are guarded by the explicit `user_id` filter above, not by a lease | `0012_durable_sync.sql`, `0013_fail_run_fencing.sql` |
 | Unconditional log redaction by key substring, at any depth, plus binary | `shared/logger.ts` |
 | Route errors return a whitelist of codes; everything else is generic | `app/api/_lib/handler.ts` |
 | All external input validated with Zod at the trust boundary | `google/classroom.schemas.ts`, all routes |
 | Parameterised queries only; no string-concatenated SQL | all repositories |
 | `requireUser()` uses `getUser()` (server-validated) not `getSession()` (cookie-trusting) | `handler.ts` |
-| Least-privilege OAuth: four read-only scopes, no roster, no profile, no write | `google/oauth.ts` |
+| Least-privilege OAuth: four read-only scopes, no roster, no profile, no write | `domain/google/scopes.ts` |
 | Bounded concurrency + page ceilings + timeouts on all outbound calls | `shared/concurrency.ts`, `classroom.client.ts` |
 | Freshness surfaced with every read, so stale data cannot present as current | `domain/sync/freshness.ts` |
 | Secrets never in source control; `.env*.local` gitignored, verified before first commit | `.gitignore` |
@@ -69,14 +76,19 @@ verified against a live Postgres by 27 passing integration tests.
 | 5 | **No CI.** ~~None existed.~~ **ADDRESSED 2026-08-31.** `.github/workflows/ci.yml` runs typecheck, lint, unit tests and a production build on every push and pull request, plus a runtime dependency audit. **NOT VERIFIED** until it has run green once on GitHub. Integration tests stay out: they need a live service-role key, and putting one in CI trades a testing gap for a credential-exposure risk. | HIGH | |
 | 6 | **OAuth callback `state` handling unverified.** `exchangeCodeForSession` is assumed to validate PKCE; not confirmed. | HIGH | Must be read and proven, not assumed. |
 | 7 | ~~The entire SQL layer has never been executed.~~ **RESOLVED 2026-08-31.** All four migrations applied to a live Postgres; 27/27 integration tests pass against it. | ~~HIGH~~ CLOSED | RLS isolation, the confidence floor, the ALL_SECTIONS guard, deadline coherence, two-strike reconciliation, single-active-sync and duplicate prevention are now measured rather than argued. |
-| 8 | **No data export.** ~~None existed.~~ **RESOLVED 2026-09-01.** `GET /api/account/export` returns everything held about the caller as one downloadable JSON file, including the classification evidence behind each decision, linked from Settings. Google tokens are deliberately excluded: they are credentials, not information about the student. | MEDIUM | Required if GDPR/UK GDPR applies. |
-| 9 | **No retention policy implemented.** **ADDRESSED IN CODE 2026-09-01**, migration `0010_sync_retention.sql`: 90-day window, dependents cascade, and a daily pg_cron job. The most recent run and most recent successful run per user are preserved regardless of age, because freshness reads both and losing either would report a synced account as never synced. **STILL OPEN AND BLOCKING: the migration is NOT APPLIED.** The privacy policy now states a 90-day window, so until it runs that claim is false. | MEDIUM | |
+| 8 | **No data export.** ~~None existed.~~ **RESOLVED 2026-09-01.** `GET /api/account/export` returns everything held about the caller as one downloadable JSON file, including the classification evidence behind each decision. Google tokens are deliberately excluded: they are credentials, not information about the student. **CORRECTED 2026-09-06:** this entry claimed it was "linked from Settings" while no link existed anywhere in the UI — the privacy policy said so too. Settings → Your data now carries a plain download anchor to the route, so the claim and the code agree. | MEDIUM | Required if GDPR/UK GDPR applies. |
+| 9 | **No retention policy implemented.** **ADDRESSED IN CODE 2026-09-01**, migration `0010_sync_retention.sql`: 90-day window, dependents cascade, and a daily pg_cron job. The most recent run and most recent successful run per user are preserved regardless of age, because freshness reads both and losing either would report a synced account as never synced. **STILL OPEN: whether the migration has been applied to any environment is UNKNOWN from the repository.** **CORRECTED 2026-09-06:** the previous note here said the privacy policy states a 90-day window and is therefore false until the job runs. It does not. `src/app/legal/privacy/page.tsx` says pruning "is built but is not yet running on a schedule, so this page does not claim a fixed retention period for it", which is accurate whether or not `0010` has been applied. The gap is the absent retention *behaviour*, not a false published claim. | MEDIUM | |
 | 10 | **No monitoring or alerting.** | MEDIUM | Nobody would know sync had been failing for a week. |
 | 11 | **No backup restore test.** | MEDIUM | Supabase takes backups; an untested restore is not a proven restore. |
 | 12 | **No threat model document.** | MEDIUM | |
 | 13 | **No legal documents.** ~~None existed.~~ **PARTIALLY ADDRESSED 2026-08-31.** Privacy policy, terms, cookie policy and disclaimer drafted from the schema and scope list, published at `/legal/*`, public in middleware, linked from a footer on both the app shell and the signed-out screen. **UPDATED 2026-08-31:** controller named (Affaan Ahmad, individual, Pakistan) and contact address set to contact@lockinapp.tech. **STILL OPEN:** never reviewed by anyone qualified, and the contact mailbox is NOT VERIFIED as receiving until Cloudflare Email Routing is live. | CRITICAL for launch | Drafting is in scope; legal sufficiency is not. |
 | 14 | **Google OAuth app is in Testing mode**, unverified. | CRITICAL for launch | See below. |
 | 15 | ~~Dev `service_role` credentials exposed.~~ **RESOLVED 2026-08-30.** Both exposed credentials are dead: the `sb_secret_` key was replaced, and legacy JWT-based API keys were disabled project-wide. | ~~HIGH~~ CLOSED | See the incident log below. |
+| 16 | **Granted OAuth scopes were fabricated, not read.** The callback wrote `REQUIRED_CLASSROOM_SCOPES` into `granted_scopes` because that is what the consent URL asked for, so a student who unticked a permission was recorded as having granted it and every "is this account connected?" check said yes. **RESOLVED IN CODE 2026-09-06:** the granted scopes are now read from Google's `tokeninfo` endpoint, stored exactly as reported, and a partial grant is written `NEEDS_RECONNECT` / `INSUFFICIENT_SCOPES` in the same statement as the scopes. A failed verification writes nothing at all rather than assuming a full grant or marking anything revoked. **NOT VERIFIED against a live Google consent flow** — unit tested only. | ~~HIGH~~ CLOSED IN CODE | The live-flow check belongs with Google verification, row 14. |
+| 17 | **`app_fail_sync_run` was fenced in name only.** It checked the lease owner on the run row and read the row count immediately afterwards, but never branched on that count — it marked every PENDING and RUNNING work item FAILED regardless and used the count only as its return value. So a stalled worker that came back emptied the queue of the successor that had replaced it. **FIXED IN CODE 2026-09-06** by `0013_fail_run_fencing.sql`, with integration regression coverage for stale owner, reclaimed run, rightful owner and terminal-course preservation. **The migration is NOT APPLIED anywhere as far as this repository can tell, and the new integration tests have NOT been run.** | HIGH until applied | `0013` keeps the function signature, so code deployed against a database still on `0012` does **not** error — it runs and keeps the race. The hazard here is silence, not a loud failure. |
+| 18 | **Known postcss advisories reached through Next.** GHSA-qx2v-qp2m-jg93, GHSA-6g55-p6wh-862q, GHSA-fxqj-rqcc-2cmp and GHSA-r28c-9q8g-f849, all affecting `<= 8.5.22`. Next pins `postcss` 8.4.31 as an exact dependency, so the root's own 8.5.x did not cover it. **RESOLVED 2026-09-06** with a scoped `next -> postcss: 8.5.26` override in `package.json`, and CI's audit step no longer ends in `\|\| true`. **VERIFIED locally:** `npm ls next postcss --all` exits clean and reports `next@15.5.24` resolving `postcss@8.5.26`, deduped onto the root copy that `npm ls` marks `overridden`; the install's online audit reports **0 vulnerabilities** across all 290 packages, down from one high and one moderate. The override needed the `next -> postcss` edge itself re-resolved to take effect — declaring it alone did nothing, because npm honours an already-resolved lockfile edge over a newly added override and never records an `overrides` key in the lockfile for a later run to notice. **NOT VERIFIED: `npm audit --omit=dev --audit-level=moderate` as a standalone command**, which the sandbox refused to run; and CI has not run green on GitHub (row 5). | ~~MEDIUM~~ CLOSED IN CODE | No major upgrade, no `audit fix --force`, no widened range, and no unrelated package moved; see the note below. |
+| 19 | **A consent that returns no refresh token was stored ACTIVE.** Google issues a refresh token on first consent and, with `prompt=consent`, normally afterwards — but not reliably. A grant arriving without one, on an account with none stored, is usable only until its access token expires, and recording it ACTIVE produced an account that read as connected everywhere and stopped working by itself about an hour later with no event to explain it. **RESOLVED IN CODE 2026-09-06:** the connection service asks the repository whether a usable refresh token will survive the write — a boolean, never the credential — and stores a non-renewable grant `NEEDS_RECONNECT` / `NO_REFRESH_TOKEN` instead. Repeat consent onto an existing stored token still stores ACTIVE. **NOT VERIFIED against a live Google consent flow.** | ~~HIGH~~ CLOSED IN CODE | The live-flow check belongs with Google verification, row 14. |
+| 20 | **A refresh that came back with a narrower grant discarded what it learned.** The scope check threw before persisting anything, dropping the access token Google had just issued, any rotated refresh token, and the scopes that were the reason for the failure. Losing the rotated token is the expensive part: it is the only one that still works, so the next refresh would fail `invalid_grant` and a fixable permissions problem became a dead connection. **RESOLVED IN CODE 2026-09-06:** one repository write persists credential, rotated token, reported scopes and `NEEDS_RECONNECT` / `INSUFFICIENT_SCOPES` together, before the throw, and outside the `invalid_grant` handler so it can never mark the row REVOKED. **NOT VERIFIED against a live Google refresh.** | ~~HIGH~~ CLOSED IN CODE | |
 
 ## Incident log
 
@@ -186,10 +198,83 @@ the operator.
 
 ---
 
+### 2026-09-06 — local fixes, and what they did not prove
+
+Verified only by `npm run verify` on a development machine: typecheck, lint,
+**555 unit tests across 24 files**, and a production build. Nothing below
+asserts anything about a deployed environment.
+
+- **The granted-scopes fabrication (row 16).** The most consequential of these,
+  because it made the connection record unreliable rather than merely
+  incomplete: a half-granted account read as connected everywhere. Scopes now
+  come from Google, and the outcomes are kept apart — a complete grant, a real
+  partial grant, and *not being able to ask*, which writes nothing at all. The
+  last is the one worth naming: an outage, an error status or an unparseable
+  body says nothing about consent, so none of them may invent a full grant,
+  overwrite a working row, or be reported as a revocation.
+- **Credential durability at consent (row 19)** and **at refresh (row 20).** Two
+  ways the code could record a connection it could not keep alive. Both now
+  write the credential, the scopes and the status they imply in one statement.
+- **The fail-run fence (row 17).** A stale worker could close a successor's work
+  queue. Fixed in `0013`, which is **not applied**, and which fails silently
+  rather than loudly when it is missing.
+- **The data export link (row 8).** The route existed and nothing pointed at it,
+  while both this document and the privacy policy said Settings did.
+- **The postcss override (row 18).** Now actually in effect; see the row for
+  what was and was not proven.
+
+A note on the lockfile, because getting the override to apply without collateral
+took several attempts. Declaring the override changed nothing on its own: npm
+honours an already-resolved lockfile edge over a newly added override, and it
+writes no `overrides` key into `package-lock.json`, so no later incremental run
+has anything to notice. The obvious escape — deleting the lockfile and
+regenerating — does take effect, but it re-resolves every caret range at once,
+which moved 33 lockfile entries — `next` 15.5.24 → 15.5.25,
+`@supabase/supabase-js` 2.112.4 → 2.115.0, `typescript-eslint` 8.68.0 → 8.69.0
+and thirty more. That was reverted in full. Two
+further approaches were tried and rejected: regenerating with the lockfile
+deleted but `node_modules` present rebuilds from the *installed* tree, which
+silently dropped every non-Windows `@rollup/*` optional binary and left entries
+without `resolved` or `integrity`; and pinning the registry to a single date
+cannot reproduce this lockfile at all, because it was built incrementally
+(`framer-motion` 13.2.0 postdates the `ignore` 7.0.6 it sits beside).
+
+What is committed instead re-resolves only Next's own subtree, against the
+restored lockfile, with the registry view frozen so `^15.5.4` lands back on the
+15.5.24 it already held. The resulting diff moves **no** package version. It
+removes the nested `next/node_modules/postcss` 8.4.31 entirely — Next's
+overridden edge is satisfied by the root `postcss` 8.5.26 that was already
+there — and drops that root copy's `dev: true`, since a production dependency
+now uses it and `npm audit --omit=dev` has to see it. `next` stays 15.5.24,
+`@supabase/supabase-js` stays 2.112.4, and the lockfile's own `version` field
+catches up to the `0.4.3` in `package.json`, where it had been stale at 0.4.0.
+
+One thing that reverting Supabase did **not** fix, found while checking it and
+still open: `@supabase/supabase-js` declares `engines.node: ">=22.0.0"`, and it
+does so at **2.112.4** — the version this repository was already pinned to
+before any of today's work. `package.json` declares `>=20.11` and CI provisions
+Node 20.11, so the runtime contract is violated by the dependency the project
+has been shipping all along, not by anything changed here. Nothing fails loudly
+today: there is no `.npmrc`, so `engine-strict` is off and npm only warns
+`EBADENGINE`, and the local verify run passes on Node 26. Whether 2.112.4
+actually calls a Node 22+ API on the paths this app uses is **UNKNOWN** and was
+not tested on Node 20.11. Closing it means either raising the declared floor or
+moving Supabase, and both are out of scope for a change whose whole purpose was
+to stop unrelated dependency movement.
+
+Deliberately **not** changed, and still open: everything under Google
+verification below, whether any migration has been applied to any environment,
+whether the retention job in `0010` is running anywhere, and whether the CI
+pipeline has ever run green. None of those are knowable from the repository, and
+this document says UNKNOWN rather than guessing.
+
+---
+
 ## OAuth scope inventory
 
-Verified against `src/infrastructure/google/oauth.ts`. Must be re-checked at launch and kept in step
-with the privacy policy.
+Verified against `src/domain/google/scopes.ts`, which is both the list requested at consent and the
+rule deciding whether a stored grant is usable. Must be re-checked at launch and kept in step with
+the privacy policy.
 
 | Scope | Sensitivity | Why required | Feature | Narrower option? |
 | --- | --- | --- | --- | --- |

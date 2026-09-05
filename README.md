@@ -71,13 +71,37 @@ error later.
 supabase db push
 ```
 
-Or run the three migrations in order against your database:
+Or run every migration **in numeric order** against your database:
 
 | File | Contents |
 | --- | --- |
-| [`supabase/migrations/0001_schema.sql`](supabase/migrations/0001_schema.sql) | Tables, enums, constraints, indexes, triggers |
-| [`supabase/migrations/0002_functions.sql`](supabase/migrations/0002_functions.sql) | Transactional batch operations and the read model |
-| [`supabase/migrations/0003_rls.sql`](supabase/migrations/0003_rls.sql) | Row-level security, grants, new-user bootstrap |
+| [`0001_schema.sql`](supabase/migrations/0001_schema.sql) | Tables, enums, constraints, indexes, triggers |
+| [`0002_functions.sql`](supabase/migrations/0002_functions.sql) | Transactional batch operations and the read model |
+| [`0003_rls.sql`](supabase/migrations/0003_rls.sql) | Row-level security, grants, new-user bootstrap |
+| [`0004_course_tracking_and_scope.sql`](supabase/migrations/0004_course_tracking_and_scope.sql) | Course tracking, section scope columns |
+| [`0005_overdue.sql`](supabase/migrations/0005_overdue.sql) | The overdue read model |
+| [`0006_rate_limits.sql`](supabase/migrations/0006_rate_limits.sql) | Database-backed fixed-window rate limiting |
+| [`0007_ignored_assignments.sql`](supabase/migrations/0007_ignored_assignments.sql) | Hiding an assignment, reversibly |
+| [`0008_ignored_update_policy.sql`](supabase/migrations/0008_ignored_update_policy.sql) | The missing UPDATE policy for the above |
+| [`0009_drop_grades.sql`](supabase/migrations/0009_drop_grades.sql) | Drops the grade columns; rewrites the submission upsert |
+| [`0010_sync_retention.sql`](supabase/migrations/0010_sync_retention.sql) | Sync-history pruning; needs `pg_cron` |
+| [`0011_sync_state_values.sql`](supabase/migrations/0011_sync_state_values.sql) | New enum labels **only** — must commit before 0012 uses them |
+| [`0012_durable_sync.sql`](supabase/migrations/0012_durable_sync.sql) | Resumable runs: work queue, fenced leases, derived finalisation |
+| [`0013_fail_run_fencing.sql`](supabase/migrations/0013_fail_run_fencing.sql) | Stops a stale worker emptying its successor's work queue |
+
+Two things about that order are not stylistic:
+
+- **0011 must be applied, and committed, before 0012.** Postgres allows
+  `ALTER TYPE ... ADD VALUE` inside a transaction but will not let the new label
+  be *used* until that transaction commits, so combining them fails at apply
+  time. They are separate files for exactly this reason.
+- **Migrations go on before the code that calls them.** The application invokes
+  `app_*` functions directly, so a build that calls a function the database does
+  not have fails at the first call. `0013` is the quieter case and the reason to
+  apply migrations deliberately rather than to rely on a loud failure: it only
+  changes the body of `app_fail_sync_run`, not its signature, so code deployed
+  against a database still on `0012` runs without error and simply keeps the
+  race it was meant to close.
 
 ### 3. Configure Google OAuth
 
@@ -547,6 +571,15 @@ invalidates the rest, and the student is told to reconnect for no reason.
 mark it broken — pushing a student through a consent flow because Google had a bad minute is the
 wrong trade.
 
+**The granted scopes are read from Google, not assumed.** Supabase's session says nothing about what
+the provider token may do, and Google's consent screen lets a student untick individual permissions,
+so the callback asks `oauth2.googleapis.com/tokeninfo` — POST, token in an `Authorization` header,
+never in the URL — and stores exactly what comes back. A partial grant is stored truthfully and
+recorded `NEEDS_RECONNECT` with `INSUFFICIENT_SCOPES` in the same write, so it is never briefly
+readable as a working connection, and the connect screen names the permissions that are missing. If
+that verification call fails, nothing is written at all: not knowing what was granted is not the
+same as knowing it was withdrawn, and only the second justifies touching a stored credential.
+
 ---
 
 ## Security
@@ -555,13 +588,22 @@ wrong trade.
   `user_id = (select auth.uid())`. Both `USING` and `WITH CHECK` on every writable policy — `USING`
   alone would let a user update a row they own into one they do not.
 - **`google_connections` has RLS enabled with no policies at all**, plus `FORCE ROW LEVEL SECURITY`.
-  No client role can reach it. Only the service role can, and it is used in exactly two places.
+  No client role can reach it. Only the service role can, and the service role is confined to three
+  places: the token service, the OAuth callback, and the durable background worker.
 - **Tokens are encrypted at rest** with AES-256-GCM, with the user id as additional authenticated
   data — a ciphertext copied between rows fails authentication rather than decrypting into someone
   else's live credential. RLS protects the API surface; encryption protects backups, replicas and
   support exports.
-- **The sync pipeline runs as the signed-in user**, not the service role. A bug in a repository
-  filter is caught by a policy instead of becoming a data leak.
+- **The sync pipeline runs as the signed-in user** whenever there is one, so a bug in a repository
+  filter is caught by a policy instead of becoming a data leak. A *continuation* is the server
+  calling itself and has no session to run as, so that path uses the service role — and what holds
+  the boundary there instead is spelled out rather than assumed: every repository method takes an
+  explicit `user_id` and filters on it, the continuation endpoint authenticates callers with an
+  HMAC derived from the service-role key and acts only on that user's own resumable run, and the
+  sync-run coordination functions — claiming, renewing, releasing, failing and finalising a run, and
+  the work queue those mutate — are fenced by the run's lease owner, so a worker cannot advance a run
+  it does not hold. That fencing covers run coordination specifically; ordinary data writes are
+  protected by the explicit `user_id` filter above, not by a lease.
 - **The logger redacts unconditionally** — any field whose key contains `token`, `secret`,
   `authorization`, `credential`, `cookie`, `session` and so on, at any nesting depth, plus all
   binary. There is no way to opt out and no call site has to remember.
@@ -573,8 +615,8 @@ wrong trade.
 ## Testing
 
 ```
-302 unit tests      no I/O, no network, no database
- 27 integration     real Postgres, real RLS; skipped when credentials are absent
+555 unit tests      no I/O, no network, no database; all passing
+ 48 integration     real Postgres, real RLS; skipped when credentials are absent
 ```
 
 The unit tests are structured around what can go wrong rather than around code coverage:
@@ -651,6 +693,7 @@ implementation is ever plausible.
    one rule to UNCERTAIN rather than to change anything else.
 6. **No caching layer.** Stale deadlines are a correctness hazard, so freshness is made *visible*
    through `lastSuccessfulSyncAt` / `syncStatus` rather than hidden behind a TTL.
-7. **Scheduled sync is not implemented.** The current pipeline runs inside an authenticated request
-   so it can use the user's own JWT and stay inside RLS. A background scheduler would need an
-   explicit service-role path with per-user scoping.
+7. **Background sync runs outside RLS.** A run started in an authenticated request uses the user's
+   own JWT; a continuation and the daily recovery sweep have no session and use the service role.
+   Explicit `user_id` filters, HMAC-authenticated worker calls and owner-fenced leases carry that
+   boundary instead of a policy, which is a weaker guarantee than RLS and is listed here as one.
