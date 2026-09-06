@@ -13,9 +13,29 @@ came from.
 
 ---
 
-## [Unreleased]
+## [0.5.2] — 2026-09-06
 
 ### Fixed
+
+- **The installed app's icon sat in a white circle instead of filling its
+  shape.** A white plate is Android saying it was handed an icon it could not
+  mask, so it shrank a copy and centred it. The manifest has declared a proper
+  `purpose: "maskable"` icon since 0.3.x, and it checks out against every
+  documented requirement: 512x512, served as `image/png`, drawn edge to edge
+  with no transparency, and the mark 164px from centre against a 205px safe
+  zone. The assets were not the problem.
+
+  The URLs were. The icon routes are static, their paths never move, and they
+  are served `immutable` with a one-year max-age. An installed Android app is
+  minted once from those URLs, and Chrome decides whether to refresh it by
+  diffing the manifest — so an unchanged URL reads as an unchanged icon and
+  nothing is re-fetched, however wrong the copy already installed. Every icon
+  URL now carries a revision that is bumped by hand when the pixels change,
+  which makes the URL itself the thing that changed.
+
+  **This is a likely cause, not a confirmed one.** What is confirmed is that
+  the manifest and the images served are correct, so the stale copy is on the
+  device. If a fresh install still shows a plate, the cause is elsewhere.
 
 - **Accepting every Classroom permission still ended at "Some Classroom
   permissions were not granted."** Observed in production: consent completed,

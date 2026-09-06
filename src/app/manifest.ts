@@ -19,6 +19,29 @@ import { THEME_COLORS } from '@/shared/theme-boot';
  * the app has already decided; sending them to a pitch would be a worse first
  * tap than the sign-in redirect they get if their session has lapsed.
  */
+/**
+ * Bumped by hand when an icon's pixels change.
+ *
+ * The icon routes are static and their paths never move, and Vercel serves them
+ * `immutable` with a one-year max-age -- correct for a byte-stable asset, and
+ * the reason a wrong icon can outlive the deploy that fixed it. An installed
+ * Android app is minted once from these URLs; Chrome decides whether to refresh
+ * it by diffing the manifest, so an unchanged URL reads as an unchanged icon
+ * and nothing is re-fetched, however wrong the copy it already has.
+ *
+ * Appending the revision makes the URL itself the thing that changed, so the
+ * next manifest check re-downloads rather than trusting what it cached.
+ *
+ * It is not the app version: icons change far less often than releases do, and
+ * tying the two would re-mint the installed app on every deploy for nothing.
+ */
+const ICON_REVISION = '2';
+
+/** The icon's URL at the current revision. */
+function ic(path: string): string {
+  return `${path}?v=${ICON_REVISION}`;
+}
+
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: 'LockIn',
@@ -60,7 +83,7 @@ export default function manifest(): MetadataRoute.Manifest {
     // kilobytes of raster.
     icons: [
       {
-        src: '/icon',
+        src: ic('/icon'),
         sizes: '512x512',
         type: 'image/png',
         // `any` rather than `maskable`: the mark is drawn edge to edge, and
@@ -68,7 +91,7 @@ export default function manifest(): MetadataRoute.Manifest {
         purpose: 'any',
       },
       {
-        src: '/apple-icon',
+        src: ic('/apple-icon'),
         sizes: '180x180',
         type: 'image/png',
         purpose: 'any',
@@ -79,7 +102,7 @@ export default function manifest(): MetadataRoute.Manifest {
         // white plate -- a small lime square in a white circle, beside every
         // other app that fills its shape. This one runs edge to edge with the
         // mark inside the 80% safe zone, so it survives any mask.
-        src: '/maskable-icon',
+        src: ic('/maskable-icon'),
         sizes: '512x512',
         type: 'image/png',
         purpose: 'maskable',
