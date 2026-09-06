@@ -580,6 +580,16 @@ readable as a working connection, and the connect screen names the permissions t
 that verification call fails, nothing is written at all: not knowing what was granted is not the
 same as knowing it was withdrawn, and only the second justifies touching a stored credential.
 
+**What comes back is matched on what it permits, not on the string we asked for.** Google reports
+the permission it granted rather than the scope name requested, and it collapses
+`classroom.student-submissions.me.readonly` into `classroom.coursework.me.readonly` — one line on
+the consent screen, the same description on both, no way to accept one and decline the other. A
+student who accepted everything was therefore described by `tokeninfo` as holding three of the four
+requested scopes, and an identity comparison called that complete grant incomplete. So a required
+scope is satisfied by itself or by an equivalent conferring at least the same access, and the
+relation is one-way: `coursework.me.readonly` covers reading the student's own submissions, while
+`student-submissions.me.readonly` alone cannot list coursework and still fails that requirement.
+
 ---
 
 ## Security

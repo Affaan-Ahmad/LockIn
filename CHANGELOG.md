@@ -13,6 +13,36 @@ came from.
 
 ---
 
+## [Unreleased]
+
+### Fixed
+
+- **Accepting every Classroom permission still ended at "Some Classroom
+  permissions were not granted."** Observed in production: consent completed,
+  and Google sent the student to
+  `/welcome?connection=insufficient_scopes` anyway, with the connection stored
+  `NEEDS_RECONNECT`. Reconnecting was the advice on the screen and could not
+  work — a second consent produces the same token and the same verdict.
+
+  Nothing was wrong with the grant. Google reports the *permission* it granted,
+  not the scope string that was asked for, and it treats
+  `classroom.student-submissions.me.readonly` and
+  `classroom.coursework.me.readonly` as one permission: a single line on the
+  consent screen, the identical description, and no way to accept one and
+  decline the other. A token granted both is described by `tokeninfo` as
+  carrying only the coursework scope, so comparing Google's answer against the
+  requested list by string identity found a complete grant one permission short.
+
+  The rule now satisfies a required scope with that scope or with an equivalent
+  that confers at least the same access. The relation is deliberately one-way —
+  `coursework.me.readonly` covers reading the student's own submissions, whereas
+  `student-submissions.me.readonly` alone cannot list coursework and still fails
+  that requirement. The requested scope set is unchanged, nothing about a
+  genuinely partial grant is now accepted, and `granted_scopes` still records
+  exactly what Google reported.
+
+---
+
 ## [0.5.1] — 2026-09-06
 
 ### Fixed

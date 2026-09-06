@@ -15,6 +15,7 @@ import {
   GoogleConnectionService,
 } from '@/application/services/google-connection.service';
 import { REQUIRED_CLASSROOM_SCOPES } from '@/domain/google/scopes';
+import { connectionRedirectPath } from '@/features/connection/connection-feedback';
 import { ConfigError, GoogleApiError, RateLimitError } from '@/shared/errors';
 import { createLogger, silentLogger, type LogFields } from '@/shared/logger';
 
@@ -442,16 +443,79 @@ describe('a stored refresh token this deployment cannot read', () => {
   });
 });
 
-describe('a partial grant', () => {
-  const withoutSubmissions = REQUIRED_CLASSROOM_SCOPES.filter(
-    (scope) => !scope.includes('student-submissions'),
-  );
+describe('a grant Google reports under its own scope names', () => {
+  /**
+   * The production fault this describe block exists for.
+   *
+   * A student accepted every permission on the consent screen and landed on
+   * `/welcome?connection=insufficient_scopes`. Nothing had gone wrong with the
+   * consent: Google collapses `classroom.student-submissions.me.readonly` into
+   * `classroom.coursework.me.readonly` -- one line on the consent screen, the
+   * same description on both, and no box that accepts one and declines the
+   * other -- so `tokeninfo` names only the coursework scope back. Matching that
+   * answer against the requested list by string identity called a complete
+   * grant one permission short.
+   *
+   * The cost was not just a wrong message. The connection was written
+   * NEEDS_RECONNECT / INSUFFICIENT_SCOPES, so the token service refused to sync
+   * it, and the remedy the screen offered -- reconnect and accept everything --
+   * produced the same token and the same verdict on every attempt.
+   */
+  const asGoogleReportsIt = [
+    'https://www.googleapis.com/auth/classroom.courses.readonly',
+    // Google's answer for the coursework *and* submissions permissions.
+    'https://www.googleapis.com/auth/classroom.coursework.me.readonly',
+    'https://www.googleapis.com/auth/classroom.topics.readonly',
+    ...SIGN_IN_SCOPES,
+  ];
 
-  it('is stored truthfully and marked for reconnection', async () => {
+  it('is stored as an active connection, not sent back for more permissions', async () => {
     const connections = new FakeConnections();
     const inspector = new FakeInspector();
     inspector.result = {
-      scopes: [...withoutSubmissions],
+      scopes: asGoogleReportsIt,
+      expiresAt: new Date('2026-03-01T13:00:00Z'),
+    };
+
+    const result = await buildService(connections, inspector).storeProviderGrant(GRANT);
+
+    expect(result).toEqual({ kind: 'CONNECTED', grantedScopes: asGoogleReportsIt });
+    expect(connections.upserts[0]).toMatchObject({
+      status: 'ACTIVE',
+      errorCode: null,
+      // Still exactly what Google said. Recognising the grant is not licence to
+      // write back the list we asked for -- that was the original bug.
+      grantedScopes: asGoogleReportsIt,
+    });
+  });
+
+  it('sends the student onward rather than to the missing-permissions screen', async () => {
+    const connections = new FakeConnections();
+    const inspector = new FakeInspector();
+    inspector.result = {
+      scopes: asGoogleReportsIt,
+      expiresAt: new Date('2026-03-01T13:00:00Z'),
+    };
+
+    const result = await buildService(connections, inspector).storeProviderGrant(GRANT);
+
+    // The exact URL the student was landing on.
+    expect(connectionRedirectPath(result.kind)).not.toBe('/welcome?connection=insufficient_scopes');
+    expect(connectionRedirectPath(result.kind)).toBe('/');
+  });
+
+  it('does not accept the equivalence in the other direction', async () => {
+    // `coursework.me.readonly` covers the submissions read, so it stands in for
+    // that scope. The reverse buys nothing, and a grant carrying only the
+    // submissions scope genuinely cannot list coursework.
+    const connections = new FakeConnections();
+    const inspector = new FakeInspector();
+    inspector.result = {
+      scopes: [
+        'https://www.googleapis.com/auth/classroom.courses.readonly',
+        'https://www.googleapis.com/auth/classroom.student-submissions.me.readonly',
+        'https://www.googleapis.com/auth/classroom.topics.readonly',
+      ],
       expiresAt: new Date('2026-03-01T13:00:00Z'),
     };
 
@@ -459,12 +523,36 @@ describe('a partial grant', () => {
 
     expect(result).toMatchObject({
       kind: 'INCOMPLETE_SCOPES',
-      missingScopes: ['https://www.googleapis.com/auth/classroom.student-submissions.me.readonly'],
+      missingScopes: ['https://www.googleapis.com/auth/classroom.coursework.me.readonly'],
+    });
+  });
+});
+
+describe('a partial grant', () => {
+  // Topics, deliberately: it is the one required permission Google has no other
+  // name for, so a grant without it is unambiguously short. A grant "without
+  // student-submissions" is not -- that is exactly what a complete consent
+  // looks like once Google has reported it.
+  const withoutTopics = REQUIRED_CLASSROOM_SCOPES.filter((scope) => !scope.includes('topics'));
+
+  it('is stored truthfully and marked for reconnection', async () => {
+    const connections = new FakeConnections();
+    const inspector = new FakeInspector();
+    inspector.result = {
+      scopes: [...withoutTopics],
+      expiresAt: new Date('2026-03-01T13:00:00Z'),
+    };
+
+    const result = await buildService(connections, inspector).storeProviderGrant(GRANT);
+
+    expect(result).toMatchObject({
+      kind: 'INCOMPLETE_SCOPES',
+      missingScopes: ['https://www.googleapis.com/auth/classroom.topics.readonly'],
     });
     expect(connections.upserts[0]).toMatchObject({
       status: 'NEEDS_RECONNECT',
       errorCode: 'INSUFFICIENT_SCOPES',
-      grantedScopes: [...withoutSubmissions],
+      grantedScopes: [...withoutTopics],
     });
   });
 
@@ -476,7 +564,7 @@ describe('a partial grant', () => {
     const connections = new FakeConnections();
     const inspector = new FakeInspector();
     inspector.result = {
-      scopes: [...withoutSubmissions],
+      scopes: [...withoutTopics],
       expiresAt: new Date('2026-03-01T13:00:00Z'),
     };
 
@@ -490,7 +578,7 @@ describe('a partial grant', () => {
     const connections = new FakeConnections();
     const inspector = new FakeInspector();
     inspector.result = {
-      scopes: [...withoutSubmissions],
+      scopes: [...withoutTopics],
       expiresAt: new Date('2026-03-01T13:00:00Z'),
     };
 

@@ -49,6 +49,62 @@ describe('the scope rule', () => {
     expect(missingClassroomScopes([])).toHaveLength(REQUIRED_CLASSROOM_SCOPES.length);
   });
 
+  /**
+   * The production bug, at the layer that caused it.
+   *
+   * A student accepted every permission on the Google consent screen and was
+   * sent to `/welcome?connection=insufficient_scopes` anyway. Google collapses
+   * `classroom.student-submissions.me.readonly` into
+   * `classroom.coursework.me.readonly` -- they are one line on the consent
+   * screen, with the identical description, and no student can accept one and
+   * decline the other -- so `tokeninfo` describes a token granted both as
+   * carrying only the coursework scope. Comparing that answer against the
+   * requested list by string identity called a complete grant incomplete, and
+   * reconnecting produced the same token and the same verdict.
+   */
+  it('accepts the scope list Google actually reports for a full consent', () => {
+    const asGoogleReportsIt = [
+      'openid',
+      'https://www.googleapis.com/auth/userinfo.email',
+      'https://www.googleapis.com/auth/userinfo.profile',
+      'https://www.googleapis.com/auth/classroom.courses.readonly',
+      // Stands in for the submissions scope, which Google does not name back.
+      'https://www.googleapis.com/auth/classroom.coursework.me.readonly',
+      'https://www.googleapis.com/auth/classroom.topics.readonly',
+    ];
+
+    expect(missingClassroomScopes(asGoogleReportsIt)).toEqual([]);
+    expect(hasCompleteClassroomGrant(asGoogleReportsIt)).toBe(true);
+  });
+
+  it('does not read the equivalence backwards', () => {
+    // `coursework.me.readonly` covers listing coursework and reading the
+    // student's own submissions, so it can stand in for the submissions scope.
+    // The reverse buys nothing: a grant carrying only the submissions scope
+    // cannot list coursework, and saying otherwise would accept a grant that
+    // really is incomplete.
+    const submissionsOnly = REQUIRED_CLASSROOM_SCOPES.filter(
+      (scope) => !scope.includes('coursework'),
+    );
+
+    expect(missingClassroomScopes(submissionsOnly)).toEqual([
+      'https://www.googleapis.com/auth/classroom.coursework.me.readonly',
+    ]);
+  });
+
+  it('still reports a grant that carries neither coursework scope', () => {
+    // The one that must not be swallowed by the equivalence: nothing here
+    // permits reading the student's work, and both requirements are unmet.
+    const neither = REQUIRED_CLASSROOM_SCOPES.filter(
+      (scope) => !scope.includes('coursework') && !scope.includes('student-submissions'),
+    );
+
+    expect(missingClassroomScopes(neither)).toEqual([
+      'https://www.googleapis.com/auth/classroom.coursework.me.readonly',
+      'https://www.googleapis.com/auth/classroom.student-submissions.me.readonly',
+    ]);
+  });
+
   it('describes each required scope in words a student would use', () => {
     const labels = describeScopes(REQUIRED_CLASSROOM_SCOPES);
 

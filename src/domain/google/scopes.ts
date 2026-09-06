@@ -72,16 +72,65 @@ const SCOPE_LABELS: Readonly<Record<string, string>> = {
     'Read topic names, which say which section a post is for',
 };
 
+type RequiredClassroomScope = (typeof REQUIRED_CLASSROOM_SCOPES)[number];
+
+/**
+ * The other scope names under which Google may report a required permission.
+ *
+ * Google's token describes the *permission it granted*, not the string that was
+ * asked for, and it collapses scopes that mean the same thing to it.
+ * `classroom.student-submissions.me.readonly` and
+ * `classroom.coursework.me.readonly` are one permission on the consent screen --
+ * they carry the identical description, "View your course work and grades in
+ * Google Classroom", and there is no box a student can untick to accept one and
+ * decline the other. Ask for both and the granted token is described by
+ * `tokeninfo` as carrying only `classroom.coursework.me.readonly`.
+ *
+ * Comparing Google's answer against the requested list by string identity
+ * therefore read a *complete* grant as one permission short: a student who
+ * accepted everything on the consent screen was sent to
+ * `/welcome?connection=insufficient_scopes`, the connection was stored
+ * NEEDS_RECONNECT / INSUFFICIENT_SCOPES, and reconnecting could not help
+ * because the second attempt produced the same token as the first.
+ *
+ * This relation is deliberately one-way and must stay that way.
+ * `classroom.coursework.me.readonly` authorises listing coursework *and*
+ * reading the student's own submissions, so it genuinely stands in for the
+ * submissions scope. The reverse does not hold, so a grant carrying only
+ * `classroom.student-submissions.me.readonly` still leaves the coursework
+ * requirement unmet and must keep saying so. Nothing here lowers what the
+ * application needs -- it recognises the same access under the name Google
+ * chose to report it by.
+ */
+const EQUIVALENT_SCOPES: Readonly<
+  Partial<Record<RequiredClassroomScope, readonly string[]>>
+> = {
+  'https://www.googleapis.com/auth/classroom.student-submissions.me.readonly': [
+    'https://www.googleapis.com/auth/classroom.coursework.me.readonly',
+  ],
+};
+
+/** Whether the grant carries a required permission, under any name Google uses. */
+function isHeld(held: ReadonlySet<string>, required: RequiredClassroomScope): boolean {
+  if (held.has(required)) return true;
+  return (EQUIVALENT_SCOPES[required] ?? []).some((equivalent) => held.has(equivalent));
+}
+
 /**
  * The required scopes Google did not grant.
  *
  * Extra scopes are ignored rather than rejected. Google attaches sign-in scopes
  * (`openid`, `email`, `profile`) to the same token, and treating an unexpected
  * entry as a fault would break every connection the day Google adds one.
+ *
+ * A required scope counts as granted when Google reports it, or when Google
+ * reports an equivalent that confers at least the same access -- see
+ * `EQUIVALENT_SCOPES`. What comes back is matched on what it permits, never on
+ * whether the string is the one this application happened to ask for.
  */
 export function missingClassroomScopes(granted: readonly string[]): readonly string[] {
   const held = new Set(granted.map((scope) => scope.trim()).filter((scope) => scope !== ''));
-  return REQUIRED_CLASSROOM_SCOPES.filter((scope) => !held.has(scope));
+  return REQUIRED_CLASSROOM_SCOPES.filter((scope) => !isHeld(held, scope));
 }
 
 /** True only when every required scope is present. */

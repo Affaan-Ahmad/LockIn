@@ -576,9 +576,39 @@ describe('a grant that is missing permissions', () => {
    * from Classroom, which reads like a revoked grant and is fixed by neither
    * retrying nor reconnecting-and-unticking-again.
    */
-  const partial = REQUIRED_CLASSROOM_SCOPES.filter(
-    (scope) => !scope.includes('student-submissions'),
-  );
+  /**
+   * Topics, deliberately. It is the one required permission Google has no other
+   * name for, so a grant without it is unambiguously short.
+   *
+   * A grant "without student-submissions" is not short at all: Google collapses
+   * that scope into `classroom.coursework.me.readonly` and reports only the
+   * latter, so it is exactly what a *complete* consent looks like once Google
+   * has described it. Using it as the partial fixture here was the same mistake
+   * that sent students who had accepted everything to
+   * `/welcome?connection=insufficient_scopes`.
+   */
+  const partial = REQUIRED_CLASSROOM_SCOPES.filter((scope) => !scope.includes('topics'));
+
+  it('is not what a complete grant looks like once Google has described it', async () => {
+    // The gate's half of the production fault. Even had the callback stored the
+    // connection ACTIVE, this check ran on every sync against the same stored
+    // list -- so a student who granted everything would have had the connection
+    // marked NEEDS_RECONNECT here instead, one sync later.
+    const repo = new FakeConnectionRepository();
+    const oauth = new FakeOAuthClient();
+    repo.connection = connection({
+      grantedScopes: [
+        'https://www.googleapis.com/auth/classroom.courses.readonly',
+        // Google's answer for the coursework *and* submissions permissions.
+        'https://www.googleapis.com/auth/classroom.coursework.me.readonly',
+        'https://www.googleapis.com/auth/classroom.topics.readonly',
+        'openid',
+      ],
+    });
+
+    await expect(buildService(repo, oauth).getAccessToken('user-1')).resolves.toBe('stored-token');
+    expect(repo.statusChanges).toEqual([]);
+  });
 
   it('refuses to hand out a token, without spending a call on Google', async () => {
     const repo = new FakeConnectionRepository();
