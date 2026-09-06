@@ -580,15 +580,21 @@ readable as a working connection, and the connect screen names the permissions t
 that verification call fails, nothing is written at all: not knowing what was granted is not the
 same as knowing it was withdrawn, and only the second justifies touching a stored credential.
 
-**What comes back is matched on what it permits, not on the string we asked for.** Google reports
-the permission it granted rather than the scope name requested, and it collapses
-`classroom.student-submissions.me.readonly` into `classroom.coursework.me.readonly` — one line on
-the consent screen, the same description on both, no way to accept one and decline the other. A
-student who accepted everything was therefore described by `tokeninfo` as holding three of the four
-requested scopes, and an identity comparison called that complete grant incomplete. So a required
-scope is satisfied by itself or by an equivalent conferring at least the same access, and the
-relation is one-way: `coursework.me.readonly` covers reading the student's own submissions, while
-`student-submissions.me.readonly` alone cannot list coursework and still fails that requirement.
+**What comes back is matched on the permission it stands for, not on the string we asked for.**
+Google reports the permission it granted rather than the scope name requested, and
+`classroom.student-submissions.me.readonly` and `classroom.coursework.me.readonly` are one
+permission to it. One live shape has been observed: after a consent in which every permission was
+accepted, `tokeninfo` named the submissions scope and not the coursework one, alongside courses,
+topics and the sign-in scopes — three of the four requested Classroom scopes, and an identity
+comparison called that complete grant incomplete. The rule therefore accepts either name, and no
+code reads which one arrived. The opposite shape has never been observed and is not ruled out;
+depending on the observed name being the one Google always picks would be the same guess that
+caused the bug. Accepting either name buys no extra access, which is checkable against
+[`classroom.client.ts`](src/infrastructure/google/classroom.client.ts): its four Classroom calls are
+courses and topics, covered by their own separately required, unaliased scopes, plus coursework and
+submissions, the only two calls that pair is required for. A grant carrying neither name is still
+refused — and reported as one missing permission rather than two, because it is one line the
+student declined once.
 
 ---
 

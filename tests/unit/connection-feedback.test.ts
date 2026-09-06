@@ -46,69 +46,114 @@ describe('the scope rule', () => {
   });
 
   it('treats an empty grant as missing everything, not as nothing to check', () => {
-    expect(missingClassroomScopes([])).toHaveLength(REQUIRED_CLASSROOM_SCOPES.length);
+    // Three permissions, not four scopes: the coursework/submissions pair is one
+    // thing a student accepts and is reported as one missing item.
+    expect(missingClassroomScopes([])).toEqual([
+      'https://www.googleapis.com/auth/classroom.courses.readonly',
+      'https://www.googleapis.com/auth/classroom.coursework.me.readonly',
+      'https://www.googleapis.com/auth/classroom.topics.readonly',
+    ]);
   });
 
   /**
-   * The production bug, at the layer that caused it.
+   * The shape the first fix assumed, which has never actually been observed.
    *
-   * A student accepted every permission on the Google consent screen and was
-   * sent to `/welcome?connection=insufficient_scopes` anyway. Google collapses
-   * `classroom.student-submissions.me.readonly` into
-   * `classroom.coursework.me.readonly` -- they are one line on the consent
-   * screen, with the identical description, and no student can accept one and
-   * decline the other -- so `tokeninfo` describes a token granted both as
-   * carrying only the coursework scope. Comparing that answer against the
-   * requested list by string identity called a complete grant incomplete, and
-   * reconnecting produced the same token and the same verdict.
+   * It is here because the rule must not depend on which of the pair's two names
+   * Google names back. Only one live shape has ever been seen -- the submissions
+   * one, in the test below -- and the reverse is neither demonstrated nor ruled
+   * out. Baking in the observed name would be the same guess that caused the
+   * production fault: a complete consent read as one permission short, the
+   * student sent to `/welcome?connection=insufficient_scopes`, and reconnecting
+   * producing the same token and the same verdict.
    */
-  it('accepts the scope list Google actually reports for a full consent', () => {
-    const asGoogleReportsIt = [
+  it('accepts a full consent reported under the coursework name alone', () => {
+    const reportedUnderCoursework = [
       'openid',
       'https://www.googleapis.com/auth/userinfo.email',
       'https://www.googleapis.com/auth/userinfo.profile',
       'https://www.googleapis.com/auth/classroom.courses.readonly',
-      // Stands in for the submissions scope, which Google does not name back.
+      // The pair's other name, with the submissions name absent.
       'https://www.googleapis.com/auth/classroom.coursework.me.readonly',
       'https://www.googleapis.com/auth/classroom.topics.readonly',
     ];
 
-    expect(missingClassroomScopes(asGoogleReportsIt)).toEqual([]);
-    expect(hasCompleteClassroomGrant(asGoogleReportsIt)).toBe(true);
+    expect(missingClassroomScopes(reportedUnderCoursework)).toEqual([]);
+    expect(hasCompleteClassroomGrant(reportedUnderCoursework)).toBe(true);
   });
 
-  it('does not read the equivalence backwards', () => {
-    // `coursework.me.readonly` covers listing coursework and reading the
-    // student's own submissions, so it can stand in for the submissions scope.
-    // The reverse buys nothing: a grant carrying only the submissions scope
-    // cannot list coursework, and saying otherwise would accept a grant that
-    // really is incomplete.
-    const submissionsOnly = REQUIRED_CLASSROOM_SCOPES.filter(
-      (scope) => !scope.includes('coursework'),
+  /**
+   * The one shape production has actually returned.
+   *
+   * A live diagnostic taken 2026-09-06 after a consent in which every permission
+   * was accepted: the submissions scope present, the coursework scope absent.
+   * The first fix aliased coursework -> submissions only, arguing that coursework
+   * access subsumes reading one's own submissions but not the reverse -- a claim
+   * about the APIs, not about what Google reports -- so it rejected this grant
+   * exactly as the original string comparison had, storing the connection
+   * NEEDS_RECONNECT / INSUFFICIENT_SCOPES. This fixture is the evidence, and it
+   * must keep passing.
+   */
+  it('accepts the full consent Google reported under the submissions name', () => {
+    const liveGrantedScopes = [
+      'https://www.googleapis.com/auth/classroom.courses.readonly',
+      'https://www.googleapis.com/auth/classroom.student-submissions.me.readonly',
+      'https://www.googleapis.com/auth/classroom.topics.readonly',
+      'openid',
+      'https://www.googleapis.com/auth/userinfo.email',
+      'https://www.googleapis.com/auth/userinfo.profile',
+    ];
+
+    expect(missingClassroomScopes(liveGrantedScopes)).toEqual([]);
+    expect(hasCompleteClassroomGrant(liveGrantedScopes)).toBe(true);
+  });
+
+  it('does not let the equivalence excuse a missing courses or topics scope', () => {
+    // Only the coursework/submissions pair is one permission with two names.
+    // Nothing stands in for these two, so a grant short of either is short.
+    const paired = REQUIRED_CLASSROOM_SCOPES.filter(
+      (scope) => scope.includes('coursework') || scope.includes('student-submissions'),
     );
 
-    expect(missingClassroomScopes(submissionsOnly)).toEqual([
-      'https://www.googleapis.com/auth/classroom.coursework.me.readonly',
+    expect(missingClassroomScopes(paired)).toEqual([
+      'https://www.googleapis.com/auth/classroom.courses.readonly',
+      'https://www.googleapis.com/auth/classroom.topics.readonly',
     ]);
   });
 
-  it('still reports a grant that carries neither coursework scope', () => {
-    // The one that must not be swallowed by the equivalence: nothing here
-    // permits reading the student's work, and both requirements are unmet.
+  it('rejects a grant that carries neither name for the coursework permission', () => {
+    // The case the equivalence must not swallow: nothing here permits reading
+    // the student's work under either name, so the grant is genuinely short.
     const neither = REQUIRED_CLASSROOM_SCOPES.filter(
       (scope) => !scope.includes('coursework') && !scope.includes('student-submissions'),
     );
 
+    expect(hasCompleteClassroomGrant(neither)).toBe(false);
     expect(missingClassroomScopes(neither)).toEqual([
       'https://www.googleapis.com/auth/classroom.coursework.me.readonly',
-      'https://www.googleapis.com/auth/classroom.student-submissions.me.readonly',
     ]);
   });
 
-  it('describes each required scope in words a student would use', () => {
+  it('reports one missing permission for the pair, not one per requested name', () => {
+    // A student declines one line on the consent screen; being told to grant two
+    // things is advice they cannot act on twice. The scope named is the one this
+    // application reads coursework with, and it is only ever reached when Google
+    // reported neither name, so it contradicts nothing Google said.
+    const declinedEverything = missingClassroomScopes([]);
+
+    expect(declinedEverything).toHaveLength(3);
+    expect(declinedEverything).not.toContain(
+      'https://www.googleapis.com/auth/classroom.student-submissions.me.readonly',
+    );
+    expect(describeScopes(declinedEverything)).toHaveLength(3);
+  });
+
+  it('describes each required permission in words a student would use', () => {
     const labels = describeScopes(REQUIRED_CLASSROOM_SCOPES);
 
-    expect(labels).toHaveLength(REQUIRED_CLASSROOM_SCOPES.length);
+    // Both names of the pair go in; one line comes out, because they are one
+    // permission and saying it twice would read as two separate asks.
+    expect(labels).toEqual(describeScopes(missingClassroomScopes([])));
+    expect(labels).toHaveLength(3);
     // No URLs in a sentence addressed to a person.
     expect(labels.join(' ')).not.toContain('https://');
   });

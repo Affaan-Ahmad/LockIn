@@ -449,12 +449,16 @@ describe('a grant Google reports under its own scope names', () => {
    *
    * A student accepted every permission on the consent screen and landed on
    * `/welcome?connection=insufficient_scopes`. Nothing had gone wrong with the
-   * consent: Google collapses `classroom.student-submissions.me.readonly` into
-   * `classroom.coursework.me.readonly` -- one line on the consent screen, the
-   * same description on both, and no box that accepts one and declines the
-   * other -- so `tokeninfo` names only the coursework scope back. Matching that
-   * answer against the requested list by string identity called a complete
-   * grant one permission short.
+   * consent: `classroom.student-submissions.me.readonly` and
+   * `classroom.coursework.me.readonly` are one permission to Google, and
+   * `tokeninfo` named just one of the two back. Matching that answer against the
+   * requested list by string identity called a complete grant one permission
+   * short.
+   *
+   * The fixture below is the *unobserved* half of that -- coursework named,
+   * submissions absent. The shape production actually returned is the one
+   * further down. Both are here because which name Google picks is not something
+   * this code may depend on either way.
    *
    * The cost was not just a wrong message. The connection was written
    * NEEDS_RECONNECT / INSUFFICIENT_SCOPES, so the token service refused to sync
@@ -463,7 +467,7 @@ describe('a grant Google reports under its own scope names', () => {
    */
   const asGoogleReportsIt = [
     'https://www.googleapis.com/auth/classroom.courses.readonly',
-    // Google's answer for the coursework *and* submissions permissions.
+    // The pair's other name, standing for the same one permission.
     'https://www.googleapis.com/auth/classroom.coursework.me.readonly',
     'https://www.googleapis.com/auth/classroom.topics.readonly',
     ...SIGN_IN_SCOPES,
@@ -504,17 +508,54 @@ describe('a grant Google reports under its own scope names', () => {
     expect(connectionRedirectPath(result.kind)).toBe('/');
   });
 
-  it('does not accept the equivalence in the other direction', async () => {
-    // `coursework.me.readonly` covers the submissions read, so it stands in for
-    // that scope. The reverse buys nothing, and a grant carrying only the
-    // submissions scope genuinely cannot list coursework.
+  /**
+   * The same fault again, reported under the other name.
+   *
+   * This is the `granted_scopes` a live production diagnostic read back off a
+   * connection stored NEEDS_RECONNECT / INSUFFICIENT_SCOPES after a complete
+   * consent -- submissions present, coursework absent. It is the only shape
+   * observed. The first fix aliased coursework -> submissions only and rejected
+   * it, which is the bug it was written to fix, so this fixture is the evidence
+   * and must keep passing.
+   */
+  const asGoogleReportedItLive = [
+    'https://www.googleapis.com/auth/classroom.courses.readonly',
+    'https://www.googleapis.com/auth/classroom.student-submissions.me.readonly',
+    'https://www.googleapis.com/auth/classroom.topics.readonly',
+    ...SIGN_IN_SCOPES,
+  ];
+
+  it('is stored active when Google named the submissions scope instead', async () => {
+    const connections = new FakeConnections();
+    const inspector = new FakeInspector();
+    inspector.result = {
+      scopes: asGoogleReportedItLive,
+      expiresAt: new Date('2026-03-01T13:00:00Z'),
+    };
+
+    const result = await buildService(connections, inspector).storeProviderGrant(GRANT);
+
+    expect(result).toEqual({ kind: 'CONNECTED', grantedScopes: asGoogleReportedItLive });
+    expect(connections.upserts[0]).toMatchObject({
+      status: 'ACTIVE',
+      errorCode: null,
+      // Still exactly what Google said, coursework scope and all: absent.
+      grantedScopes: asGoogleReportedItLive,
+    });
+    expect(connectionRedirectPath(result.kind)).toBe('/');
+  });
+
+  it('still refuses a grant carrying neither name for that permission', async () => {
+    // The equivalence covers one permission under two names. It must not excuse
+    // a grant that carries no name for it at all -- and it is reported as the one
+    // permission the student declined, not as two.
     const connections = new FakeConnections();
     const inspector = new FakeInspector();
     inspector.result = {
       scopes: [
         'https://www.googleapis.com/auth/classroom.courses.readonly',
-        'https://www.googleapis.com/auth/classroom.student-submissions.me.readonly',
         'https://www.googleapis.com/auth/classroom.topics.readonly',
+        ...SIGN_IN_SCOPES,
       ],
       expiresAt: new Date('2026-03-01T13:00:00Z'),
     };
@@ -530,9 +571,9 @@ describe('a grant Google reports under its own scope names', () => {
 
 describe('a partial grant', () => {
   // Topics, deliberately: it is the one required permission Google has no other
-  // name for, so a grant without it is unambiguously short. A grant "without
-  // student-submissions" is not -- that is exactly what a complete consent
-  // looks like once Google has reported it.
+  // name for, so a grant without it is unambiguously short. A grant missing
+  // either half of the coursework/submissions pair is not -- that is what a
+  // complete consent looks like once Google has reported it.
   const withoutTopics = REQUIRED_CLASSROOM_SCOPES.filter((scope) => !scope.includes('topics'));
 
   it('is stored truthfully and marked for reconnection', async () => {

@@ -580,11 +580,11 @@ describe('a grant that is missing permissions', () => {
    * Topics, deliberately. It is the one required permission Google has no other
    * name for, so a grant without it is unambiguously short.
    *
-   * A grant "without student-submissions" is not short at all: Google collapses
-   * that scope into `classroom.coursework.me.readonly` and reports only the
-   * latter, so it is exactly what a *complete* consent looks like once Google
-   * has described it. Using it as the partial fixture here was the same mistake
-   * that sent students who had accepted everything to
+   * A grant missing either half of the coursework/submissions pair is not short
+   * at all: those two are one permission to Google, which names just one of them
+   * back, so such a grant is exactly what a *complete* consent looks like once
+   * Google has described it. Using it as the partial fixture here was the same
+   * mistake that sent students who had accepted everything to
    * `/welcome?connection=insufficient_scopes`.
    */
   const partial = REQUIRED_CLASSROOM_SCOPES.filter((scope) => !scope.includes('topics'));
@@ -599,10 +599,33 @@ describe('a grant that is missing permissions', () => {
     repo.connection = connection({
       grantedScopes: [
         'https://www.googleapis.com/auth/classroom.courses.readonly',
-        // Google's answer for the coursework *and* submissions permissions.
+        // One name for the coursework/submissions permission; the shape observed
+        // live named the other one, and is covered by the test below.
         'https://www.googleapis.com/auth/classroom.coursework.me.readonly',
         'https://www.googleapis.com/auth/classroom.topics.readonly',
         'openid',
+      ],
+    });
+
+    await expect(buildService(repo, oauth).getAccessToken('user-1')).resolves.toBe('stored-token');
+    expect(repo.statusChanges).toEqual([]);
+  });
+
+  it('is not short when Google named the submissions scope instead', async () => {
+    // The `granted_scopes` a live production diagnostic read back off a
+    // connection stored NEEDS_RECONNECT / INSUFFICIENT_SCOPES after a complete
+    // consent. The first fix aliased coursework -> submissions only, so this
+    // gate kept marking the connection for a reconnection that cannot help.
+    const repo = new FakeConnectionRepository();
+    const oauth = new FakeOAuthClient();
+    repo.connection = connection({
+      grantedScopes: [
+        'https://www.googleapis.com/auth/classroom.courses.readonly',
+        'https://www.googleapis.com/auth/classroom.student-submissions.me.readonly',
+        'https://www.googleapis.com/auth/classroom.topics.readonly',
+        'openid',
+        'https://www.googleapis.com/auth/userinfo.email',
+        'https://www.googleapis.com/auth/userinfo.profile',
       ],
     });
 

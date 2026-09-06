@@ -27,19 +27,32 @@ came from.
   Nothing was wrong with the grant. Google reports the *permission* it granted,
   not the scope string that was asked for, and it treats
   `classroom.student-submissions.me.readonly` and
-  `classroom.coursework.me.readonly` as one permission: a single line on the
-  consent screen, the identical description, and no way to accept one and
-  decline the other. A token granted both is described by `tokeninfo` as
-  carrying only the coursework scope, so comparing Google's answer against the
-  requested list by string identity found a complete grant one permission short.
+  `classroom.coursework.me.readonly` as one permission. A token granted both is
+  described by `tokeninfo` as carrying only one of the two names, so comparing
+  Google's answer against the requested list by string identity found a complete
+  grant one permission short.
 
-  The rule now satisfies a required scope with that scope or with an equivalent
-  that confers at least the same access. The relation is deliberately one-way —
-  `coursework.me.readonly` covers reading the student's own submissions, whereas
-  `student-submissions.me.readonly` alone cannot list coursework and still fails
-  that requirement. The requested scope set is unchanged, nothing about a
-  genuinely partial grant is now accepted, and `granted_scopes` still records
-  exactly what Google reported.
+  The first attempt at this fix aliased coursework to submissions and no
+  further, on the reasoning that coursework access subsumes reading one's own
+  submissions but not the reverse. That describes the APIs, not what Google
+  reports: a live diagnostic on the deployed fix, after a complete consent,
+  came back naming `student-submissions.me.readonly` with
+  `coursework.me.readonly` absent, and the connection was stored
+  `NEEDS_RECONNECT` / `INSUFFICIENT_SCOPES` exactly as before.
+
+  So either name is accepted now, and nothing reads which one came back. That
+  submissions-named shape is the only one ever observed; the coursework-named
+  one is neither demonstrated nor ruled out, and relying on the observed name
+  being the one Google always picks would repeat the guess that caused the
+  fault. Accepting either buys no extra access: the pair is needed only for the
+  coursework and submissions calls, and the courses and topics calls have their
+  own unaliased scopes.
+
+  A grant carrying neither name is still refused, and now says so once rather
+  than twice — the pair is one line on the consent screen, so "Still needed"
+  lists one permission for it instead of asking a student to grant two things
+  they declined once. The requested scope set is unchanged, and
+  `granted_scopes` still records exactly what Google reported.
 
 ---
 
