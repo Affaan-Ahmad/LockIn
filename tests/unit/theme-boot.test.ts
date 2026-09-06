@@ -86,28 +86,42 @@ describe('installed app chrome', () => {
 
 describe('installed app icons', () => {
   /**
-   * A white circle around the icon is Android saying it was handed something it
-   * could not mask, so it centred a shrunken copy on a plate. The cure is an
-   * entry marked `purpose: "maskable"`, drawn edge to edge with the mark inside
-   * the safe zone -- and an entry that exists is not the same as one the
-   * installed app has actually fetched.
+   * The white circle in the bug report was Android's legacy plating: handed an
+   * icon it cannot crop, it shrinks a copy and centres it on a white disc.
+   *
+   * What decides that is the `purpose` declaration, not the artwork. The
+   * manifest used to offer two `any` entries beside one `maskable`, which reads
+   * as thorough and is exactly the fault -- the launcher took an `any` entry and
+   * plated it. So the property worth testing is not "a maskable icon exists"
+   * but "there is nothing here that is not maskable", because the second is the
+   * only one the launcher cannot get wrong.
    */
-  it('offers a maskable entry for the launcher to crop', () => {
-    const maskable = manifest().icons?.filter((icon) => icon.purpose === 'maskable') ?? [];
-    expect(maskable).toHaveLength(1);
-    expect(maskable[0]?.sizes).toBe('512x512');
+  it('leaves the launcher no unmaskable icon to choose', () => {
+    const icons = manifest().icons ?? [];
+    expect(icons.length).toBeGreaterThan(0);
+    for (const icon of icons) {
+      expect(icon.purpose?.split(' ')).toContain('maskable');
+    }
   });
 
-  it('still offers unmaskable icons for everything that is not a launcher', () => {
-    const any = manifest().icons?.filter((icon) => icon.purpose === 'any') ?? [];
-    expect(any.length).toBeGreaterThan(0);
+  it('still covers the plain role, so nothing is left without an icon', () => {
+    // `any maskable` rather than `maskable` alone: an entry that is only
+    // maskable is not a candidate where a plain icon is wanted, and a manifest
+    // whose every icon is maskable-only can leave a surface with none at all.
+    const icons = manifest().icons ?? [];
+    expect(icons.some((icon) => icon.purpose?.split(' ').includes('any'))).toBe(true);
+  });
+
+  it('offers it at a size a launcher will accept', () => {
+    const icons = manifest().icons ?? [];
+    expect(icons.some((icon) => icon.sizes === '512x512')).toBe(true);
   });
 
   it('carries the revision on every icon url', () => {
-    // The reason this is a test and not a convention: the icon paths are static
-    // and served immutable for a year, so an installed app that cached a wrong
-    // icon has nothing to notice. The revision is the only thing that can
-    // change, and an icon added later without one would silently not update.
+    // The icon paths are static and served immutable for a year, so an
+    // installed app holding a wrong icon has nothing to notice. The revision is
+    // the only thing that can change; an icon added without one would silently
+    // never update, and that failure is invisible rather than loud.
     const icons = manifest().icons ?? [];
     expect(icons.length).toBeGreaterThan(0);
     for (const icon of icons) {

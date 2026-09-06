@@ -13,6 +13,46 @@ came from.
 
 ---
 
+## [0.5.3] — 2026-09-06
+
+### Fixed
+
+- **The installed icon really was being plated, and 0.5.2 fixed the wrong
+  half of it.** A screenshot settled what remote inspection could not: the
+  thing sitting in the white circle was the *rounded* icon with the large
+  mark -- `/icon`, the `purpose: "any"` entry -- not the maskable one. So the
+  launcher was not holding a stale copy of the right icon. It was choosing a
+  different icon.
+
+  Android decides whether to plate on the `purpose` declaration, not on the
+  artwork. The manifest offered three entries: two `any` and one `maskable`.
+  That reads as thorough and is precisely the fault, because it leaves the
+  launcher a choice, and every unmaskable entry in the list is a way for it to
+  choose wrong. On a circular launcher it took `/icon`, could not crop it, and
+  did what it does with a picture it cannot crop -- shrank it and centred it on
+  a white disc.
+
+  The manifest now offers exactly one icon, `purpose: "any maskable"`, drawn
+  edge to edge with the mark inside the safe zone. Not "a maskable icon is
+  available" but "there is nothing here that is not maskable", which is the
+  only arrangement where no choice the launcher makes can go wrong. A test
+  fails if an unmaskable entry is ever added back.
+
+  Nothing else moves: the browser tab still comes from `icon.svg` and the iOS
+  home screen from `apple-touch-icon`, both link tags, neither read from the
+  manifest.
+
+  The 0.5.2 revision stamp stays and is bumped, because it is still what makes
+  an installed app re-fetch at all -- it was necessary and, on its own, not
+  sufficient.
+
+### Note
+
+- A circular launcher needs no circular icon, and supplying one would be worse:
+  the launcher masks whatever it is given, so a pre-rounded image is cropped a
+  second time. Edge-to-edge artwork plus `maskable` is how an icon fills a
+  circle, a squircle or a teardrop equally.
+
 ## [0.5.2] — 2026-09-06
 
 ### Fixed
