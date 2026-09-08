@@ -111,6 +111,21 @@ const serverEnvSchema = z.object({
   DISCOVERY_RATE_WINDOW_SECONDS: intFromEnv(600, 30, 86_400),
 
   /**
+   * The data export, which reaches no external quota but is not cheap.
+   *
+   * One call runs eight repository reads, several capped at a thousand rows, to
+   * assemble a student's entire record. That is the right shape for a thing a
+   * person does occasionally and the wrong shape for something callable in a
+   * loop, so it gets a limit of its own rather than sharing the sync bucket --
+   * exhausting your export allowance must not stop you syncing.
+   *
+   * Ten per ten minutes: past any real use of a download button, well short of
+   * a script.
+   */
+  EXPORT_RATE_LIMIT: intFromEnv(10, 1, 200),
+  EXPORT_RATE_WINDOW_SECONDS: intFromEnv(600, 30, 86_400),
+
+  /**
    * Enables the daily recovery sweep. Optional, and the system is correct
    * without it -- the sweep is a floor, not the mechanism.
    *

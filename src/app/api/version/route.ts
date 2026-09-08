@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-import { buildInfo } from '@/config/version';
+import { publicBuildInfo } from '@/config/version';
 
 /**
  * What build is serving this request.
@@ -10,12 +10,16 @@ import { buildInfo } from '@/config/version';
  * a session -- and an endpoint that needs a login cannot be used to diagnose a
  * login that is broken.
  *
- * What that costs: it tells anyone the exact commit running. That is a real,
- * small disclosure -- it narrows which code an attacker is looking at. It is
- * accepted here because the repository is the source of that mapping either
- * way, and because the alternative was people guessing. Nothing else is
- * exposed: not the dependency tree, not the environment variables, not the
- * branch, not the deployment URL.
+ * The commit used to be part of that answer and no longer is. The trade was
+ * re-examined in a penetration test and came out the other way: a short SHA
+ * pins the deployment to an exact revision, which is a free head start for
+ * anyone auditing the source for a weakness -- and the people who genuinely
+ * need it are signed in, where the Settings screen already shows it. The
+ * version and the environment are what a deployment check actually reads.
+ *
+ * Left unauthenticated rather than session-gated on purpose. Gating would put
+ * an auth round trip, and Supabase's availability, in front of the endpoint
+ * whose job is to work when other things do not.
  */
 
 export const runtime = 'nodejs';
@@ -24,7 +28,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export function GET(): NextResponse {
-  return NextResponse.json(buildInfo(), {
+  return NextResponse.json(publicBuildInfo(), {
     headers: { 'Cache-Control': 'no-store, max-age=0' },
   });
 }

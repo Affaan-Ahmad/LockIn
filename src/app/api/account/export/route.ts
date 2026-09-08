@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { createBackendContext } from '@/infrastructure/composition';
 import { buildStudentSectionProfile } from '@/domain/academic/alias-generation';
 
-import { handleRoute, requireUser } from '../../_lib/handler';
+import { enforceRateLimit, handleRoute, requireUser } from '../../_lib/handler';
 
 /**
  * Everything LockIn holds about the caller, as one JSON file.
@@ -31,6 +31,18 @@ export async function GET(): Promise<NextResponse> {
   return handleRoute(async () => {
     const user = await requireUser();
     const context = await createBackendContext();
+
+    // Assembling one of these is eight reads, several of a thousand rows. The
+    // endpoint is self-scoped so there is nothing here to steal by repeating it,
+    // and no Google quota to burn -- the limit exists so a loop cannot turn one
+    // student's download button into sustained database load.
+    await enforceRateLimit(
+      context.rateLimiter,
+      user.id,
+      'account-export',
+      context.limits.accountExport.limit,
+      context.limits.accountExport.windowSeconds,
+    );
 
     const relevance = ['RELEVANT', 'NOT_RELEVANT', 'UNCERTAIN'] as const;
 

@@ -48,9 +48,44 @@ describe('version', () => {
 
   it('exposes only the three fields, never the rest of package.json', async () => {
     // package.json lists every dependency and its exact version, which is a
-    // CVE map for anyone who asks. This value is served publicly.
+    // CVE map for anyone who asks.
     const { buildInfo } = await import('@/config/version');
 
     expect(Object.keys(buildInfo()).sort()).toEqual(['commit', 'environment', 'version']);
+  });
+});
+
+/**
+ * What an unauthenticated caller is allowed to learn.
+ *
+ * `/api/version` is public, so its payload is an published surface rather than
+ * an implementation detail. A penetration test flagged the commit here: a short
+ * SHA pins the deployment to an exact revision and hands anyone auditing the
+ * source the precise tree to read.
+ *
+ * Asserted as a whole-shape equality rather than a "does not contain commit"
+ * check, because the failure worth catching is the *next* field somebody adds
+ * to the public payload without thinking about who reads it.
+ */
+describe('the public build identity', () => {
+  it('names the version and the environment, and nothing else', async () => {
+    const { publicBuildInfo } = await import('@/config/version');
+
+    expect(Object.keys(publicBuildInfo()).sort()).toEqual(['environment', 'version']);
+  });
+
+  it('withholds the commit, which the authenticated label still carries', async () => {
+    const { publicBuildInfo, buildInfo } = await import('@/config/version');
+
+    expect(publicBuildInfo()).not.toHaveProperty('commit');
+    // The operator has not lost it: buildInfo, and the Settings screen's
+    // buildLabel, still report the commit behind a session.
+    expect(buildInfo()).toHaveProperty('commit');
+  });
+
+  it('still answers the question the endpoint exists for', async () => {
+    const { publicBuildInfo } = await import('@/config/version');
+
+    expect(publicBuildInfo().version).toBe(pkg.version);
   });
 });

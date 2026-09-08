@@ -122,6 +122,7 @@ export interface BackendContext {
   readonly limits: {
     readonly sync: { readonly limit: number; readonly windowSeconds: number };
     readonly discovery: { readonly limit: number; readonly windowSeconds: number };
+    readonly accountExport: { readonly limit: number; readonly windowSeconds: number };
   };
   readonly assignments: SupabaseAssignmentRepository;
   readonly overrides: SupabaseOverrideRepository;
@@ -282,6 +283,10 @@ function buildContext(db: AppSupabaseClient, logger: Logger): BackendContext {
       discovery: {
         limit: env.DISCOVERY_RATE_LIMIT,
         windowSeconds: env.DISCOVERY_RATE_WINDOW_SECONDS,
+      },
+      accountExport: {
+        limit: env.EXPORT_RATE_LIMIT,
+        windowSeconds: env.EXPORT_RATE_WINDOW_SECONDS,
       },
     },
     };

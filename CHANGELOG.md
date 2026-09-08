@@ -60,6 +60,49 @@ Not released. The version in `package.json` is unchanged, so `/api/version` stil
   broader than the job needs, belongs to a personal account, and expires with that person's
   enrolment.
 
+### Security
+
+Findings from a penetration test of the production deployment. It found no critical, high or medium
+issues; these are the three low-severity ones it did find, and one fault discovered while fixing
+them. Recording them here rather than only in the commit, because "what was the security posture at
+this version" is a question that gets asked later.
+
+- **Manual relevance overrides now require the assignment to be yours.** The write went to PostgREST
+  as an upsert, and the assignment id was validated only by its foreign key — which Postgres checks
+  as the table owner, outside the caller's row-level security. So another user's assignment id
+  succeeded while a nonexistent one failed, and the difference told the caller which was which.
+
+  Low severity and worth stating why: assignment ids are `gen_random_uuid()`, so there was nothing
+  to enumerate, and a confirmed hit named no owner, course or title. It was still a distinction the
+  caller had no business drawing. `app_set_override` (migration `0014`) now asserts ownership and
+  answers `P0002` either way, in one statement, so there is no window between the check and the
+  write. The shape is not new — `app_set_assignment_ignored` has done exactly this since `0007`.
+
+- **`P0002` is translated as "not found" rather than falling through to a persistence error.** The
+  ignore endpoint had raised it since `0007` and been reporting a routine "that assignment is not
+  yours" as a `500`. Both endpoints now answer `404`.
+
+- **`/api/version` no longer publishes the commit.** A short SHA pins the deployment to an exact
+  revision, which hands anyone auditing the source the precise tree to read. The version and
+  environment remain public; the commit stays on the Settings screen, behind a session, where the
+  person who needs it for a bug report already is.
+
+- **The data export is rate limited.** One call assembles a student's whole record from eight reads.
+  It has its own bucket (`EXPORT_RATE_LIMIT`, ten per ten minutes) so exhausting it cannot also stop
+  you syncing.
+
+- Fixed while making the above: the new override RPC returns a composite, and PostgREST is not
+  dependable about whether that arrives as an object or a one-element array. Read directly it would
+  have thrown a `TypeError` *after* the write had already succeeded. It is normalised the same way
+  the sync repository already normalises `app_start_sync_run`.
+
+### Migration
+
+- **`0014_override_ownership.sql` must be applied before this code is deployed.** It introduces
+  `app_set_override`, which the application calls directly, so until it exists every attempt to
+  record a manual relevance decision fails. This is the loud kind of ordering dependency, unlike
+  `0013`.
+
 ---
 
 ## [0.5.3] — 2026-09-06

@@ -47,8 +47,36 @@ export interface BuildInfo {
   readonly environment: string | null;
 }
 
+/**
+ * The full identity, including the commit. For authenticated surfaces only.
+ *
+ * Everything here is safe to show a signed-in operator and none of it is safe
+ * to publish -- see `publicBuildInfo` for why.
+ */
 export function buildInfo(): BuildInfo {
   return { version: APP_VERSION, commit: BUILD_COMMIT, environment: BUILD_ENV };
+}
+
+export interface PublicBuildInfo {
+  readonly version: string;
+  readonly environment: string | null;
+}
+
+/**
+ * What an unauthenticated caller is told: the version and the environment.
+ *
+ * The commit is deliberately withheld. A short SHA pins the running build to an
+ * exact revision, and if the repository is readable that hands an attacker the
+ * precise source to audit -- including the window between a weakness being
+ * committed and being deployed over. The version alone answers "is this the
+ * release I expect?" without naming the tree.
+ *
+ * Nothing is lost operationally: the Settings screen renders `buildLabel()`,
+ * commit included, to the signed-in operator who actually needs it for a bug
+ * report.
+ */
+export function publicBuildInfo(): PublicBuildInfo {
+  return { version: APP_VERSION, environment: BUILD_ENV };
 }
 
 /**

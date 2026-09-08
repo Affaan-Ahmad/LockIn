@@ -154,22 +154,36 @@ export class SupabaseOverrideRepository implements OverrideRepository {
     relevance: 'RELEVANT' | 'NOT_RELEVANT',
     note: string | null,
     ): Promise<ManualOverride> {
-    const { data, error } = await this.db
-      .from('classification_overrides')
-      .upsert(
-        { user_id: userId, assignment_id: assignmentId, relevance, note },
-        { onConflict: 'user_id,assignment_id' },
-      )
-      .select('relevance, note, updated_at')
-      .single();
+    // Through the RPC rather than a direct upsert. PostgREST would let the
+    // foreign key decide whether the assignment_id was acceptable, and a foreign
+    // key is checked as the table owner -- so another user's assignment passed
+    // while a non-existent one failed, which told the caller which was which.
+    // app_set_override requires the assignment to be the caller's own and
+    // answers P0002 either way. See 0014_override_ownership.sql.
+    const { data, error } = await this.db.rpc('app_set_override', {
+      p_user_id: userId,
+      p_assignment_id: assignmentId,
+      p_relevance: relevance,
+      p_note: note,
+    });
 
     if (error !== null) throw translatePostgrestError(error, 'overrides.set');
-    if (data === null) throw new NotFoundError('Override was not persisted');
+
+    // Normalised, not trusted. PostgREST is inconsistent about whether a
+    // composite return arrives as an object or as a one-element array, and the
+    // sync repository already carries the same guard for the same reason.
+    // Reading `.updated_at` straight off `data` works right up until it does
+    // not, and the failure would be a TypeError inside a write that had already
+    // succeeded.
+    const row = Array.isArray(data) ? data[0] : data;
+    if (row === undefined || row === null || typeof row.id !== 'string') {
+      throw new NotFoundError('Override was not persisted');
+    }
 
     return {
-      relevance: data.relevance === 'NOT_RELEVANT' ? 'NOT_RELEVANT' : 'RELEVANT',
-      note: data.note,
-      decidedAt: new Date(data.updated_at),
+      relevance: row.relevance === 'NOT_RELEVANT' ? 'NOT_RELEVANT' : 'RELEVANT',
+      note: row.note,
+      decidedAt: new Date(row.updated_at),
     };
   }
 

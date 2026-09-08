@@ -2,12 +2,12 @@ import 'server-only';
 
 import type { PostgrestError } from '@supabase/supabase-js';
 
-import { PersistenceError, SyncAlreadyRunningError } from '@/shared/errors';
+import { NotFoundError, PersistenceError, SyncAlreadyRunningError } from '@/shared/errors';
 
 /**
  * Translates PostgREST failures into the application's error taxonomy.
  *
- * Two SQLSTATEs carry real meaning for this system and must not be flattened
+ * Three SQLSTATEs carry real meaning for this system and must not be flattened
  * into a generic database error:
  *
  *   55006 (object_in_use) is raised by app_acquire_sync_run when another run
@@ -17,6 +17,10 @@ import { PersistenceError, SyncAlreadyRunningError } from '@/shared/errors';
  *   23505 (unique_violation) on the single-active-run index means the same
  *   thing arrived by a different route: two callers raced past the advisory
  *   lock boundary and Postgres arbitrated.
+ *
+ *   P0002 (no_data_found) is raised by the ownership guards on the override and
+ *   ignore writes, and means "that assignment is not yours" -- a 404, not a
+ *   fault.
  *
  * Everything else becomes a PersistenceError whose retryable flag reflects
  * whether trying again could plausibly help.
@@ -36,6 +40,19 @@ export function translatePostgrestError(error: PostgrestError, operation: string
       'A synchronisation is already running for this account',
       { context: { operation } },
     );
+  }
+
+  // P0002 (no_data_found) is what the ownership guards in app_set_override and
+  // app_set_assignment_ignored raise when the assignment is not the caller's.
+  // It means the same thing for a row that belongs to somebody else as for one
+  // that was never there, and both must keep answering identically -- that
+  // sameness is the point of the guard.
+  //
+  // Mapped rather than left to fall through: as a PersistenceError this became
+  // a 500 with a generic body, which reported a routine "you asked about
+  // something that is not yours" as server breakage.
+  if (code === 'P0002') {
+    return new NotFoundError('Assignment not found', { context: { operation } });
   }
 
   // 42501 is insufficient_privilege, which for us means RLS refused the write.

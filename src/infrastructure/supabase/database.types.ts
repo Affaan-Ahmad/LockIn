@@ -572,6 +572,21 @@ export type Database = {
         };
         Returns: boolean;
       };
+      /**
+       * Declared as an array for the same reason app_start_sync_run is, though
+       * both are `returns <table>` and not `returns setof`: PostgREST is not
+       * dependable about whether a composite arrives as an object or as a
+       * one-element array. The repository normalises rather than betting.
+       */
+      app_set_override: {
+        Args: {
+          p_user_id: string;
+          p_assignment_id: string;
+          p_relevance: Relevance;
+          p_note: string | null;
+        };
+        Returns: ClassificationOverrideRow[] | ClassificationOverrideRow;
+      };
       app_ignored_assignments: {
         Args: { p_user_id: string; p_limit: number };
         Returns: UpcomingAssignmentRow[];

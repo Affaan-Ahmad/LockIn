@@ -88,6 +88,7 @@ Or run every migration **in numeric order** against your database:
 | [`0011_sync_state_values.sql`](supabase/migrations/0011_sync_state_values.sql) | New enum labels **only** — must commit before 0012 uses them |
 | [`0012_durable_sync.sql`](supabase/migrations/0012_durable_sync.sql) | Resumable runs: work queue, fenced leases, derived finalisation |
 | [`0013_fail_run_fencing.sql`](supabase/migrations/0013_fail_run_fencing.sql) | Stops a stale worker emptying its successor's work queue |
+| [`0014_override_ownership.sql`](supabase/migrations/0014_override_ownership.sql) | Override writes require the assignment to be yours — **apply before deploying** |
 
 Two things about that order are not stylistic:
 
@@ -97,11 +98,13 @@ Two things about that order are not stylistic:
   time. They are separate files for exactly this reason.
 - **Migrations go on before the code that calls them.** The application invokes
   `app_*` functions directly, so a build that calls a function the database does
-  not have fails at the first call. `0013` is the quieter case and the reason to
-  apply migrations deliberately rather than to rely on a loud failure: it only
-  changes the body of `app_fail_sync_run`, not its signature, so code deployed
-  against a database still on `0012` runs without error and simply keeps the
-  race it was meant to close.
+  not have fails at the first call. `0014` is the loud case: it introduces
+  `app_set_override`, and until it is applied every attempt to record a manual
+  relevance decision fails. `0013` is the quieter one, and the reason to apply
+  migrations deliberately rather than to rely on a loud failure: it only changes
+  the body of `app_fail_sync_run`, not its signature, so code deployed against a
+  database still on `0012` runs without error and simply keeps the race it was
+  meant to close.
 
 ### 3. Configure Google OAuth
 
