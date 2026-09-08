@@ -20,7 +20,9 @@ export default function TermsPage() {
       <Section heading="What LockIn is">
         <p>
           LockIn reads your Google Classroom coursework and tries to show you only the work that
-          applies to your section. It is run by {CONTROLLER}, an individual in {JURISDICTION}, and
+          applies to your section. It also shows the class timetable your university publishes,
+          filtered to the programme and section you choose, and can tell you which rooms have no
+          class scheduled in them. It is run by {CONTROLLER}, an individual in {JURISDICTION}, and
           is provided free of charge.
         </p>
         <p>
@@ -70,14 +72,27 @@ export default function TermsPage() {
           remain responsible for your own deadlines, and Google Classroom remains the authoritative
           source.
         </p>
+        <p>
+          The same applies to the timetable. It is read from your university&rsquo;s own published
+          document, which is written by hand and changes during the semester; LockIn interprets it
+          and can interpret it wrongly. That document, not LockIn, is the authoritative record of
+          when and where your classes are, and a room LockIn reports as free is only one it found no
+          class in &mdash; not a booking.
+        </p>
       </Section>
 
       <Section heading="Google and other services">
         <p>
-          LockIn depends on Google Classroom, and on Supabase and Vercel to run. Their terms apply
-          to their own services, and LockIn cannot control their availability or their decisions.
-          Google may withdraw or change API access at any time, which would stop synchronisation
-          working regardless of anything done here.
+          LockIn depends on Google Classroom, on the Google Sheets API for reading the published
+          timetable, and on Supabase and Vercel to run. Their terms apply to their own services, and
+          LockIn cannot control their availability or their decisions. Google may withdraw or change
+          API access at any time, which would stop synchronisation working regardless of anything
+          done here.
+        </p>
+        <p>
+          The timetable also depends on your university continuing to publish the document and on
+          LockIn continuing to be permitted to read it. If either stops, the timetable screen stops;
+          the rest of the product is unaffected.
         </p>
         <p>
           LockIn requests read-only Classroom permissions and cannot change anything in your

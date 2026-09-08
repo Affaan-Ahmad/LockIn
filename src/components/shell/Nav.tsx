@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
 
-import { BooksIcon, CalendarIcon, HomeIcon, ReviewIcon } from '@/components/icons';
+import { BooksIcon, CalendarIcon, HomeIcon, ReviewIcon, TimetableIcon } from '@/components/icons';
 import { cx } from '@/lib/cx';
 
 /**
@@ -19,8 +19,10 @@ import { cx } from '@/lib/cx';
  * active item. That is the whole client footprint -- the pages it links to stay
  * Server Components.
  *
- * Four destinations, not five. Settings is reached from the header: it is
- * visited rarely, and a fifth tab dilutes the four that matter. Icons are
+ * Five destinations. Settings still is not one of them -- it is reached from
+ * the header, because it is visited rarely and a tab spent on it dilutes the
+ * ones opened daily. Timetable earns a tab on exactly that test: "where am I
+ * meant to be now" is asked more often than anything else here. Icons are
  * paired with visible labels rather than replacing them, because an icon-only
  * bar makes every user guess.
  */
@@ -34,6 +36,7 @@ interface NavItem {
 const ITEMS: readonly NavItem[] = [
   { href: '/', label: 'Today', Icon: HomeIcon },
   { href: '/upcoming', label: 'Upcoming', Icon: CalendarIcon },
+  { href: '/timetable', label: 'Timetable', Icon: TimetableIcon },
   { href: '/courses', label: 'Courses', Icon: BooksIcon },
   { href: '/review', label: 'Review', Icon: ReviewIcon },
 ];

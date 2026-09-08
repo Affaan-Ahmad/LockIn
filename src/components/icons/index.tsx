@@ -54,6 +54,18 @@ export function CalendarIcon(props: IconProps) {
   );
 }
 
+export function TimetableIcon(props: IconProps) {
+  // A week grid, not another calendar. Upcoming already owns the calendar
+  // glyph, and two dated-looking icons in one nav is how a student learns to
+  // stop reading them.
+  return (
+    <Icon {...props}>
+      <rect x="3" y="4" width="18" height="17" rx="2.5" />
+      <path d="M3 9h18M9 9v12M15 9v12" />
+    </Icon>
+  );
+}
+
 export function BooksIcon(props: IconProps) {
   return (
     <Icon {...props}>

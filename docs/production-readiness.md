@@ -90,6 +90,7 @@ regressions — have NOT been run against a database.**
 | 19 | **A consent that returns no refresh token was stored ACTIVE.** Google issues a refresh token on first consent and, with `prompt=consent`, normally afterwards — but not reliably. A grant arriving without one, on an account with none stored, is usable only until its access token expires, and recording it ACTIVE produced an account that read as connected everywhere and stopped working by itself about an hour later with no event to explain it. **RESOLVED IN CODE 2026-09-06:** the connection service asks the repository whether a usable refresh token will survive the write — a boolean, never the credential — and stores a non-renewable grant `NEEDS_RECONNECT` / `NO_REFRESH_TOKEN` instead. Repeat consent onto an existing stored token still stores ACTIVE. **NOT VERIFIED against a live Google consent flow.** | ~~HIGH~~ CLOSED IN CODE | The live-flow check belongs with Google verification, row 14. |
 | 20 | **A refresh that came back with a narrower grant discarded what it learned.** The scope check threw before persisting anything, dropping the access token Google had just issued, any rotated refresh token, and the scopes that were the reason for the failure. Losing the rotated token is the expensive part: it is the only one that still works, so the next refresh would fail `invalid_grant` and a fixable permissions problem became a dead connection. **RESOLVED IN CODE 2026-09-06:** one repository write persists credential, rotated token, reported scopes and `NEEDS_RECONNECT` / `INSUFFICIENT_SCOPES` together, before the throw, and outside the `invalid_grant` handler so it can never mark the row REVOKED. **NOT VERIFIED against a live Google refresh.** | ~~HIGH~~ CLOSED IN CODE | |
 | 21 | **A complete consent was read as an incomplete one, in production.** Observed 2026-09-06 on `lockinapp.tech`: a student accepted every permission on the Google consent screen and was redirected to `/welcome?connection=insufficient_scopes`, with the connection stored `NEEDS_RECONNECT` / `INSUFFICIENT_SCOPES`. Reconnecting could not help, because a second consent produces the same token and the same verdict. The consent was fine; the comparison was not. Google reports the *permission* it granted rather than the scope string that was asked for, and `classroom.student-submissions.me.readonly` and `classroom.coursework.me.readonly` are one permission to it, so `tokeninfo` names only one of the two back. `missingClassroomScopes` matched Google's answer against the requested list by string identity and called a complete grant one permission short. **FIRST FIX 2026-09-06 WAS WRONG.** It aliased coursework → submissions only, arguing that coursework access subsumes reading one's own submissions but not the reverse — a claim about the APIs, not about what Google reports. A live diagnostic taken on the deployed fix, after a complete consent, returned the *other* name: `granted_scopes` held `courses.readonly`, `student-submissions.me.readonly`, `topics.readonly` and the sign-in scopes, with `coursework.me.readonly` absent, and the connection was stored `NEEDS_RECONNECT` / `INSUFFICIENT_SCOPES` exactly as before. **FIXED IN CODE 2026-09-06:** either name satisfies the requirement and no code branches on which one Google returned. The submissions-named shape above is the only one ever observed; the coursework-named shape the first fix assumed has not been observed and is not ruled out, and depending on the observed name being the one Google always picks would repeat the guess that caused the fault. The cost of accepting either is checkable rather than assumed: the pair is required only for the coursework and submissions calls in `classroom.client.ts`, and its other two calls are covered by the separately required, unaliased `courses.readonly` and `topics.readonly`. The pair is also modelled as **one** required permission, so a grant carrying neither name reports one missing item instead of two bullets for one consent entry. A grant carrying neither name is still refused. The requested scope set is unchanged, and the stored `granted_scopes` remains exactly what Google reported. Regression coverage for both reported shapes, including the live one, at the domain rule, the callback's connection service and the token service's sync gate. **The fix is NOT VERIFIED against a live Google consent flow** — the previous fix was also unit-green, and only a live flow can close this. | ~~HIGH~~ FIXED IN CODE | The first live-flow evidence bearing on row 16, whose closure was explicitly unit-tested only. Row 16's write path was right; its comparison was not — twice. |
+| 22 | **The timetable credential is over-broad, personal, and mortal.** The class timetable is read with one `spreadsheets.readonly` grant on a personal university account, in a separate Cloud project so no student ever consents to it. Three unresolved problems: the scope reads every spreadsheet that account can open when one document is needed (`drive.file` + Picker would fix it and is not implemented); the account is a person's own, so a leaked refresh token exposes their Drive and the exposure grows as they are granted more access; and the credential dies when they graduate, at which point the timetable screen stops. The credential-free public-HTML reader exists and is tested as an independent second implementation, but nothing fails over to it automatically. **Nothing student-facing is affected by any of this** — the timetable holds no student data and the Classroom consent screen is unchanged. | MEDIUM | Not a launch blocker for the deadline product; is one for relying on the timetable screen. |
 
 ## Incident log
 
@@ -287,6 +288,28 @@ the privacy policy.
 No write scopes. No roster scope. No profile scope. The student's Classroom user id is learned from
 their own submission payloads specifically to avoid a broader scope.
 
+**A second credential exists, and no student consents to it.** The class timetable is read with a
+single service credential held by the operator, in its **own Google Cloud project**, so the
+student-facing consent screen still lists the four scopes above and nothing else. The separation is
+the point: the consent screen is per Cloud project, so putting the Sheets scope in the existing
+project would add it to the screen every student sees.
+
+| Scope | Sensitivity | Held by | Why required | Narrower option? |
+| --- | --- | --- | --- | --- |
+| `spreadsheets.readonly` | Sensitive | The operator, once | Read the university's published timetable document | **Yes — `drive.file` + Picker would scope it to that one file. Not implemented.** |
+
+Three properties of this credential are open risks rather than settled controls, and they are
+recorded here rather than in a comment:
+
+- **It is over-broad for the job.** `spreadsheets.readonly` reads *every* spreadsheet the account
+  can open, and the product needs exactly one. `drive.file` with the Google Picker would narrow it
+  to that single document and has not been done.
+- **It is a personal university account.** So the blast radius of a leak is that person's own
+  Drive, and it grows on its own as they are granted access to more documents.
+- **It expires with enrolment.** When the account is deprovisioned the credential dies and the
+  timetable screen stops. The public-HTML reader remains as an independent fallback, but nothing
+  automatically fails over to it today.
+
 **Google does not name all four back.** `classroom.student-submissions.me.readonly` and
 `classroom.coursework.me.readonly` are one permission to Google, and a token granted both is
 described by `tokeninfo` as carrying only one of the two names. **One shape has been observed**
@@ -342,6 +365,8 @@ To be completed and verified before launch. Populated from the schema as it stan
 | Manual overrides, course tracking | Student decisions | Product behaviour | `classification_overrides`, `course_tracking` | TBD | TBD |
 | Google access + refresh tokens | OAuth | Call Classroom on the student's behalf | `google_connections`, **encrypted** | Until disconnect/deletion | Revoke + delete |
 | Sync history and errors | Internal | Debugging, freshness | `sync_runs`, `sync_errors`, `sync_course_results` | **TBD — currently unbounded** | TBD |
+| Published class timetable | University spreadsheet | Show classes and free rooms | **Not stored** — held in server memory, 15-minute cache, up to 24h if refresh fails | Process lifetime | N/A |
+| Chosen timetable cohort and section | Student input | Filter the timetable screen | **Not stored server-side** — a cookie on the device | 1 year, or until cleared | Clearing site data |
 
 ~~Note that **grades** are stored (`assigned_grade`, `draft_grade`).~~ **RESOLVED 2026-08-31.**
 Grades are no longer stored. Migration `0009_drop_grades.sql` drops both columns and replaces
@@ -352,6 +377,12 @@ never survive it. The `student-submissions.me.readonly` scope is unchanged becau
 Deleting the data was preferred to disclosing it: nothing read those columns, they were the most
 sensitive fields in the database, and minimal collection is the standing rule.
 
+The timetable rows are deliberately outside the database. The document is one the whole university
+shares and contains no student names, so it is fetched once per server and never written against
+anyone's account; the cohort choice is a view preference and lives on the device. Neither is
+personal data held by LockIn, and neither appears in the account export because there is nothing in
+an account to export.
+
 ## Subprocessors
 
 **Data controller:** an individual based in Pakistan. Legal name and contact addresses are
@@ -361,7 +392,7 @@ contact@lockinapp.tech. Production domain is lockinapp.tech.
 | Provider | Data | Region | Status |
 | --- | --- | --- | --- |
 | Supabase | Everything in the tables above | Chosen at project creation | Region must be recorded here once set |
-| Google | OAuth + Classroom reads | Google infrastructure | |
+| Google | OAuth + Classroom reads; also hosts the university's timetable document, read with the operator's own credential and carrying no student data | Google infrastructure | |
 | Hosting (Vercel or equivalent) | Request metadata, logs | TBD | Not yet chosen |
 
 No analytics, no error-monitoring vendor, no email provider today. **Adding any of them is a

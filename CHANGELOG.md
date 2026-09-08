@@ -13,6 +13,55 @@ came from.
 
 ---
 
+## [Unreleased]
+
+Not released. The version in `package.json` is unchanged, so `/api/version` still reports 0.5.3.
+
+### Added
+
+- **The class timetable.** A `/timetable` screen showing the classes for a chosen programme,
+  intake and section, read from the spreadsheet the university publishes rather than typed in by
+  hand. Days are selectable; today is the default.
+
+  The parser exists because the document cannot be read the obvious way. A cell names its course
+  and section but **not its intake** — `OOP (CS-A)` and `DB (CS-A)` are different years sharing a
+  section letter, separated only by the cell's background colour. Every values-only source (the CSV
+  export, `gviz`, an `IMPORTRANGE` mirror) throws that away and would merge four intakes into one
+  timetable. So the sheet is read through the Sheets API with grid data, and the colour is decoded
+  against the legend printed in the document's own first rows.
+
+- **Free-room search.** Which rooms have no class in them for the next 30, 60 or 120 minutes,
+  answered from the campus clock on the server rather than the browser's. A room holding something
+  the parser could not read is reported as unaccounted for rather than counted as empty, and the
+  count of those is shown: sending somebody to an occupied room is the one mistake this must not
+  make.
+
+- **A second Google credential**, in its own Cloud project, holding `spreadsheets.readonly` for one
+  account. Deliberately separate from the student-facing OAuth client, because the consent screen is
+  per project: sharing one would have added a Sheets permission to the screen every student sees.
+  The four read-only Classroom scopes are unchanged, and no student consents to anything new.
+
+### Changed
+
+- Navigation gains a Timetable destination on both the sidebar and the mobile bar. The mobile bar's
+  documented "four destinations, not five" rule is updated rather than quietly broken: Settings is
+  still not a tab, and Timetable earns one on the same test the rule was written around.
+
+- **Legal pages updated in the same change, as the standing rule requires.** The cookie policy no
+  longer claims cookies exist only to keep you signed in, and lists the two timetable preference
+  cookies. The disclaimer gains sections on how the timetable can be wrong and on free rooms not
+  being bookings. The terms describe the timetable, name the university's document as authoritative
+  for it, and add the Sheets dependency. The privacy policy states that the timetable is not read
+  from the student's Google account, that fetching it sends nothing about them anywhere, and that
+  the cohort choice is held on the device rather than in the database.
+
+- `docs/production-readiness.md` records the new credential in the scope inventory, the timetable
+  and cohort cookie in the data inventory, and a new gap (22) stating plainly that the credential is
+  broader than the job needs, belongs to a personal account, and expires with that person's
+  enrolment.
+
+---
+
 ## [0.5.3] — 2026-09-06
 
 ### Fixed

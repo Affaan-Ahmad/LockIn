@@ -121,6 +121,24 @@ const serverEnvSchema = z.object({
    */
   CRON_SECRET: z.string().min(16).optional(),
 
+  /**
+   * The published class timetable.
+   *
+   * All four are optional and are checked together at the point of use: with
+   * none of them the timetable screens simply say the feature is not
+   * configured, which is the right behaviour for a deployment that has not been
+   * given a credential yet. Failing startup instead would take the whole
+   * application down over a secondary feature.
+   *
+   * The spreadsheet id is configuration rather than a constant because the
+   * university publishes a new document every semester. When that happens this
+   * is the one value that changes.
+   */
+  TIMETABLE_SPREADSHEET_ID: z.string().min(20).optional(),
+  TIMETABLE_OAUTH_CLIENT_ID: z.string().min(1).optional(),
+  TIMETABLE_OAUTH_CLIENT_SECRET: z.string().min(1).optional(),
+  TIMETABLE_REFRESH_TOKEN: z.string().min(1).optional(),
+
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
 })
   /**

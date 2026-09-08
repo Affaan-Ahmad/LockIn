@@ -7,6 +7,12 @@ import { LegalTitle, List, PRIVACY_CONTACT, Section } from '../content';
  * consent banner. Adding one anyway would be theatre: asking permission for
  * something that needs none trains people to click through the dialogs that do
  * matter. If a non-essential cookie is ever added, the banner arrives with it.
+ *
+ * The timetable preference cookies are listed here because this page has to
+ * describe what the code actually sets. They are not tracking: they hold a
+ * programme name and a section letter the student typed in themselves, are read
+ * only to draw one screen, and exist because the student asked to be
+ * remembered.
  */
 export const metadata = {
   title: 'Cookie policy · LockIn',
@@ -20,11 +26,11 @@ export default function CookiesPage() {
 
       <Section heading="The short version">
         <p>
-          LockIn sets cookies for one purpose: keeping you signed in. There are no analytics
-          cookies, no advertising cookies and no third-party trackers, which is why you are not
-          being asked to accept anything. The product carries no analytics service, no session
-          recording and no error-reporting service, so there is nothing here for a consent banner to
-          ask about.
+          LockIn sets cookies for two purposes: keeping you signed in, and remembering which
+          section&rsquo;s timetable you asked to see. There are no analytics cookies, no advertising
+          cookies and no third-party trackers, which is why you are not being asked to accept
+          anything. The product carries no analytics service, no session recording and no
+          error-reporting service, so there is nothing here for a consent banner to ask about.
         </p>
       </Section>
 
@@ -32,11 +38,18 @@ export default function CookiesPage() {
         <List
           items={[
             'Authentication cookies issued by Supabase, which hold your session so the server can confirm on each request that it is really you.',
+            'Two small preference cookies recording the programme, intake and section whose timetable you chose to view. They are set only when you make that choice, hold nothing but the labels shown in the picker, and are used only to draw the timetable screen.',
           ]}
         />
         <p>
-          These are strictly necessary. Blocking them does not degrade LockIn, it signs you out:
-          there is no version of the product that works without knowing whose coursework to show.
+          The authentication cookies are strictly necessary. Blocking them does not degrade LockIn,
+          it signs you out: there is no version of the product that works without knowing whose
+          coursework to show.
+        </p>
+        <p>
+          The timetable cookies are not necessary in that sense. Blocking or clearing them costs you
+          nothing except being asked which section you are in again. They do not affect which
+          coursework LockIn treats as yours, and they are never used to identify you.
         </p>
       </Section>
 

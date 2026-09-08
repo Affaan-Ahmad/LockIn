@@ -59,6 +59,24 @@ export default function PrivacyPage() {
         </p>
       </Section>
 
+      <Section heading="The class timetable">
+        <p>
+          The timetable screen is read from a spreadsheet your university publishes. It is not read
+          from your Google account, and it did not require any new permission from you: the consent
+          screen still lists the four read-only Classroom permissions above and nothing else.
+        </p>
+        <p>
+          LockIn reads that document with a credential of its own, so fetching it sends nothing
+          about you to anyone. The same document is fetched once and shown to everybody who uses
+          LockIn; which parts of it you are shown is worked out afterwards, here, from the
+          programme and section you picked.
+        </p>
+        <p>
+          The document itself names courses, sections, rooms and times. It contains no student
+          names and nothing about you personally, and LockIn stores none of it against your account.
+        </p>
+      </Section>
+
       <Section heading="How LockIn uses what it reads">
         <p>
           Only to run the features you can see: listing your courses so you can choose which to
@@ -98,6 +116,12 @@ export default function PrivacyPage() {
             'A history of sync attempts and any errors, used to tell you how current your data is.',
           ]}
         />
+        <p>
+          Two things are deliberately not in that list because they are not kept on the server at
+          all: the programme and section whose timetable you asked to see, which is held in a cookie
+          on your device, and your theme choice, which is held in your browser&rsquo;s local
+          storage. Both are described in the cookie policy.
+        </p>
       </Section>
 
       <Section heading="Why the classification evidence is kept">
@@ -117,7 +141,7 @@ export default function PrivacyPage() {
         </p>
         <List
           items={[
-            'Google, which is the source of the coursework and handles sign-in.',
+            'Google, which is the source of the coursework, handles sign-in, and hosts the timetable document your university publishes.',
             'Supabase, which hosts the database and the authentication service.',
             'Vercel, which hosts and serves the application and keeps its request logs.',
           ]}

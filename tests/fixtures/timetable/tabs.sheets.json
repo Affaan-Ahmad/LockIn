@@ -1,0 +1,94 @@
+{
+ "sheets": [
+  {
+   "properties": {
+    "sheetId": 1174567785,
+    "title": "Welcome",
+    "index": 0
+   }
+  },
+  {
+   "properties": {
+    "sheetId": 1882612924,
+    "title": "Monday",
+    "index": 1
+   }
+  },
+  {
+   "properties": {
+    "sheetId": 2029661410,
+    "title": "Tuesday",
+    "index": 2
+   }
+  },
+  {
+   "properties": {
+    "sheetId": 1634689132,
+    "title": "Wednesday",
+    "index": 3
+   }
+  },
+  {
+   "properties": {
+    "sheetId": 1393723190,
+    "title": "Monday (May 11)",
+    "index": 4,
+    "hidden": true
+   }
+  },
+  {
+   "properties": {
+    "sheetId": 1725465035,
+    "title": "Sat (May 09)",
+    "index": 5,
+    "hidden": true
+   }
+  },
+  {
+   "properties": {
+    "sheetId": 1622709969,
+    "title": "Thursday",
+    "index": 6
+   }
+  },
+  {
+   "properties": {
+    "sheetId": 1783333514,
+    "title": "Friday",
+    "index": 7
+   }
+  },
+  {
+   "properties": {
+    "sheetId": 880546975,
+    "title": "Sat (25 Apr)",
+    "index": 8,
+    "hidden": true
+   }
+  },
+  {
+   "properties": {
+    "sheetId": 1891810149,
+    "title": "Sat (May 02)",
+    "index": 9,
+    "hidden": true
+   }
+  },
+  {
+   "properties": {
+    "sheetId": 2044125373,
+    "title": "Tuesday (May 12)",
+    "index": 10,
+    "hidden": true
+   }
+  },
+  {
+   "properties": {
+    "sheetId": 1608934840,
+    "title": "Saturday (Feb.14,2025)",
+    "index": 11,
+    "hidden": true
+   }
+  }
+ ]
+}

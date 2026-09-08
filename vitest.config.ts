@@ -50,6 +50,19 @@ export default defineConfig({
             NEXT_PUBLIC_SUPABASE_URL: fileEnv['NEXT_PUBLIC_SUPABASE_URL'] ?? '',
             NEXT_PUBLIC_SUPABASE_ANON_KEY: fileEnv['NEXT_PUBLIC_SUPABASE_ANON_KEY'] ?? '',
             SUPABASE_SERVICE_ROLE_KEY: fileEnv['SUPABASE_SERVICE_ROLE_KEY'] ?? '',
+            // The timetable suite goes through the real server config, which
+            // validates every required variable at once rather than the few a
+            // single feature needs. These are passed so that validation can
+            // succeed; the suite itself skips when the timetable credential is
+            // absent, so a checkout with none of this still runs green.
+            NEXT_PUBLIC_SITE_URL: fileEnv['NEXT_PUBLIC_SITE_URL'] ?? '',
+            GOOGLE_OAUTH_CLIENT_ID: fileEnv['GOOGLE_OAUTH_CLIENT_ID'] ?? '',
+            GOOGLE_OAUTH_CLIENT_SECRET: fileEnv['GOOGLE_OAUTH_CLIENT_SECRET'] ?? '',
+            GOOGLE_TOKEN_ENCRYPTION_KEY: fileEnv['GOOGLE_TOKEN_ENCRYPTION_KEY'] ?? '',
+            TIMETABLE_SPREADSHEET_ID: fileEnv['TIMETABLE_SPREADSHEET_ID'] ?? '',
+            TIMETABLE_OAUTH_CLIENT_ID: fileEnv['TIMETABLE_OAUTH_CLIENT_ID'] ?? '',
+            TIMETABLE_OAUTH_CLIENT_SECRET: fileEnv['TIMETABLE_OAUTH_CLIENT_SECRET'] ?? '',
+            TIMETABLE_REFRESH_TOKEN: fileEnv['TIMETABLE_REFRESH_TOKEN'] ?? '',
           },
           // Integration tests share one Postgres schema; running them in parallel
           // would let one test's sync run collide with another's lease.

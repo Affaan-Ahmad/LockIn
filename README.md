@@ -108,7 +108,7 @@ Two things about that order are not stylistic:
 In Google Cloud Console, enable the Classroom API and create an OAuth client. Add your Supabase
 callback URL as an authorised redirect URI.
 
-The application requests only these read-only scopes:
+The application asks each student for only these read-only scopes:
 
 ```
 classroom.courses.readonly
@@ -116,6 +116,11 @@ classroom.coursework.me.readonly
 classroom.student-submissions.me.readonly
 classroom.topics.readonly
 ```
+
+The class timetable is read with a **separate** credential, in its own Google Cloud project, holding
+`spreadsheets.readonly` for a single operator account. No student consents to it and the consent
+screen above is unchanged by it — the OAuth consent screen is per Cloud project, which is exactly
+why it is a second project rather than a fifth scope.
 
 No roster scope, no profile scope, no write scope. The student's Classroom user id — needed for
 Google's own assignee targeting — is learned from their own submission payloads instead of being

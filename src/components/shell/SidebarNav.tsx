@@ -11,6 +11,7 @@ import {
   LockInMark,
   ReviewIcon,
   SettingsIcon,
+  TimetableIcon,
 } from '@/components/icons';
 import { cx } from '@/lib/cx';
 
@@ -39,6 +40,7 @@ interface NavItem {
 const PRIMARY: readonly NavItem[] = [
   { href: '/', label: 'Today', Icon: HomeIcon },
   { href: '/upcoming', label: 'Upcoming', Icon: CalendarIcon },
+  { href: '/timetable', label: 'Timetable', Icon: TimetableIcon },
   { href: '/courses', label: 'Courses', Icon: BooksIcon },
   { href: '/review', label: 'Review', Icon: ReviewIcon },
 ];
