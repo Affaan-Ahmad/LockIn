@@ -148,9 +148,22 @@ async function getAccessToken(config: TimetableConfig): Promise<string> {
   });
 
   if (!response.ok) {
-    // The body can echo the credential back; it is never logged or surfaced.
+    // Two different faults, and merging them sends whoever is debugging to the
+    // wrong place. Google answers `401 invalid_client` when the client id or
+    // secret is wrong -- our own misconfiguration, with nothing revoked and the
+    // stored token still perfectly good -- and `400 invalid_grant` when the
+    // refresh token itself is dead. The first is fixed by correcting a
+    // deployment variable; the second needs somebody to authorise again.
+    //
+    // The body is never surfaced: it can echo the credential back.
     throw new GoogleApiError(
-      `Timetable credential could not be refreshed (${response.status}). It may have been revoked.`,
+      response.status === 401
+        ? 'The timetable credential was rejected: its client id or secret is wrong. ' +
+          'Nothing has been revoked -- check the deployment configuration.'
+        : response.status === 400
+          ? 'The timetable refresh token was rejected. It has most likely been revoked, ' +
+            'and the timetable account has to authorise again.'
+          : `The timetable credential could not be refreshed (${response.status}).`,
     );
   }
 
