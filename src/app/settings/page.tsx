@@ -4,11 +4,13 @@ import { AppShell } from '@/components/shell/AppShell';
 import { buildLabel } from '@/config/version';
 import { ProfileForm } from '@/features/onboarding/ProfileForm';
 import { DangerZone } from '@/features/settings/DangerZone';
+import { ClockToggle } from '@/features/settings/ClockToggle';
 import { ThemeToggle } from '@/features/settings/ThemeToggle';
 import { SyncButton } from '@/features/sync/SyncButton';
 import { AutoSync } from '@/features/sync/AutoSync';
 import { SyncStatus } from '@/features/sync/SyncStatus';
 import { formatAge } from '@/lib/format';
+import { readTimeFormat } from '@/lib/preferences';
 import { loadDashboard, loadProfile, loadSetupState, requireSessionUser } from '@/lib/queries';
 
 /**
@@ -24,6 +26,7 @@ export const metadata = { robots: { index: false, follow: false } };
 
 export default async function SettingsPage() {
   const user = await requireSessionUser();
+  const timeFormat = await readTimeFormat();
   const [setup, data, profile] = await Promise.all([
     loadSetupState(user.id),
     loadDashboard(user.id),
@@ -70,11 +73,19 @@ export default async function SettingsPage() {
 
         <section aria-labelledby="appearance">
           <SectionHeading id="appearance">Appearance</SectionHeading>
-          <div className="surface-raised flex flex-wrap items-center justify-between gap-3 p-4">
-            <p className="text-sm text-ink-soft">
-              LockIn follows your device by default. Choose one to override it.
-            </p>
-            <ThemeToggle />
+          <div className="flex flex-col gap-3">
+            <div className="surface-raised flex flex-wrap items-center justify-between gap-3 p-4">
+              <p className="text-sm text-ink-soft">
+                LockIn follows your device by default. Choose one to override it.
+              </p>
+              <ThemeToggle />
+            </div>
+            <div className="surface-raised flex flex-wrap items-center justify-between gap-3 p-4">
+              <p className="text-sm text-ink-soft">
+                How times are written, on deadlines and on the timetable.
+              </p>
+              <ClockToggle initial={timeFormat} />
+            </div>
           </div>
         </section>
 

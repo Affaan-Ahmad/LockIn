@@ -18,6 +18,8 @@ import {
   type Weekday,
   WHOLE_COHORT_SECTION,
 } from '@/domain/timetable';
+import { type TimeFormat } from '@/lib/clock';
+import { readTimeFormat } from '@/lib/preferences';
 import {
   isTimetableConfigured,
   loadTimetable,
@@ -60,9 +62,11 @@ export interface TimetableScreen {
   /** The campus weekday now, or null at the weekend. */
   readonly todayWeekday: Weekday | null;
   readonly nowMinute: number;
+  /** How the student asked for times to be written. */
+  readonly timeFormat: TimeFormat;
 }
 
-const emptyScreen = (error: string | null): TimetableScreen => {
+const emptyScreen = async (error: string | null): Promise<TimetableScreen> => {
   const moment = toTimetableMoment(new Date());
   return {
     configured: isTimetableConfigured(),
@@ -75,6 +79,7 @@ const emptyScreen = (error: string | null): TimetableScreen => {
     documentTitle: null,
     todayWeekday: moment.weekday,
     nowMinute: moment.minuteOfDay,
+    timeFormat: await readTimeFormat(),
   };
 };
 
@@ -109,7 +114,9 @@ export async function loadTimetableScreen(): Promise<TimetableScreen> {
   } catch (error) {
     // The screen explains itself rather than falling over: an unreadable
     // timetable is a thing to report, not a reason to break navigation.
-    return emptyScreen(error instanceof Error ? error.message : 'The timetable could not be read.');
+    return emptyScreen(
+      error instanceof Error ? error.message : 'The timetable could not be read.',
+    );
   }
 
   const options = cohortOptions(snapshot.days);
@@ -126,6 +133,7 @@ export async function loadTimetableScreen(): Promise<TimetableScreen> {
     documentTitle: snapshot.documentTitle,
     todayWeekday: moment.weekday,
     nowMinute: moment.minuteOfDay,
+    timeFormat: await readTimeFormat(),
   };
 }
 

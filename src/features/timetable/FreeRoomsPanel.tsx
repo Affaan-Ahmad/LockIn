@@ -3,6 +3,7 @@
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/Button';
+import { formatClock, type TimeFormat } from '@/lib/clock';
 import { cx } from '@/lib/cx';
 
 /**
@@ -20,13 +21,13 @@ import { cx } from '@/lib/cx';
 
 interface FreeRoom {
   readonly room: string;
-  readonly freeUntil: string | null;
+  readonly freeUntilMinute: number | null;
   readonly cancelledHere: readonly string[];
 }
 
 interface RoomsResponse {
   readonly weekday: string | null;
-  readonly at: string;
+  readonly atMinute: number;
   readonly forMinutes: number;
   readonly occupiedCount: number;
   readonly unknownCount: number;
@@ -35,7 +36,11 @@ interface RoomsResponse {
 
 const DURATIONS = [30, 60, 120] as const;
 
-export function FreeRoomsPanel() {
+export interface FreeRoomsPanelProps {
+  readonly timeFormat: TimeFormat;
+}
+
+export function FreeRoomsPanel({ timeFormat }: FreeRoomsPanelProps) {
   const [result, setResult] = useState<RoomsResponse | null>(null);
   const [forMinutes, setForMinutes] = useState<number>(30);
   const [loading, setLoading] = useState(false);
@@ -88,17 +93,23 @@ export function FreeRoomsPanel() {
           Shows rooms with no class in them for that long, starting now.
         </p>
       ) : (
-        <Results result={result} />
+        <Results result={result} timeFormat={timeFormat} />
       )}
     </div>
   );
 }
 
-function Results({ result }: { readonly result: RoomsResponse }) {
+function Results({
+  result,
+  timeFormat,
+}: {
+  readonly result: RoomsResponse;
+  readonly timeFormat: TimeFormat;
+}) {
   if (result.weekday === null) {
     return (
       <p className="text-xs text-ink-muted">
-        The timetable covers Monday to Friday, so there is nothing to check today.
+        Nothing is published for today, so there is nothing to check.
       </p>
     );
   }
@@ -106,7 +117,7 @@ function Results({ result }: { readonly result: RoomsResponse }) {
   return (
     <div className="flex flex-col gap-2">
       <p className="text-xs text-ink-soft">
-        Free from {result.at} for {result.forMinutes} minutes.
+        Free from {formatClock(result.atMinute, timeFormat)} for {result.forMinutes} minutes.
       </p>
 
       {result.rooms.length === 0 ? (
@@ -117,7 +128,9 @@ function Results({ result }: { readonly result: RoomsResponse }) {
             <li key={room.room} className="flex items-baseline justify-between gap-3 px-3 py-2">
               <span className="text-sm font-medium text-ink">{room.room}</span>
               <span className={cx('shrink-0 text-xs', 'text-ink-muted')}>
-                {room.freeUntil === null ? 'rest of the day' : `until ${room.freeUntil}`}
+                {room.freeUntilMinute === null
+                  ? 'rest of the day'
+                  : `until ${formatClock(room.freeUntilMinute, timeFormat)}`}
               </span>
             </li>
           ))}

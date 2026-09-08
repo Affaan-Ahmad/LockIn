@@ -24,7 +24,17 @@
  * dropped.
  */
 
-export type Weekday = 'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY';
+/**
+ * Saturday is included because it is taught: one semester's document publishes
+ * a standing Saturday tab alongside the weekdays. Sunday never appears.
+ */
+export type Weekday =
+  | 'MONDAY'
+  | 'TUESDAY'
+  | 'WEDNESDAY'
+  | 'THURSDAY'
+  | 'FRIDAY'
+  | 'SATURDAY';
 
 /** Minutes since local midnight, 24-hour. The sheet's times are 12-hour and unmarked. */
 export type MinuteOfDay = number;

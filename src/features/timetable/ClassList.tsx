@@ -1,4 +1,5 @@
-import { formatMinuteOfDay, type TimetableMatch } from '@/domain/timetable';
+import type { TimetableMatch } from '@/domain/timetable';
+import { formatClock, formatClockRange, toIsoTime, type TimeFormat } from '@/lib/clock';
 import { cx } from '@/lib/cx';
 
 /**
@@ -21,19 +22,30 @@ import { cx } from '@/lib/cx';
 
 export interface ClassListProps {
   readonly matches: readonly TimetableMatch[];
+  readonly timeFormat: TimeFormat;
 }
 
-export function ClassList({ matches }: ClassListProps) {
+export function ClassList({ matches, timeFormat }: ClassListProps) {
   return (
     <ul className="divide-y divide-line overflow-hidden rounded-control border border-line bg-raised">
       {matches.map((match) => (
-        <ClassRow key={`${match.entry.row}:${match.entry.column}:${match.entry.raw}`} match={match} />
+        <ClassRow
+          key={`${match.entry.row}:${match.entry.column}:${match.entry.raw}`}
+          match={match}
+          timeFormat={timeFormat}
+        />
       ))}
     </ul>
   );
 }
 
-function ClassRow({ match }: { readonly match: TimetableMatch }) {
+function ClassRow({
+  match,
+  timeFormat,
+}: {
+  readonly match: TimetableMatch;
+  readonly timeFormat: TimeFormat;
+}) {
   const { entry } = match;
   const cancelled = entry.status === 'CANCELLED';
   const time = entry.time;
@@ -42,15 +54,19 @@ function ClassRow({ match }: { readonly match: TimetableMatch }) {
     <li className="flex flex-wrap items-baseline gap-x-4 gap-y-1 px-4 py-3">
       <span
         className={cx(
-          'w-[7.5rem] shrink-0 font-mono text-sm tabular-nums',
+          'shrink-0 font-mono text-sm whitespace-nowrap tabular-nums',
+          // A twelve-hour range is half again as wide as "08:30-09:50", and a
+          // fixed column sized for the latter wrapped every row in two.
+          timeFormat === '12' ? 'w-[9.5rem]' : 'w-[7.5rem]',
           cancelled ? 'text-ink-muted' : 'text-ink-soft',
         )}
       >
         {time === null ? (
           <span title="The sheet publishes no time for this column">time not given</span>
         ) : (
-          <time dateTime={formatMinuteOfDay(time.startMinute)}>
-            {formatMinuteOfDay(time.startMinute)}–{formatMinuteOfDay(time.endMinute)}
+          // The machine-readable value stays 24-hour whatever the student chose.
+          <time dateTime={toIsoTime(time.startMinute)}>
+            {formatClockRange(time.startMinute, time.endMinute, timeFormat)}
           </time>
         )}
       </span>
@@ -68,7 +84,7 @@ function ClassRow({ match }: { readonly match: TimetableMatch }) {
         <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-muted">
           {entry.sections.length > 0 ? <span>{entry.sections.map((s) => s.raw).join(', ')}</span> : null}
           {entry.extendedUntilMinute === null ? null : (
-            <span>runs on to {formatMinuteOfDay(entry.extendedUntilMinute)}</span>
+            <span>runs on to {formatClock(entry.extendedUntilMinute, timeFormat)}</span>
           )}
           {/* The sheet's own words, kept verbatim: a venue override, a one-off
               date, "ReSch". Paraphrasing them would lose the only note a

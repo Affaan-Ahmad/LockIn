@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { CloseIcon, ExternalIcon } from '@/components/icons';
 import { ButtonLink } from '@/components/ui/Button';
 import { formatDeadline } from '@/lib/format';
+import { readTimeFormat } from '@/lib/preferences';
 import type { AssignmentView } from '@/lib/queries';
 
 import { ScopeExplanation, StatusChips, SubmissionStatus } from './primitives';
@@ -32,8 +33,13 @@ export interface AssignmentDetailProps {
   readonly closeHref: string;
 }
 
-export function AssignmentDetail({ item, now, timeZone, closeHref }: AssignmentDetailProps) {
-  const deadline = formatDeadline(item.deadline, now, timeZone);
+export async function AssignmentDetail({
+  item,
+  now,
+  timeZone,
+  closeHref,
+}: AssignmentDetailProps) {
+  const deadline = formatDeadline(item.deadline, now, timeZone, await readTimeFormat());
 
   return (
     <section

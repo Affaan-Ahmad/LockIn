@@ -11,6 +11,8 @@
  * is no date library in the bundle.
  */
 
+import { DEFAULT_TIME_FORMAT, type TimeFormat } from './clock';
+
 export type DuePrecision = 'EXACT' | 'DATE_ONLY' | 'NONE';
 
 export interface ApiDeadline {
@@ -140,6 +142,12 @@ export function formatDeadline(
   deadline: ApiDeadline,
   now: Date,
   timeZone: string,
+  /**
+   * How to write the clock. Defaults to twelve-hour, which is what this
+   * function did before the preference existed, so a caller that has not been
+   * told about it renders exactly as it always has.
+   */
+  timeFormat: TimeFormat = DEFAULT_TIME_FORMAT,
 ): FormattedDeadline {
   const band = urgencyBand(deadline, now, timeZone);
 
@@ -193,9 +201,9 @@ export function formatDeadline(
         ? 'No time given'
         : new Intl.DateTimeFormat('en-GB', {
             timeZone,
-            hour: 'numeric',
+            hour: timeFormat === '12' ? 'numeric' : '2-digit',
             minute: '2-digit',
-            hour12: true,
+            hour12: timeFormat === '12',
           }).format(instant),
     day,
     relative: instant === null ? null : relativeTime(instant, now),

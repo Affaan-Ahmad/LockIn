@@ -152,6 +152,7 @@ const WEEKDAY_BY_NAME: ReadonlyMap<string, Weekday> = new Map([
   ['wednesday', 'WEDNESDAY'],
   ['thursday', 'THURSDAY'],
   ['friday', 'FRIDAY'],
+  ['saturday', 'SATURDAY'],
 ]);
 
 /**

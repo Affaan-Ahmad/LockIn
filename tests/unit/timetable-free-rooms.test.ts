@@ -205,8 +205,13 @@ describe('turning "now" into a place in the timetable', () => {
     expect(elsewhere.timeZone).toBe('America/Los_Angeles');
   });
 
-  it('has no weekday at the weekend, because the timetable has no Saturday', () => {
-    expect(toTimetableMoment(new Date('2026-09-12T07:00:00Z')).weekday).toBeNull();
+  /**
+   * Saturday is a teaching day in some semesters -- one document publishes a
+   * standing Saturday tab beside the weekdays -- so it resolves like any other.
+   * Sunday is the only day no published document has ever carried.
+   */
+  it('resolves Saturday, and gives no weekday only on Sunday', () => {
+    expect(toTimetableMoment(new Date('2026-09-12T07:00:00Z')).weekday).toBe('SATURDAY');
     expect(toTimetableMoment(new Date('2026-09-13T07:00:00Z')).weekday).toBeNull();
   });
 

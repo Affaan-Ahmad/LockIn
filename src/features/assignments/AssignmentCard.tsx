@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import Link from 'next/link';
 
 import { formatDeadline } from '@/lib/format';
+import { readTimeFormat } from '@/lib/preferences';
 import type { AssignmentView } from '@/lib/queries';
 import {
   AssignmentTitle, CourseLabel, DeadlineDisplay, ScopeExplanation, StatusChips, SubmissionStatus,
@@ -18,10 +19,13 @@ export interface AssignmentCardProps {
 }
 
 /** Shared facts render once. Named CSS areas compose the phone card and web row. */
-export function AssignmentCard({
+export async function AssignmentCard({
   item, now, timeZone, showScope = false, actions, detailHref, selected = false,
 }: AssignmentCardProps) {
-  const deadline = formatDeadline(item.deadline, now, timeZone);
+  // Read here rather than threaded down from every page that renders a list.
+  // It is a Server Component and the lookup is cached for the request, so this
+  // costs one cookie read however many rows are on screen.
+  const deadline = formatDeadline(item.deadline, now, timeZone, await readTimeFormat());
   return (
     <article className="assignment-item" data-selected={selected || undefined} data-urgency={deadline.band}>
       <div className="assignment-identity">

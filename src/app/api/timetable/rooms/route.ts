@@ -1,6 +1,5 @@
 import type { NextResponse } from 'next/server';
 
-import { formatMinuteOfDay } from '@/domain/timetable';
 import { loadFreeRooms } from '@/lib/timetable';
 
 import { handleRoute, jsonOk, requireUser } from '../../_lib/handler';
@@ -42,7 +41,9 @@ export async function GET(request: Request): Promise<NextResponse> {
 
     return jsonOk({
       weekday: result.weekday,
-      at: formatMinuteOfDay(result.minuteOfDay),
+      // Minutes rather than a rendered string: how a time is written is the
+      // student's choice, and the browser is where that choice is known.
+      atMinute: result.minuteOfDay,
       forMinutes: result.forMinutes,
       // Counted rather than listed: a student wants somewhere to sit, not a
       // census of the building. The unknown count is still reported, because
@@ -51,7 +52,7 @@ export async function GET(request: Request): Promise<NextResponse> {
       unknownCount: result.unknownCount,
       rooms: result.rooms.map((status) => ({
         room: status.room,
-        freeUntil: status.busyFromMinute === null ? null : formatMinuteOfDay(status.busyFromMinute),
+        freeUntilMinute: status.busyFromMinute,
         cancelledHere: status.cancelledHere.map((entry) => entry.raw),
       })),
     });

@@ -4,7 +4,7 @@ import { CalendarIcon, ClockIcon } from '@/components/icons';
 import { AppShell } from '@/components/shell/AppShell';
 import { ButtonLink } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { WHOLE_COHORT_SECTION, type Weekday } from '@/domain/timetable';
+import { CAMPUS_TIME_ZONE, WHOLE_COHORT_SECTION, type Weekday } from '@/domain/timetable';
 import { ClassList } from '@/features/timetable/ClassList';
 import { CohortPicker } from '@/features/timetable/CohortPicker';
 import { FreeRoomsPanel } from '@/features/timetable/FreeRoomsPanel';
@@ -27,13 +27,21 @@ import { classesFor, loadTimetableScreen } from '@/lib/timetable';
 export const dynamic = 'force-dynamic';
 export const metadata = { robots: { index: false, follow: false } };
 
-const DAYS: readonly Weekday[] = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'];
+const DAYS: readonly Weekday[] = [
+  'MONDAY',
+  'TUESDAY',
+  'WEDNESDAY',
+  'THURSDAY',
+  'FRIDAY',
+  'SATURDAY',
+];
 const SHORT: Readonly<Record<Weekday, string>> = {
   MONDAY: 'Mon',
   TUESDAY: 'Tue',
   WEDNESDAY: 'Wed',
   THURSDAY: 'Thu',
   FRIDAY: 'Fri',
+  SATURDAY: 'Sat',
 };
 
 const isWeekday = (value: string | undefined): value is Weekday =>
@@ -89,7 +97,7 @@ export default async function TimetablePage({
           <section className="flex flex-col gap-3" aria-label="Free rooms">
             <h2 className="context-heading">Find a free room</h2>
             {screen.configured && screen.error === null ? (
-              <FreeRoomsPanel />
+              <FreeRoomsPanel timeFormat={screen.timeFormat} />
             ) : (
               <p className="text-xs text-ink-muted">Unavailable until the timetable can be read.</p>
             )}
@@ -104,9 +112,10 @@ export default async function TimetablePage({
                   {' · read '}
                   <time dateTime={screen.fetchedAt.toISOString()}>
                     {screen.fetchedAt.toLocaleTimeString('en-GB', {
-                      hour: '2-digit',
+                      hour: screen.timeFormat === '12' ? 'numeric' : '2-digit',
                       minute: '2-digit',
-                      timeZone: 'Asia/Karachi',
+                      hour12: screen.timeFormat === '12',
+                      timeZone: CAMPUS_TIME_ZONE,
                     })}
                   </time>
                 </>
@@ -163,7 +172,7 @@ export default async function TimetablePage({
               } on this day.`}
             />
           ) : (
-            <ClassList matches={matches} />
+            <ClassList matches={matches} timeFormat={screen.timeFormat} />
           )}
         </div>
       )}

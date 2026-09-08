@@ -43,7 +43,17 @@ interface SlotHeader {
 
 /** A header row is one that announces several times. Three is past coincidence. */
 const MINIMUM_SLOTS_IN_HEADER = 3;
-const ROOM_LABEL = /^(room|lab)$/i;
+/**
+ * The header cell that marks a room column.
+ *
+ * Not always the bare word: one semester's document labels the first column
+ * `Room/ Time` and the evening one just `Room`. Requiring an exact match cost
+ * every lecture its room on that document while the evening block kept one,
+ * which is the kind of half-right output that is worse than an obvious break.
+ * Deliberately still an anchored, closed pattern so a room genuinely *named*
+ * `Lab 3` is never mistaken for a column heading.
+ */
+const ROOM_LABEL = /^(room|lab)(\s*\/\s*time)?$/i;
 /** A cell says something only if it holds a letter or a digit. */
 const HAS_CONTENT = /[\p{L}\p{N}]/u;
 const TIME_RANGE_ONLY = /^\d{1,2}:\d{2}\s*[-–—]\s*\d{1,2}:\d{2}/;
@@ -54,6 +64,7 @@ const WEEKDAY_NAMES: Readonly<Record<Weekday, string>> = {
   WEDNESDAY: 'wednesday',
   THURSDAY: 'thursday',
   FRIDAY: 'friday',
+  SATURDAY: 'saturday',
 };
 
 function findSlotHeaders(grid: Grid): readonly SlotHeader[] {
@@ -166,7 +177,7 @@ function resolveCohort(
   return { cohort: null, ambiguous: true };
 }
 
-const ANY_WEEKDAY = /^(monday|tuesday|wednesday|thursday|friday)\b/i;
+const ANY_WEEKDAY = /^(monday|tuesday|wednesday|thursday|friday|saturday)\b/i;
 
 /** Finds the tab's day heading in the first rows, wherever the export put it. */
 function findDayLabel(grid: Grid): string {

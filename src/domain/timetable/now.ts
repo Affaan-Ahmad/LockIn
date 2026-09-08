@@ -21,7 +21,7 @@ import type { MinuteOfDay, Weekday } from './types';
 export const CAMPUS_TIME_ZONE = 'Asia/Karachi';
 
 export interface TimetableMoment {
-  /** Null on Saturday and Sunday, which the standing timetable does not cover. */
+  /** Null on Sunday, the one day no published document has ever carried. */
   readonly weekday: Weekday | null;
   readonly minuteOfDay: MinuteOfDay;
   /** The zone the reading was taken in, so a caller can say so. */
@@ -34,6 +34,7 @@ const WEEKDAY_BY_NAME: ReadonlyMap<string, Weekday> = new Map([
   ['Wednesday', 'WEDNESDAY'],
   ['Thursday', 'THURSDAY'],
   ['Friday', 'FRIDAY'],
+  ['Saturday', 'SATURDAY'],
 ]);
 
 /**
