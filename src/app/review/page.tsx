@@ -1,6 +1,6 @@
 
 import { CheckIcon } from '@/components/icons';
-import { AppShell } from '@/components/shell/AppShell';
+import { Shell } from '@/components/shell/Shell';
 import { ButtonLink } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { AssignmentCard } from '@/features/assignments/AssignmentCard';
@@ -34,7 +34,7 @@ export default async function ReviewPage() {
   const now = new Date();
 
   return (
-    <AppShell
+    <Shell
       title="Review"
       subtitle={
         items.length === 0
@@ -114,6 +114,6 @@ export default async function ReviewPage() {
           </ul>
         </section>
       )}
-    </AppShell>
+    </Shell>
   );
 }

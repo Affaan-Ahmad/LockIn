@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Caveat:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  [data-theme='light'] {
+    --p0: oklch(89.5% 0.018 76);
+    --p1: oklch(93.5% 0.016 80);
+    --p2: oklch(96.5% 0.013 84);
+    --p3: oklch(98.5% 0.010 88);
+    --kraft: oklch(79% 0.045 68);
+    --kraft-2: oklch(71% 0.052 64);
+    --kraft-3: oklch(52% 0.060 60);
+    --edge: oklch(74% 0.035 70);
+    --edge-soft: oklch(84% 0.024 76);
+    --ink: oklch(29% 0.022 62);
+    --ink-soft: oklch(46% 0.024 62);
+    --ink-faint: oklch(48% 0.028 64);
+    --glow: oklch(90% 0.095 80);
+    --glow-deep: oklch(82% 0.120 72);
+    --terra: oklch(53% 0.135 42);
+    --moss: oklch(52% 0.075 138);
+    --slate: oklch(48% 0.030 250);
+    --lift-0: 0 1px 0 var(--edge-soft);
+    --lift-1: 0 1px 0 var(--edge-soft), 0 2px 3px -1px oklch(58% 0.05 62 / 0.16);
+    --lift-2: 0 1px 0 var(--edge-soft), 0 2px 0 var(--p1), 0 4px 8px -3px oklch(56% 0.05 62 / 0.22), 0 10px 18px -12px oklch(52% 0.05 62 / 0.26);
+    --lift-3: 0 1px 0 var(--edge-soft), 0 3px 0 var(--p1), 0 5px 0 var(--edge-soft), 0 9px 16px -6px oklch(54% 0.05 62 / 0.26), 0 20px 34px -18px oklch(50% 0.05 62 / 0.32);
+    --lift-4: 0 1px 0 var(--edge-soft), 0 4px 0 var(--p2), 0 6px 0 var(--edge-soft), 0 8px 0 var(--p1), 0 10px 0 var(--edge-soft), 0 16px 26px -8px oklch(52% 0.05 62 / 0.28), 0 34px 50px -24px oklch(48% 0.05 62 / 0.34);
+    --press: inset 0 2px 4px oklch(56% 0.05 62 / 0.28), inset 0 -1px 0 oklch(100% 0 0 / 0.5);
+    --grain: repeating-linear-gradient(31deg, oklch(70% 0.04 70 / 0.045) 0 1px, transparent 1px 3px), repeating-linear-gradient(-59deg, oklch(70% 0.04 70 / 0.035) 0 1px, transparent 1px 4px);
+  }
+  [data-theme='dark'] {
+    --p0: oklch(19.5% 0.013 66);
+    --p1: oklch(23.5% 0.015 68);
+    --p2: oklch(27.5% 0.016 70);
+    --p3: oklch(32% 0.017 72);
+    --kraft: oklch(45% 0.048 62);
+    --kraft-2: oklch(53% 0.055 60);
+    --kraft-3: oklch(76% 0.060 68);
+    --edge: oklch(40% 0.022 70);
+    --edge-soft: oklch(44% 0.024 72);
+    --ink: oklch(95% 0.012 82);
+    --ink-soft: oklch(79% 0.016 78);
+    --ink-faint: oklch(72% 0.018 74);
+    --glow: oklch(80% 0.110 78);
+    --glow-deep: oklch(74% 0.130 70);
+    --terra: oklch(73% 0.150 40);
+    --moss: oklch(71% 0.090 140);
+    --slate: oklch(74% 0.065 250);
+    --lift-0: inset 0 1px 0 oklch(100% 0 0 / 0.05), 0 1px 2px oklch(6% 0.01 60 / 0.5);
+    --lift-1: inset 0 1px 0 oklch(100% 0 0 / 0.06), 0 2px 4px -1px oklch(5% 0.01 60 / 0.6);
+    --lift-2: inset 0 1px 0 oklch(100% 0 0 / 0.07), 0 2px 0 var(--p1), 0 3px 0 oklch(100% 0 0 / 0.05), 0 6px 12px -4px oklch(4% 0.01 60 / 0.65);
+    --lift-3: inset 0 1px 0 oklch(100% 0 0 / 0.09), 0 3px 0 var(--p1), 0 4px 0 oklch(100% 0 0 / 0.06), 0 6px 0 var(--p0), 0 12px 22px -6px oklch(4% 0.01 60 / 0.7);
+    --lift-4: inset 0 1px 0 oklch(100% 0 0 / 0.1), 0 4px 0 var(--p2), 0 5px 0 oklch(100% 0 0 / 0.07), 0 8px 0 var(--p1), 0 9px 0 oklch(100% 0 0 / 0.05), 0 20px 34px -10px oklch(3% 0.01 60 / 0.75);
+    --press: inset 0 2px 5px oklch(4% 0.01 60 / 0.7), inset 0 -1px 0 oklch(100% 0 0 / 0.05);
+    --grain: repeating-linear-gradient(31deg, oklch(100% 0 0 / 0.022) 0 1px, transparent 1px 3px), repeating-linear-gradient(-59deg, oklch(0% 0 0 / 0.05) 0 1px, transparent 1px 4px);
+  }
+  body { margin: 0; font-family: 'Instrument Sans', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  * { box-sizing: border-box; }
+  a { color: var(--kraft-3); text-decoration: none; }
+  a:hover { color: var(--ink); }
+  button { font: inherit; }
+  @keyframes pp-stack { from { opacity: 0; transform: translateY(10px) scale(0.985); } to { opacity: 1; transform: none; } }
+  @keyframes pp-breathe { 0%, 100% { opacity: 0.55; } 50% { opacity: 0.95; } }
+  @keyframes pp-slide-out { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+  @keyframes pp-shimmer { 0% { background-position: -160% 0; } 100% { background-position: 260% 0; } }
+  @media (prefers-reduced-motion: reduce) { * { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; } }
+</style>
+</helmet>
+
+<div data-theme="{{ theme }}" style="background: var(--p0); background-image: var(--grain); color: var(--ink); padding: 44px; display: flex; flex-direction: column; gap: 52px; min-height: 100vh; width: max-content; min-width: 100%;">
+
+  <div style="position: relative; width: 1280px;">
+    <div style="position: absolute; inset: 14px -10px -12px 10px; border-radius: 6px; background: var(--kraft); opacity: 0.5;"></div>
+    <div style="position: absolute; inset: 7px -5px -6px 5px; border-radius: 5px; background: var(--p1); box-shadow: var(--lift-1);"></div>
+    <div style="position: relative; border-radius: 4px; background: var(--p2); background-image: var(--grain); box-shadow: var(--lift-3); padding: 34px 38px 38px; overflow: hidden;">
+      <div style="position: absolute; left: 0; right: 0; top: 0; height: 3px; background: linear-gradient(90deg, transparent, var(--glow), transparent); opacity: 0.7;"></div>
+      <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 40px; flex-wrap: wrap;">
+        <div style="max-width: 660px;">
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-faint);">LockIn · material system</div>
+          <div style="font-size: 40px; font-weight: 700; letter-spacing: -0.035em; line-height: 1.05; padding-top: 14px; text-wrap: balance;">Cut from paper, stacked into an interface.</div>
+          <div style="font-size: 15px; line-height: 1.6; color: var(--ink-soft); padding-top: 14px; text-wrap: pretty;">Six materials, five elevations, one rule: every surface sits on a visible sheet below it, and light escapes from the gap between them. Contour stacking is reserved for the two components that matter most.</div>
+        </div>
+        <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 16px;">
+          <button onClick="{{ toggleTheme }}" style="min-height: 44px; padding: 0 18px; border-radius: 3px; border: 1px solid var(--edge); background: var(--p3); color: var(--ink); font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: var(--lift-2); transition: transform 160ms ease, box-shadow 160ms ease;" style-hover="transform: translateY(-2px); box-shadow: var(--lift-3);" style-active="transform: translateY(2px); box-shadow: var(--press);">{{ themeLabel }}</button>
+          <div style="display: flex; align-items: flex-end; gap: 10px;">
+            <div style="font-family: 'Caveat', cursive; font-size: 20px; color: var(--kraft-3); transform: rotate(-4deg); padding-bottom: 6px;">five sheets deep →</div>
+            <div style="display: flex; align-items: flex-end; gap: 5px;">
+              <div style="width: 26px; height: 30px; border-radius: 2px; background: var(--p0); box-shadow: var(--lift-0);"></div>
+              <div style="width: 26px; height: 44px; border-radius: 2px; background: var(--p1); box-shadow: var(--lift-1);"></div>
+              <div style="width: 26px; height: 58px; border-radius: 2px; background: var(--p2); box-shadow: var(--lift-2);"></div>
+              <div style="width: 26px; height: 72px; border-radius: 2px; background: var(--p3); box-shadow: var(--lift-3);"></div>
+              <div style="width: 26px; height: 86px; border-radius: 2px; background: var(--p3); box-shadow: var(--lift-4);"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1.1fr 1fr 1fr; gap: 34px; padding-top: 34px; margin-top: 30px; border-top: 1px solid var(--edge-soft);">
+        <div style="display: flex; flex-direction: column; gap: 16px;">
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-faint);">Material</div>
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px;">
+            <div style="display: flex; flex-direction: column; gap: 7px;"><div style="height: 48px; border-radius: 3px; background: var(--p0); box-shadow: var(--lift-0);"></div><div style="font-size: 11px; font-weight: 600;">Base sand</div></div>
+            <div style="display: flex; flex-direction: column; gap: 7px;"><div style="height: 48px; border-radius: 3px; background: var(--p1); box-shadow: var(--lift-0);"></div><div style="font-size: 11px; font-weight: 600;">Parchment</div></div>
+            <div style="display: flex; flex-direction: column; gap: 7px;"><div style="height: 48px; border-radius: 3px; background: var(--p2); box-shadow: var(--lift-0);"></div><div style="font-size: 11px; font-weight: 600;">Ivory</div></div>
+            <div style="display: flex; flex-direction: column; gap: 7px;"><div style="height: 48px; border-radius: 3px; background: var(--p3); box-shadow: var(--lift-0);"></div><div style="font-size: 11px; font-weight: 600;">Cardstock</div></div>
+            <div style="display: flex; flex-direction: column; gap: 7px;"><div style="height: 48px; border-radius: 3px; background: var(--kraft);"></div><div style="font-size: 11px; font-weight: 600;">Kraft</div></div>
+            <div style="display: flex; flex-direction: column; gap: 7px;"><div style="height: 48px; border-radius: 3px; background: var(--kraft-3);"></div><div style="font-size: 11px; font-weight: 600;">Board</div></div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 16px; padding-top: 4px;">
+            <div style="display: flex; align-items: center; gap: 8px;"><div style="width: 20px; height: 8px; border-radius: 2px; background: var(--terra);"></div><span style="font-size: 11.5px;">Late</span></div>
+            <div style="display: flex; align-items: center; gap: 8px;"><div style="width: 20px; height: 8px; border-radius: 2px; background: var(--glow-deep);"></div><span style="font-size: 11.5px;">Today</span></div>
+            <div style="display: flex; align-items: center; gap: 8px;"><div style="width: 20px; height: 8px; border-radius: 2px; background: var(--slate);"></div><span style="font-size: 11.5px;">Review</span></div>
+            <div style="display: flex; align-items: center; gap: 8px;"><div style="width: 20px; height: 8px; border-radius: 2px; background: var(--moss);"></div><span style="font-size: 11.5px;">Done</span></div>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 16px;">
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-faint);">Type · Instrument Sans</div>
+          <div style="font-size: 30px; font-weight: 700; letter-spacing: -0.035em; line-height: 1;">Display 30/700</div>
+          <div style="font-size: 21px; font-weight: 600; letter-spacing: -0.03em;">Title 21/600</div>
+          <div style="font-size: 14.5px; font-weight: 600; letter-spacing: -0.01em;">Assignment 14.5/600</div>
+          <div style="font-size: 13.5px; color: var(--ink-soft); line-height: 1.55;">Body 13.5/400 — a single line of supporting context.</div>
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-variant-numeric: tabular-nums;">23:59 · Tue 12:00 · 2d late</div>
+          <div style="display: flex; align-items: baseline; gap: 12px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-faint);">Caption</span>
+            <span style="font-family: 'Caveat', cursive; font-size: 19px; color: var(--kraft-3);">annotation only</span>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 16px;">
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-faint);">Controls</div>
+          <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
+            <button onClick="{{ noop }}" style="min-height: 44px; padding: 0 20px; border-radius: 3px; border: 1px solid var(--edge); background: var(--p3); color: var(--ink); font-size: 13.5px; font-weight: 600; cursor: pointer; box-shadow: var(--lift-2); transition: transform 160ms ease, box-shadow 160ms ease;" style-hover="transform: translateY(-2px); box-shadow: var(--lift-3);" style-active="transform: translateY(2px); box-shadow: var(--press);">Raised</button>
+            <button onClick="{{ noop }}" style="position: relative; min-height: 44px; padding: 0 20px; border-radius: 3px; border: 1px solid var(--kraft-2); background: var(--kraft); color: var(--ink); font-size: 13.5px; font-weight: 700; cursor: pointer; box-shadow: var(--lift-2), 0 12px 22px -12px var(--glow-deep); transition: transform 160ms ease, box-shadow 160ms ease;" style-hover="transform: translateY(-2px);" style-active="transform: translateY(2px); box-shadow: var(--press);">Primary</button>
+            <div style="position: relative; min-height: 44px; padding: 0 20px; border-radius: 3px; background: var(--p1); color: var(--ink-soft); font-size: 13.5px; font-weight: 600; display: grid; place-items: center; box-shadow: var(--press);">Pressed</div>
+          </div>
+          <div style="display: flex; align-items: flex-end; gap: 3px; padding-top: 4px;">
+            <div style="position: relative; padding: 11px 16px 12px; background: var(--p3); border-radius: 3px 3px 0 0; box-shadow: var(--lift-2); font-size: 12.5px; font-weight: 700; clip-path: polygon(0 0, calc(100% - 9px) 0, 100% 9px, 100% 100%, 0 100%); transform: translateY(-3px);">
+              <div style="position: absolute; left: 6px; right: 6px; bottom: -3px; height: 3px; background: var(--glow); opacity: 0.9;"></div>
+              Today
+            </div>
+            <div style="padding: 9px 15px 10px; background: var(--p1); border-radius: 3px 3px 0 0; box-shadow: var(--lift-1); font-size: 12.5px; font-weight: 500; color: var(--ink-soft); clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 0 100%);">Upcoming</div>
+            <div style="padding: 9px 15px 10px; background: var(--p0); border-radius: 3px 3px 0 0; box-shadow: var(--lift-0); font-size: 12.5px; font-weight: 500; color: var(--ink-faint); clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 0 100%);">Courses</div>
+            <div style="font-family: 'Caveat', cursive; font-size: 18px; color: var(--kraft-3); padding: 0 0 8px 8px;">active sheet forward</div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px; padding-top: 2px;">
+            <div style="position: relative; width: 40px; height: 40px; border-radius: 3px; background: var(--p1); box-shadow: var(--press); display: grid; place-items: center;">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"></path><path d="M5 9.5V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9.5"></path></svg>
+            </div>
+            <div style="font-size: 12px; color: var(--ink-soft); line-height: 1.45;">Icons are punched into the sheet —<br>inset well, ink stroke, no gloss.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 14px;">
+    <div style="display: flex; align-items: baseline; gap: 14px; font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase;">
+      <span>Landing · 1280</span><span style="color: var(--ink-faint);">Scroll inside the frame — lockinapp.tech</span>
+    </div>
+
+    <div style="position: relative; width: 1280px; height: 820px; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; border-radius: 5px; background: var(--p1); background-image: var(--grain); box-shadow: var(--lift-4); scroll-behavior: smooth;">
+      <header style="position: sticky; top: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between; padding: 14px 30px; background: var(--p1); background-image: var(--grain); border-bottom: 1px solid var(--edge-soft); box-shadow: 0 6px 14px -12px oklch(56% 0.05 62 / 0.5);">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div style="width: 30px; height: 30px; border-radius: 3px; background: var(--kraft); display: grid; place-items: center; box-shadow: var(--lift-1);">
+            <svg width="15" height="15" viewBox="0 0 64 64" fill="var(--ink)" aria-hidden="true"><path d="M9 6h13v39h28v13H9z"></path><rect x="30" y="6" width="13" height="26"></rect></svg>
+          </div>
+          <div style="font-size: 16px; font-weight: 700; letter-spacing: -0.03em;">LockIn</div>
+        </div>
+        <nav style="display: flex; align-items: flex-end; gap: 3px;">
+          <div style="position: relative; padding: 9px 14px 10px; background: var(--p3); border-radius: 3px 3px 0 0; box-shadow: var(--lift-1); font-size: 12.5px; font-weight: 700; clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 0 100%);">Overview</div>
+          <div style="padding: 9px 14px 10px; background: var(--p2); border-radius: 3px 3px 0 0; box-shadow: var(--lift-0); font-size: 12.5px; font-weight: 500; color: var(--ink-soft); cursor: pointer; clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 0 100%);" style-hover="color: var(--ink);">How it works</div>
+          <div style="padding: 9px 14px 10px; background: var(--p2); border-radius: 3px 3px 0 0; box-shadow: var(--lift-0); font-size: 12.5px; font-weight: 500; color: var(--ink-soft); cursor: pointer; clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 0 100%);" style-hover="color: var(--ink);">Privacy</div>
+        </nav>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <button onClick="{{ noop }}" style="min-height: 40px; padding: 0 14px; border-radius: 3px; border: 1px solid var(--edge); background: var(--p2); color: var(--ink); font-size: 12.5px; font-weight: 600; cursor: pointer; box-shadow: var(--lift-1); transition: transform 160ms ease;" style-hover="transform: translateY(-2px);" style-active="transform: translateY(2px); box-shadow: var(--press);">Sign in</button>
+          <button onClick="{{ noop }}" style="min-height: 40px; padding: 0 16px; border-radius: 3px; border: 1px solid var(--kraft-2); background: var(--kraft); color: var(--ink); font-size: 12.5px; font-weight: 700; cursor: pointer; box-shadow: var(--lift-2); transition: transform 160ms ease;" style-hover="transform: translateY(-2px);" style-active="transform: translateY(2px); box-shadow: var(--press);">Get started</button>
+        </div>
+      </header>
+
+      <div style="position: relative; margin: 22px; height: 620px; border-radius: 3px; overflow: hidden; background: linear-gradient(180deg, var(--p3) 0%, var(--p2) 46%, var(--p1) 100%); box-shadow: var(--press);">
+
+        <div style="position: absolute; left: 50%; top: 40%; width: 720px; height: 320px; transform: translate(-50%, -50%); background: radial-gradient(ellipse at center, var(--glow) 0%, transparent 68%); opacity: {{ heroGlow }}; animation: pp-breathe 12s ease-in-out infinite;"></div>
+
+        <sc-for list="{{ clouds }}" as="c" hint-placeholder-count="4">
+          <div style="position: absolute; left: {{ c.left }}; top: {{ c.top }}; width: {{ c.w }}; height: {{ c.h }};">
+            <div style="position: absolute; inset: -10px -14px; border-radius: 999px; background: var(--glow); opacity: {{ cloudGlow }}; filter: blur(9px);"></div>
+            <div style="position: absolute; inset: 0; border-radius: 999px; background: var(--kraft); opacity: 0.55;"></div>
+            <div style="position: absolute; inset: 4px 8px; border-radius: 999px; background: var(--p1); box-shadow: 0 2px 4px -1px oklch(56% 0.05 62 / 0.3);"></div>
+            <div style="position: absolute; inset: 9px 18px; border-radius: 999px; background: var(--p2); box-shadow: 0 2px 4px -1px oklch(56% 0.05 62 / 0.26);"></div>
+            <div style="position: absolute; inset: 14px 30px; border-radius: 999px; background: var(--p3); box-shadow: 0 2px 3px -1px oklch(56% 0.05 62 / 0.2);"></div>
+          </div>
+        </sc-for>
+
+        <sc-for list="{{ ridges }}" as="g" hint-placeholder-count="3">
+          <div style="position: absolute; left: 0; right: 0; bottom: {{ g.bottom }}; height: {{ g.h }}; filter: drop-shadow(0 4px 5px oklch(54% 0.05 62 / 0.28));">
+            <sc-for list="{{ g.curls }}" as="c" hint-placeholder-count="6">
+              <div style="position: absolute; left: {{ c.x }}; bottom: 0; width: {{ c.s }}; height: {{ c.s }};">
+                <div style="position: absolute; inset: 0; border-radius: 50%; background: {{ g.edge }};"></div>
+                <div style="position: absolute; inset: 7% 9% 9% 7%; border-radius: 50%; background: {{ g.fill }}; box-shadow: inset 0 3px 0 oklch(100% 0 0 / 0.4);"></div>
+                <div style="position: absolute; inset: 24% 28% 30% 24%; border-radius: 50%; background: {{ g.edge }}; opacity: 0.8;"></div>
+                <div style="position: absolute; inset: 30% 34% 36% 30%; border-radius: 50%; background: {{ g.fill }}; box-shadow: inset 0 2px 0 oklch(100% 0 0 / 0.35);"></div>
+                <div style="position: absolute; left: 46%; top: 50%; width: 22%; height: 18%; border-radius: 50%; border: 3px solid {{ g.edge }}; border-color: {{ g.edge }} {{ g.edge }} transparent transparent; transform: rotate(-30deg);"></div>
+                <div style="position: absolute; left: -22%; bottom: 0; width: 60%; height: 42%; border-radius: 50%; background: {{ g.edge }};"></div>
+                <div style="position: absolute; left: -18%; bottom: 3%; width: 52%; height: 34%; border-radius: 50%; background: {{ g.fill }}; box-shadow: inset 0 2px 0 oklch(100% 0 0 / 0.4);"></div>
+              </div>
+            </sc-for>
+            <div style="position: absolute; left: 0; right: 0; bottom: 0; height: 22%; background: {{ g.fill }}; box-shadow: inset 0 3px 0 {{ g.edge }};"></div>
+          </div>
+        </sc-for>
+
+        <div style="position: absolute; left: 56px; top: 76px; width: 520px;">
+          <div style="position: absolute; inset: 12px -8px -10px 8px; border-radius: 4px; background: var(--kraft); opacity: 0.4;"></div>
+          <div style="position: absolute; inset: 6px -4px -5px 4px; border-radius: 3px; background: var(--p1); box-shadow: var(--lift-1);"></div>
+          <div style="position: relative; padding: 30px 32px 32px; border-radius: 3px; background: var(--p3); background-image: var(--grain); box-shadow: var(--lift-3); animation: pp-stack 620ms cubic-bezier(0.22,1,0.36,1) both;">
+            <div style="display: inline-flex; align-items: center; gap: 9px; padding: 6px 11px; border-radius: 2px; background: var(--p1); box-shadow: var(--lift-0);">
+              <div style="width: 6px; height: 6px; border-radius: 1px; background: var(--kraft-3);"></div>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.13em; text-transform: uppercase; color: var(--ink-soft);">Google Classroom, filtered</span>
+            </div>
+            <div style="font-size: 42px; font-weight: 700; letter-spacing: -0.04em; line-height: 1.03; padding-top: 18px; text-wrap: balance;">See only the coursework that applies to your section.</div>
+            <div style="font-size: 15px; line-height: 1.6; color: var(--ink-soft); padding-top: 14px; max-width: 420px; text-wrap: pretty;">One Classroom, many sections, different deadlines. LockIn sorts what's yours, asks when it isn't sure, and shows what's due next.</div>
+            <div style="display: flex; align-items: center; gap: 12px; padding-top: 24px;">
+              <button onClick="{{ noop }}" style="min-height: 48px; padding: 0 22px; border-radius: 3px; border: 1px solid var(--kraft-2); background: var(--kraft); color: var(--ink); font-size: 14px; font-weight: 700; cursor: pointer; box-shadow: var(--lift-2), 0 14px 26px -14px var(--glow-deep); transition: transform 160ms ease, box-shadow 160ms ease;" style-hover="transform: translateY(-2px); box-shadow: var(--lift-3), 0 18px 30px -14px var(--glow-deep);" style-active="transform: translateY(2px); box-shadow: var(--press);">Continue with Google</button>
+              <button onClick="{{ noop }}" style="min-height: 48px; padding: 0 20px; border-radius: 3px; border: 1px solid var(--edge); background: var(--p2); color: var(--ink); font-size: 14px; font-weight: 600; cursor: pointer; box-shadow: var(--lift-1); transition: transform 160ms ease;" style-hover="transform: translateY(-2px);" style-active="transform: translateY(2px); box-shadow: var(--press);">How filtering works</button>
+            </div>
+          </div>
+        </div>
+
+        <div style="position: absolute; right: 48px; bottom: 54px; width: 400px;">
+          <div style="position: absolute; inset: -10px -10px -14px -10px; border-radius: 4px; background: var(--kraft); opacity: 0.35;"></div>
+          <div style="position: absolute; inset: -5px -5px -7px -5px; border-radius: 3px; background: var(--p1); box-shadow: var(--lift-1);"></div>
+          <div style="position: relative; border-radius: 3px; background: var(--p3); box-shadow: var(--lift-3); overflow: hidden;">
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 15px; background: var(--p1); border-bottom: 1px solid var(--edge-soft);">
+              <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.13em; text-transform: uppercase; color: var(--ink-soft);">Your week</div>
+              <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; color: var(--ink-faint);">Section 02</div>
+            </div>
+            <sc-for list="{{ preview }}" as="r" hint-placeholder-count="3">
+              <div style="display: flex; align-items: center; gap: 12px; padding: 12px 15px; border-bottom: 1px solid var(--edge-soft);">
+                <div style="width: 4px; height: 26px; border-radius: 1px; background: {{ r.tone }};"></div>
+                <div style="flex: 1; min-width: 0;">
+                  <div style="font-size: 13.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ r.title }}</div>
+                  <div style="font-size: 11.5px; color: var(--ink-faint); padding-top: 2px;">{{ r.course }}</div>
+                </div>
+                <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12.5px; font-variant-numeric: tabular-nums;">{{ r.due }}</div>
+              </div>
+            </sc-for>
+            <div style="display: flex; align-items: center; gap: 10px; padding: 11px 15px; background: var(--p2);">
+              <div style="width: 4px; height: 18px; border-radius: 1px; background: var(--slate);"></div>
+              <div style="flex: 1; font-size: 12px; color: var(--ink-soft);">3 items need your call</div>
+            </div>
+          </div>
+          <div style="position: absolute; left: 10px; top: -32px; padding: 5px 10px; border-radius: 2px; background: var(--p3); box-shadow: var(--lift-2); transform: rotate(-3deg); font-family: 'Caveat', cursive; font-size: 17px; color: var(--kraft-3);">your section only</div>
+        </div>
+      </div>
+
+      <section style="position: relative; padding: 40px 60px 64px;">
+        <div style="display: grid; grid-template-columns: 420px 1fr; gap: 60px; align-items: center;">
+          <div>
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-faint);">01 · The shared-Classroom problem</div>
+            <div style="font-size: 34px; font-weight: 700; letter-spacing: -0.035em; line-height: 1.06; padding-top: 14px; text-wrap: balance;">Six sections. One stream. Every deadline mixed together.</div>
+            <div style="font-size: 14.5px; line-height: 1.65; color: var(--ink-soft); padding-top: 14px; text-wrap: pretty;">Instructors post to the whole Classroom. Section 04's lab is due Tuesday, yours Thursday, and both arrive as the same notification. The noise is structural — LockIn is the sheet that sorts it.</div>
+          </div>
+          <div style="position: relative; border-radius: 3px; background: var(--p0); box-shadow: var(--press); padding: 22px 24px 24px;">
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.13em; text-transform: uppercase; color: var(--ink-faint); padding-bottom: 12px;">Classroom stream, unsorted</div>
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              <sc-for list="{{ stream }}" as="s" hint-placeholder-count="6">
+                <div style="display: flex; align-items: center; gap: 12px; padding: 10px 13px; border-radius: 2px; background: {{ s.bg }}; box-shadow: {{ s.lift }}; opacity: {{ s.op }}; transform: translateX({{ s.shift }});">
+                  <div style="width: 4px; height: 20px; border-radius: 1px; background: {{ s.tone }};"></div>
+                  <div style="flex: 1; min-width: 0; font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ s.title }}</div>
+                  <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--ink-faint);">{{ s.meta }}</div>
+                </div>
+              </sc-for>
+            </div>
+            <div style="position: absolute; right: 18px; top: -14px; padding: 4px 10px; border-radius: 2px; background: var(--p3); box-shadow: var(--lift-2); transform: rotate(2.5deg); font-family: 'Caveat', cursive; font-size: 17px; color: var(--kraft-3);">only 3 of these are yours</div>
+          </div>
+        </div>
+      </section>
+
+      <div style="position: relative; height: 34px; margin: 0 -2%; background: var(--p2); clip-path: polygon(0 60%, 12% 30%, 24% 55%, 38% 20%, 52% 50%, 66% 22%, 80% 48%, 92% 26%, 100% 45%, 100% 100%, 0 100%);"></div>
+
+      <section style="position: relative; padding: 54px 60px 64px; background: var(--p2); background-image: var(--grain);">
+        <div style="display: grid; grid-template-columns: 1fr 440px; gap: 60px; align-items: center;">
+          <div style="position: relative;">
+            <div style="display: flex; align-items: stretch; gap: 26px;">
+              <div style="flex: 1; position: relative;">
+                <div style="position: absolute; inset: 8px -6px -8px -4px; border-radius: 4px; background: var(--kraft); opacity: 0.3;"></div>
+                <div style="position: absolute; inset: 4px -3px -4px -2px; border-radius: 3px; background: var(--p1); box-shadow: var(--lift-1);"></div>
+                <div style="position: relative; border-radius: 3px; background: var(--p3); box-shadow: var(--lift-3); overflow: hidden;">
+                  <div style="display: flex; align-items: center; gap: 9px; padding: 11px 14px; background: var(--p1); border-bottom: 1px solid var(--edge-soft);">
+                    <div style="width: 7px; height: 7px; border-radius: 1px; background: var(--moss);"></div>
+                    <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.13em; text-transform: uppercase; color: var(--ink-soft);">Kept · Section 02</span>
+                  </div>
+                  <sc-for list="{{ kept }}" as="r" hint-placeholder-count="3">
+                    <div style="display: flex; align-items: center; gap: 11px; padding: 11px 14px; border-bottom: 1px solid var(--edge-soft);">
+                      <div style="width: 4px; height: 22px; border-radius: 1px; background: var(--glow-deep);"></div>
+                      <div style="flex: 1; min-width: 0; font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ r.title }}</div>
+                      <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; font-variant-numeric: tabular-nums;">{{ r.due }}</div>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+              <div style="width: 190px; display: flex; flex-direction: column; gap: 8px; align-self: flex-end; padding-bottom: 10px;">
+                <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.13em; text-transform: uppercase; color: var(--ink-faint); padding-bottom: 2px;">Set aside</div>
+                <sc-for list="{{ aside }}" as="r" hint-placeholder-count="3">
+                  <div style="padding: 9px 12px; border-radius: 2px; background: var(--p1); box-shadow: var(--press); font-size: 12px; color: var(--ink-faint); display: flex; justify-content: space-between; gap: 8px;"><span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ r.title }}</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; flex: none;">{{ r.sec }}</span></div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-faint);">02 · Section filtering</div>
+            <div style="font-size: 34px; font-weight: 700; letter-spacing: -0.035em; line-height: 1.06; padding-top: 14px; text-wrap: balance;">Yours moves forward. The rest sits a sheet below.</div>
+            <div style="font-size: 14.5px; line-height: 1.65; color: var(--ink-soft); padding-top: 14px; text-wrap: pretty;">LockIn reads section tags, titles and due-date patterns. Confident matches go straight to your list. Nothing is deleted — set-aside work stays one layer down if you ever need it.</div>
+            <div style="display: flex; gap: 3px; padding-top: 22px;">
+              <div style="flex: 1; height: 6px; border-radius: 1px; background: var(--glow-deep);"></div>
+              <div style="flex: 1; height: 6px; border-radius: 1px; background: var(--glow-deep);"></div>
+              <div style="flex: 1; height: 6px; border-radius: 1px; background: var(--glow-deep);"></div>
+              <div style="flex: 1; height: 6px; border-radius: 1px; background: var(--slate);"></div>
+              <div style="flex: 1; height: 6px; border-radius: 1px; background: var(--edge);"></div>
+              <div style="flex: 1; height: 6px; border-radius: 1px; background: var(--edge);"></div>
+            </div>
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--ink-faint); padding-top: 8px;">3 kept · 1 to review · 2 set aside, this week</div>
+          </div>
+        </div>
+      </section>
+
+      <section style="position: relative; padding: 60px 60px 64px; background: var(--p1); background-image: var(--grain); border-top: 1px solid var(--edge-soft);">
+        <div style="display: grid; grid-template-columns: 400px 1fr; gap: 60px; align-items: center;">
+          <div>
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-faint);">03 · Needs review</div>
+            <div style="font-size: 34px; font-weight: 700; letter-spacing: -0.035em; line-height: 1.06; padding-top: 14px; text-wrap: balance;">When we can't tell, you decide — once.</div>
+            <div style="font-size: 14.5px; line-height: 1.65; color: var(--ink-soft); padding-top: 14px; text-wrap: pretty;">Some posts carry no section at all. LockIn lays the evidence side by side and asks a single question. Your answer is remembered for that course, so the same guess never comes back.</div>
+          </div>
+          <div style="position: relative; max-width: 480px; justify-self: end; width: 100%;">
+            <div style="position: absolute; inset: 16px -18px -18px -12px; border-radius: 5px; background: var(--kraft); opacity: 0.26;"></div>
+            <div style="position: absolute; inset: 11px -12px -12px -8px; border-radius: 4px; background: var(--kraft); opacity: 0.4;"></div>
+            <div style="position: absolute; inset: 6px -6px -7px -4px; border-radius: 3px; background: var(--p1); box-shadow: var(--lift-1);"></div>
+            <div style="position: absolute; inset: -6px 4px 20px 4px; border-radius: 4px; background: var(--glow); opacity: 0.55; filter: blur(12px);"></div>
+            <div style="position: relative; border-radius: 3px; background: var(--p3); background-image: var(--grain); box-shadow: var(--lift-3); overflow: hidden;">
+              <div style="display: flex; align-items: center; gap: 10px; padding: 16px 18px 0;">
+                <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 500; color: var(--slate);">Needs review</div>
+                <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; color: var(--ink-faint);">1 of 3</div>
+              </div>
+              <div style="padding: 12px 18px 0;">
+                <div style="font-size: 18px; font-weight: 700; letter-spacing: -0.02em;">Field notes 3</div>
+                <div style="font-size: 12px; color: var(--ink-faint); padding-top: 4px;">Course C · shared Classroom · due Thu 23:59</div>
+              </div>
+              <div style="margin: 14px 18px 0; padding: 12px 13px; border-radius: 2px; background: var(--p1); box-shadow: var(--press); display: flex; flex-direction: column; gap: 7px;">
+                <div style="font-size: 12.5px; color: var(--ink-soft); line-height: 1.4;">Title mentions <strong style="color: var(--ink); font-weight: 700;">Section 04</strong></div>
+                <div style="font-size: 12.5px; color: var(--ink-soft); line-height: 1.4;">You're in <strong style="color: var(--ink); font-weight: 700;">Section 02</strong></div>
+                <div style="font-size: 12.5px; color: var(--ink-soft); line-height: 1.4;">Posted to everyone, no section tag</div>
+              </div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 9px; padding: 15px 18px 18px;">
+                <button onClick="{{ noop }}" style="min-height: 44px; border-radius: 3px; border: 1px solid var(--kraft-2); background: var(--kraft); color: var(--ink); font-size: 12.5px; font-weight: 700; cursor: pointer; box-shadow: var(--lift-2), 0 10px 18px -12px var(--glow-deep); transition: transform 160ms ease;" style-hover="transform: translateY(-2px);" style-active="transform: translateY(2px); box-shadow: var(--press);">This is for me</button>
+                <button onClick="{{ noop }}" style="min-height: 44px; border-radius: 3px; border: 1px solid var(--edge); background: var(--p2); color: var(--ink); font-size: 12.5px; font-weight: 600; cursor: pointer; box-shadow: var(--lift-1); transition: transform 160ms ease;" style-hover="transform: translateY(-2px);" style-active="transform: translateY(2px); box-shadow: var(--press);">Not for me</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section style="position: relative; padding: 60px 60px 64px; background: var(--p2); background-image: var(--grain); border-top: 1px solid var(--edge-soft);">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: start;">
+          <div>
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-faint);">04 · Courses</div>
+            <div style="font-size: 34px; font-weight: 700; letter-spacing: -0.035em; line-height: 1.06; padding-top: 14px; text-wrap: balance;">Track this term. File the rest.</div>
+            <div style="font-size: 14.5px; line-height: 1.65; color: var(--ink-soft); padding-top: 14px; max-width: 460px; text-wrap: pretty;">Old Classrooms don't vanish — they slide a sheet down. Tracked courses sit forward; archived and unavailable ones stay legible but recessed, and a sync problem is marked where it happens.</div>
+            <div style="display: flex; flex-direction: column; gap: 8px; padding-top: 24px; max-width: 460px;">
+              <sc-for list="{{ courseRows }}" as="c" hint-placeholder-count="5">
+                <div style="display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0 14px; border-radius: 3px; background: {{ c.bg }}; box-shadow: {{ c.lift }}; color: {{ c.color }};">
+                  <div style="width: 4px; height: 20px; border-radius: 1px; background: {{ c.tone }};"></div>
+                  <div style="flex: 1; min-width: 0; font-size: 13.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ c.name }}</div>
+                  <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px;">{{ c.status }}</div>
+                  <div style="width: 36px; height: 22px; border-radius: 2px; background: {{ c.toggleBg }}; box-shadow: var(--press); position: relative;">
+                    <div style="position: absolute; top: 3px; left: {{ c.knob }}; width: 16px; height: 16px; border-radius: 2px; background: var(--p3); box-shadow: var(--lift-1);"></div>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <div style="padding-top: 34px;">
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-faint);">05 · Freshness</div>
+            <div style="font-size: 34px; font-weight: 700; letter-spacing: -0.035em; line-height: 1.06; padding-top: 14px; text-wrap: balance;">You always know how current it is.</div>
+            <div style="font-size: 14.5px; line-height: 1.65; color: var(--ink-soft); padding-top: 14px; max-width: 460px; text-wrap: pretty;">Stale data is shown as stale, never dressed up as live. Sync state lives in one calm place and only speaks up when something actually changed.</div>
+            <div style="display: flex; flex-direction: column; gap: 8px; padding-top: 24px; max-width: 460px;">
+              <sc-for list="{{ syncStates }}" as="s" hint-placeholder-count="4">
+                <div style="display: flex; align-items: center; gap: 11px; min-height: 44px; padding: 0 14px; border-radius: 3px; background: var(--p3); box-shadow: var(--lift-1);">
+                  <div style="width: 7px; height: 7px; border-radius: 1px; background: {{ s.tone }};"></div>
+                  <div style="flex: 1; font-size: 13px; font-weight: 600;">{{ s.label }}</div>
+                  <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--ink-faint);">{{ s.meta }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section style="position: relative; padding: 56px 60px; background: var(--p1); background-image: var(--grain); border-top: 1px solid var(--edge-soft);">
+        <div style="display: grid; grid-template-columns: 400px 1fr; gap: 60px; align-items: center;">
+          <div>
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-faint);">06 · Privacy</div>
+            <div style="font-size: 30px; font-weight: 700; letter-spacing: -0.035em; line-height: 1.08; padding-top: 14px; text-wrap: balance;">Read-only, and only what it needs.</div>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+            <sc-for list="{{ privacy }}" as="p" hint-placeholder-count="3">
+              <div style="padding: 16px 16px 18px; border-radius: 3px; background: var(--p0); box-shadow: var(--press);">
+                <div style="width: 34px; height: 34px; border-radius: 3px; background: var(--p1); box-shadow: var(--lift-1); display: grid; place-items: center;">
+                  <div style="width: 10px; height: 10px; border-radius: 1px; background: var(--kraft-3);"></div>
+                </div>
+                <div style="font-size: 14px; font-weight: 700; padding-top: 14px; letter-spacing: -0.01em;">{{ p.t }}</div>
+                <div style="font-size: 12.5px; color: var(--ink-soft); padding-top: 5px; line-height: 1.5;">{{ p.d }}</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </section>
+
+      <section style="position: relative; margin: 0 22px 22px; padding: 22px; border-radius: 5px; background: var(--p0); box-shadow: var(--press);">
+        <div style="position: relative; border-radius: 3px; overflow: hidden; background: var(--p2); box-shadow: var(--lift-3); padding: 54px 60px;">
+          <div style="position: absolute; left: 50%; bottom: -80px; width: 700px; height: 220px; transform: translateX(-50%); background: radial-gradient(ellipse at center, var(--glow) 0%, transparent 70%); opacity: {{ heroGlow }}; animation: pp-breathe 12s ease-in-out infinite;"></div>
+          <div style="position: absolute; left: -2%; right: -2%; bottom: 0; height: 70px; background: var(--p1); clip-path: polygon(0 60%, 12% 30%, 24% 55%, 38% 20%, 52% 50%, 66% 22%, 80% 48%, 92% 26%, 100% 45%, 100% 100%, 0 100%);"></div>
+          <div style="position: absolute; left: -2%; right: -2%; bottom: 0; height: 38px; background: var(--kraft); opacity: 0.6; clip-path: polygon(0 50%, 10% 20%, 22% 44%, 34% 16%, 46% 40%, 58% 14%, 70% 38%, 82% 18%, 94% 42%, 100% 26%, 100% 100%, 0 100%);"></div>
+          <div style="position: relative; display: flex; align-items: center; justify-content: space-between; gap: 40px;">
+            <div>
+              <div style="font-size: 34px; font-weight: 700; letter-spacing: -0.035em; line-height: 1.06; text-wrap: balance;">Your Classroom, filtered for your section.</div>
+              <div style="font-size: 14.5px; color: var(--ink-soft); padding-top: 10px;">Free for students. Connect in under a minute.</div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px; flex: none;">
+              <button onClick="{{ noop }}" style="min-height: 48px; padding: 0 22px; border-radius: 3px; border: 1px solid var(--kraft-2); background: var(--kraft); color: var(--ink); font-size: 14px; font-weight: 700; cursor: pointer; box-shadow: var(--lift-2), 0 14px 26px -14px var(--glow-deep); transition: transform 160ms ease, box-shadow 160ms ease;" style-hover="transform: translateY(-2px); box-shadow: var(--lift-3), 0 18px 30px -14px var(--glow-deep);" style-active="transform: translateY(2px); box-shadow: var(--press);">Continue with Google</button>
+              <button onClick="{{ noop }}" style="min-height: 48px; padding: 0 20px; border-radius: 3px; border: 1px solid var(--edge); background: var(--p3); color: var(--ink); font-size: 14px; font-weight: 600; cursor: pointer; box-shadow: var(--lift-1); transition: transform 160ms ease;" style-hover="transform: translateY(-2px);" style-active="transform: translateY(2px); box-shadow: var(--press);">Read the privacy note</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <footer style="display: flex; align-items: center; justify-content: space-between; padding: 0 30px 24px; font-size: 12px; color: var(--ink-faint);">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <svg width="12" height="12" viewBox="0 0 64 64" fill="var(--ink-faint)" aria-hidden="true"><path d="M9 6h13v39h28v13H9z"></path><rect x="30" y="6" width="13" height="26"></rect></svg>
+          <span>LockIn · lockinapp.tech</span>
+        </div>
+        <div style="display: flex; gap: 22px;">
+          <a href="#" style="font-size: 12px;">Privacy</a>
+          <a href="#" style="font-size: 12px;">Terms</a>
+          <a href="#" style="font-size: 12px;">Contact</a>
+        </div>
+        <span style="font-family: 'Caveat', cursive; font-size: 16px; color: var(--kraft-3);">not affiliated with Google</span>
+      </footer>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 14px;">
+    <div style="display: flex; align-items: baseline; gap: 14px; font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase;">
+      <span>Desktop app · 1280</span><span style="color: var(--ink-faint);">Paper tabs, contour cards</span>
+    </div>
+
+    <div style="position: relative; width: 1280px; border-radius: 5px; background: var(--p1); background-image: var(--grain); box-shadow: var(--lift-3); overflow: hidden; display: flex;">
+      <aside style="width: 214px; flex: none; background: var(--p0); padding: 22px 0 18px 16px; display: flex; flex-direction: column; gap: 24px; box-shadow: inset -8px 0 14px -12px oklch(56% 0.05 62 / 0.4);">
+        <div style="display: flex; align-items: center; gap: 10px; padding-right: 16px;">
+          <div style="width: 30px; height: 30px; border-radius: 3px; background: var(--kraft); display: grid; place-items: center; box-shadow: var(--lift-1);">
+            <svg width="15" height="15" viewBox="0 0 64 64" fill="var(--ink)" aria-hidden="true"><path d="M9 6h13v39h28v13H9z"></path><rect x="30" y="6" width="13" height="26"></rect></svg>
+          </div>
+          <div style="font-size: 16px; font-weight: 700; letter-spacing: -0.03em;">LockIn</div>
+        </div>
+
+        <nav style="display: flex; flex-direction: column; gap: 6px;">
+          <div style="position: relative; display: flex; align-items: center; gap: 11px; min-height: 44px; padding: 0 14px; margin-right: -1px; background: var(--p3); border-radius: 3px 0 0 3px; box-shadow: var(--lift-2); font-size: 13.5px; font-weight: 700; cursor: default; transform: translateX(3px);">
+            <div style="position: absolute; left: 0; right: 0; bottom: -3px; height: 3px; background: var(--glow); opacity: 0.85;"></div>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"></path><path d="M5 9.5V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9.5"></path></svg>
+            <span>Today</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 11px; min-height: 44px; padding: 0 14px; background: var(--p1); border-radius: 3px 0 0 3px; box-shadow: var(--lift-0); font-size: 13.5px; font-weight: 500; color: var(--ink-soft); cursor: pointer; transition: transform 180ms ease, box-shadow 180ms ease;" style-hover="transform: translateX(3px); box-shadow: var(--lift-1); color: var(--ink);">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M3 10h18M8 3v4M16 3v4"></path></svg>
+            <span>Upcoming</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 11px; min-height: 44px; padding: 0 14px; background: var(--p1); border-radius: 3px 0 0 3px; box-shadow: var(--lift-0); font-size: 13.5px; font-weight: 500; color: var(--ink-soft); cursor: pointer; transition: transform 180ms ease, box-shadow 180ms ease;" style-hover="transform: translateX(3px); box-shadow: var(--lift-1); color: var(--ink);">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H10a2 2 0 0 1 2 2v14a2 2 0 0 0-2-2H5.5A1.5 1.5 0 0 1 4 15.5Z"></path><path d="M20 4.5A1.5 1.5 0 0 0 18.5 3H14a2 2 0 0 0-2 2v14a2 2 0 0 1 2-2h4.5a1.5 1.5 0 0 0 1.5-1.5Z"></path></svg>
+            <span>Courses</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 11px; min-height: 44px; padding: 0 14px; background: var(--p1); border-radius: 3px 0 0 3px; box-shadow: var(--lift-0); font-size: 13.5px; font-weight: 500; color: var(--ink-soft); cursor: pointer; transition: transform 180ms ease, box-shadow 180ms ease;" style-hover="transform: translateX(3px); box-shadow: var(--lift-1); color: var(--ink);">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M9.6 9.2a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2.2-2.4 3.6"></path><path d="M12 17.2h.01"></path></svg>
+            <span style="flex: 1;">Review</span>
+            <span style="min-width: 20px; padding: 2px 6px; border-radius: 2px; background: var(--slate); color: var(--p3); font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; text-align: center;">3</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 11px; min-height: 44px; padding: 0 14px; background: var(--p1); border-radius: 3px 0 0 3px; box-shadow: var(--lift-0); font-size: 13.5px; font-weight: 500; color: var(--ink-soft); cursor: pointer; transition: transform 180ms ease, box-shadow 180ms ease;" style-hover="transform: translateX(3px); box-shadow: var(--lift-1); color: var(--ink);">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1Z"></path></svg>
+            <span>Settings</span>
+          </div>
+        </nav>
+
+        <div style="flex: 1;"></div>
+
+        <div style="margin-right: 16px; padding: 13px; border-radius: 3px; background: var(--p2); box-shadow: var(--lift-1);">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <div style="width: 7px; height: 7px; border-radius: 1px; background: var(--moss);"></div>
+            <div style="font-size: 12px; font-weight: 600;">Synced</div>
+            <div style="margin-left: auto; font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; color: var(--ink-faint);">4m</div>
+          </div>
+          <div style="display: flex; gap: 3px; padding-top: 10px;">
+            <div style="flex: 1; height: 5px; border-radius: 1px; background: var(--moss);"></div>
+            <div style="flex: 1; height: 5px; border-radius: 1px; background: var(--moss);"></div>
+            <div style="flex: 1; height: 5px; border-radius: 1px; background: var(--moss);"></div>
+            <div style="flex: 1; height: 5px; border-radius: 1px; background: var(--moss);"></div>
+            <div style="flex: 1; height: 5px; border-radius: 1px; background: var(--moss);"></div>
+            <div style="flex: 1; height: 5px; border-radius: 1px; background: var(--glow-deep);"></div>
+          </div>
+          <div style="font-size: 11.5px; color: var(--ink-soft); padding-top: 9px; line-height: 1.4;">5 of 6 courses current</div>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 10px; margin-right: 16px;">
+          <div style="width: 30px; height: 30px; border-radius: 3px; background: var(--p2); box-shadow: var(--lift-1); display: grid; place-items: center; font-size: 11px; font-weight: 700;">AA</div>
+          <div style="min-width: 0;">
+            <div style="font-size: 12.5px; font-weight: 600;">Section 02</div>
+            <div style="font-size: 11px; color: var(--ink-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">student@uni.edu</div>
+          </div>
+        </div>
+      </aside>
+
+      <div style="flex: 1; min-width: 0; background: var(--p2); background-image: var(--grain); padding: 26px 28px 32px; box-shadow: var(--lift-2);">
+        <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 28px; padding-bottom: 22px;">
+          <div>
+            <div style="font-size: 27px; font-weight: 700; letter-spacing: -0.035em; line-height: 1.1;">Today</div>
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; color: var(--ink-faint); padding-top: 6px;">Mon 7 September · 3 due · 1 late</div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="display: flex; align-items: center; gap: 9px; min-height: 38px; padding: 0 13px; border-radius: 3px; background: var(--p3); box-shadow: var(--lift-1);">
+              <div style="width: 7px; height: 7px; border-radius: 1px; background: var(--moss);"></div>
+              <span style="font-size: 12.5px; color: var(--ink-soft);">Updated 4m ago</span>
+            </div>
+            <button onClick="{{ noop }}" style="min-height: 38px; padding: 0 15px; border-radius: 3px; border: 1px solid var(--edge); background: var(--p3); color: var(--ink); font-size: 12.5px; font-weight: 600; cursor: pointer; box-shadow: var(--lift-1); transition: transform 160ms ease;" style-hover="transform: translateY(-2px);" style-active="transform: translateY(2px); box-shadow: var(--press);">Sync now</button>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 336px; gap: 26px; align-items: start;">
+          <div style="display: flex; flex-direction: column; gap: 24px;">
+
+            <div style="position: relative;">
+              <div style="position: absolute; inset: 10px -14px -12px -8px; border-radius: 4px; background: var(--kraft); opacity: 0.32;"></div>
+              <div style="position: absolute; inset: 5px -8px -7px -4px; border-radius: 3px; background: var(--p1); box-shadow: var(--lift-1);"></div>
+              <div style="position: relative; border-radius: 3px; background: var(--p3); box-shadow: var(--lift-2); overflow: hidden;">
+                <div style="position: absolute; left: 0; right: 0; top: 0; height: 4px; background: var(--terra);"></div>
+                <div style="display: flex; align-items: center; gap: 11px; padding: 17px 18px 12px;">
+                  <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 500; color: var(--terra);">Late</div>
+                  <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; color: var(--ink-faint);">1</div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 132px 128px 108px; align-items: center; gap: 16px; padding: 0 18px 17px;">
+                  <div style="min-width: 0;">
+                    <div style="font-size: 15px; font-weight: 700; letter-spacing: -0.015em;">Reading response 6</div>
+                    <div style="font-size: 12px; color: var(--ink-faint); padding-top: 3px;">Course C · Section 02</div>
+                  </div>
+                  <div>
+                    <div style="font-family: 'IBM Plex Mono', monospace; font-size: 13.5px; font-weight: 500; color: var(--terra);">2 days late</div>
+                    <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--ink-faint); padding-top: 3px;">was Thu 23:59</div>
+                  </div>
+                  <div style="font-size: 12.5px; color: var(--ink-soft);">Not submitted</div>
+                  <button onClick="{{ noop }}" style="min-height: 40px; border-radius: 3px; border: 1px solid var(--edge); background: var(--p2); color: var(--ink); font-size: 12.5px; font-weight: 600; cursor: pointer; box-shadow: var(--lift-1); transition: transform 160ms ease;" style-hover="transform: translateY(-2px);" style-active="transform: translateY(2px); box-shadow: var(--press);">Open</button>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div style="display: flex; align-items: center; gap: 11px; padding-bottom: 11px;">
+                <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 500;">Due today</div>
+                <div style="flex: 1; height: 1px; background: var(--edge-soft);"></div>
+                <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; color: var(--ink-faint);">3</div>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 10px;">
+                <sc-for list="{{ today }}" as="r" hint-placeholder-count="3">
+                  <div style="position: relative; display: grid; grid-template-columns: 5px 1fr 132px 128px 24px; align-items: center; gap: 16px; min-height: 66px; padding: 0 16px 0 0; border-radius: 3px; background: var(--p3); box-shadow: var(--lift-1); cursor: pointer; animation: pp-stack 520ms cubic-bezier(0.22,1,0.36,1) both; animation-delay: {{ r.delay }}; transition: transform 200ms cubic-bezier(0.22,1,0.36,1), box-shadow 200ms ease;" style-hover="transform: translateY(-3px); box-shadow: var(--lift-3);">
+                    <div style="align-self: stretch; border-radius: 3px 0 0 3px; background: {{ r.tone }};"></div>
+                    <div style="min-width: 0; padding: 12px 0 12px 4px;">
+                      <div style="font-size: 14.5px; font-weight: 600; letter-spacing: -0.012em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ r.title }}</div>
+                      <div style="font-size: 12px; color: var(--ink-faint); padding-top: 3px;">{{ r.course }}</div>
+                    </div>
+                    <div>
+                      <div style="font-family: 'IBM Plex Mono', monospace; font-size: 13.5px; font-weight: 500; font-variant-numeric: tabular-nums;">{{ r.due }}</div>
+                      <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--ink-faint); padding-top: 3px;">{{ r.dueSub }}</div>
+                    </div>
+                    <div style="justify-self: start; padding: 4px 9px; border-radius: 2px; background: var(--p1); box-shadow: var(--lift-0); font-size: 11.5px; font-weight: 600; color: var(--ink-soft);">{{ r.state }}</div>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"></path></svg>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+
+            <div>
+              <div style="display: flex; align-items: center; gap: 11px; padding-bottom: 11px;">
+                <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 500; color: var(--ink-soft);">This week</div>
+                <div style="flex: 1; height: 1px; background: var(--edge-soft);"></div>
+                <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; color: var(--ink-faint);">5</div>
+              </div>
+              <div style="border-radius: 3px; background: var(--p1); box-shadow: var(--lift-0); overflow: hidden;">
+                <sc-for list="{{ week }}" as="r" hint-placeholder-count="4">
+                  <div style="display: grid; grid-template-columns: 1fr 132px 128px 24px; align-items: center; gap: 16px; min-height: 54px; padding: 0 16px; border-top: 1px solid var(--edge-soft); cursor: pointer; transition: background 180ms ease;" style-hover="background: var(--p2);">
+                    <div style="min-width: 0;">
+                      <div style="font-size: 14px; font-weight: 600; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ r.title }}</div>
+                      <div style="font-size: 11.5px; color: var(--ink-faint); padding-top: 2px;">{{ r.course }}</div>
+                    </div>
+                    <div style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: var(--ink-soft); font-variant-numeric: tabular-nums;">{{ r.due }}</div>
+                    <div style="font-size: 12px; color: var(--ink-faint);">{{ r.state }}</div>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"></path></svg>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 24px;">
+            <div style="position: relative;">
+              <div style="position: absolute; inset: 16px -18px -18px -12px; border-radius: 5px; background: var(--kraft); opacity: 0.26;"></div>
+              <div style="position: absolute; inset: 11px -12px -12px -8px; border-radius: 4px; background: var(--kraft); opacity: 0.4;"></div>
+              <div style="position: absolute; inset: 6px -6px -7px -4px; border-radius: 3px; background: var(--p1); box-shadow: var(--lift-1);"></div>
+              <div style="position: absolute; inset: -6px 4px 20px 4px; border-radius: 4px; background: var(--glow); opacity: 0.55; filter: blur(12px);"></div>
+              <div style="position: relative; border-radius: 3px; background: var(--p3); background-image: var(--grain); box-shadow: var(--lift-3); overflow: hidden;">
+                <div style="display: flex; align-items: center; gap: 10px; padding: 15px 17px 0;">
+                  <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 500; color: var(--slate);">Needs review</div>
+                  <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; color: var(--ink-faint);">1 of 3</div>
+                </div>
+                <div style="padding: 12px 17px 0;">
+                  <div style="font-size: 16px; font-weight: 700; letter-spacing: -0.02em;">Field notes 3</div>
+                  <div style="font-size: 12px; color: var(--ink-faint); padding-top: 4px;">Course C · shared Classroom · due Thu 23:59</div>
+                </div>
+                <div style="margin: 14px 17px 0; padding: 12px 13px; border-radius: 2px; background: var(--p1); box-shadow: var(--press); display: flex; flex-direction: column; gap: 7px;">
+                  <div style="font-size: 12.5px; color: var(--ink-soft); line-height: 1.4;">Title mentions <strong style="color: var(--ink); font-weight: 700;">Section 04</strong></div>
+                  <div style="font-size: 12.5px; color: var(--ink-soft); line-height: 1.4;">You're in <strong style="color: var(--ink); font-weight: 700;">Section 02</strong></div>
+                  <div style="font-size: 12.5px; color: var(--ink-soft); line-height: 1.4;">Posted to everyone, no section tag</div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 9px; padding: 15px 17px 17px;">
+                  <button onClick="{{ noop }}" style="min-height: 44px; border-radius: 3px; border: 1px solid var(--kraft-2); background: var(--kraft); color: var(--ink); font-size: 12.5px; font-weight: 700; cursor: pointer; box-shadow: var(--lift-2), 0 10px 18px -12px var(--glow-deep); transition: transform 160ms ease;" style-hover="transform: translateY(-2px);" style-active="transform: translateY(2px); box-shadow: var(--press);">This is for me</button>
+                  <button onClick="{{ noop }}" style="min-height: 44px; border-radius: 3px; border: 1px solid var(--edge); background: var(--p2); color: var(--ink); font-size: 12.5px; font-weight: 600; cursor: pointer; box-shadow: var(--lift-1); transition: transform 160ms ease;" style-hover="transform: translateY(-2px);" style-active="transform: translateY(2px); box-shadow: var(--press);">Not for me</button>
+                </div>
+              </div>
+              <div style="position: absolute; right: -14px; top: -12px; padding: 4px 10px; border-radius: 2px; background: var(--p3); box-shadow: var(--lift-2); transform: rotate(3deg); font-family: 'Caveat', cursive; font-size: 17px; color: var(--kraft-3);">contour card</div>
+            </div>
+
+            <div style="border-radius: 3px; background: var(--p3); box-shadow: var(--lift-1); padding: 15px 16px;">
+              <div style="display: flex; align-items: center; justify-content: space-between; padding-bottom: 12px;">
+                <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 500; color: var(--ink-faint);">Tracked</div>
+                <a href="#" style="font-size: 12px; font-weight: 600;">Manage</a>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 7px;">
+                <sc-for list="{{ courses }}" as="c" hint-placeholder-count="5">
+                  <div style="display: flex; align-items: center; gap: 10px; padding: 9px 11px; border-radius: 2px; background: var(--p1); box-shadow: var(--lift-0);">
+                    <div style="width: 4px; height: 16px; border-radius: 1px; background: {{ c.tone }};"></div>
+                    <div style="flex: 1; min-width: 0; font-size: 12.5px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ c.name }}</div>
+                    <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--ink-faint);">{{ c.section }}</div>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="display: flex; gap: 9px; margin-top: 12px; padding: 11px 12px; border-radius: 2px; background: var(--p1); box-shadow: var(--press);">
+                <div style="width: 4px; border-radius: 1px; background: var(--glow-deep); flex: none;"></div>
+                <div>
+                  <div style="font-size: 12.5px; font-weight: 600;">Course E is 3 hours behind</div>
+                  <div style="font-size: 12px; color: var(--ink-soft); padding-top: 2px; line-height: 1.4;">Showing the last version we could read.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display: flex; align-items: flex-start; gap: 40px; flex-wrap: wrap;">
+    <div style="display: flex; flex-direction: column; gap: 14px;">
+      <div style="display: flex; align-items: baseline; gap: 12px; font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase;">
+        <span>Mobile · 390</span><span style="color: var(--ink-faint);">Fewer layers, paper tab bar</span>
+      </div>
+      <div style="width: 390px; height: 812px; border-radius: 22px; background: var(--p1); box-shadow: var(--lift-4); padding: 8px; display: flex;">
+        <div style="flex: 1; min-width: 0; border-radius: 16px; background: var(--p2); background-image: var(--grain); box-shadow: var(--press); overflow: hidden; display: flex; flex-direction: column;">
+          <div style="flex: none; height: 40px; display: flex; align-items: center; justify-content: space-between; padding: 0 22px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 500;">
+            <span>9:41</span>
+            <div style="display: flex; align-items: center; gap: 5px;">
+              <div style="width: 15px; height: 8px; border-radius: 1px; background: var(--ink);"></div>
+              <div style="width: 21px; height: 10px; border-radius: 2px; border: 1.5px solid var(--ink);"></div>
+            </div>
+          </div>
+
+          <header style="flex: none; padding: 4px 16px 14px; display: flex; align-items: center; gap: 11px;">
+            <div style="width: 30px; height: 30px; border-radius: 3px; background: var(--kraft); display: grid; place-items: center; box-shadow: var(--lift-1);">
+              <svg width="15" height="15" viewBox="0 0 64 64" fill="var(--ink)" aria-hidden="true"><path d="M9 6h13v39h28v13H9z"></path><rect x="30" y="6" width="13" height="26"></rect></svg>
+            </div>
+            <div style="flex: 1;">
+              <div style="font-size: 20px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.1;">Today</div>
+              <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--ink-faint); padding-top: 2px;">Mon 7 Sep · updated 4m ago</div>
+            </div>
+            <div style="width: 44px; height: 44px; border-radius: 3px; background: var(--p3); box-shadow: var(--lift-1); display: grid; place-items: center; font-size: 12px; font-weight: 700;">AA</div>
+          </header>
+
+          <div style="flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 16px 16px; display: flex; flex-direction: column; gap: 14px;">
+            <div style="position: relative; flex: none;">
+              <div style="position: absolute; inset: 7px -6px -8px -4px; border-radius: 3px; background: var(--kraft); opacity: 0.35;"></div>
+              <div style="position: relative; border-radius: 3px; background: var(--p3); box-shadow: var(--lift-2); padding: 15px 16px; overflow: hidden;">
+                <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 5px; background: var(--terra);"></div>
+                <div style="padding-left: 6px;">
+                  <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--terra);">Late</div>
+                  <div style="font-size: 15px; font-weight: 700; letter-spacing: -0.015em; padding-top: 8px;">Reading response 6</div>
+                  <div style="font-size: 12px; color: var(--ink-faint); padding-top: 3px;">Course C · 2 days late</div>
+                </div>
+              </div>
+            </div>
+
+            <div style="flex: none; display: flex; align-items: center; gap: 11px;">
+              <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 500;">Due today</div>
+              <div style="flex: 1; height: 1px; background: var(--edge-soft);"></div>
+              <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--ink-faint);">3</div>
+            </div>
+
+            <sc-for list="{{ today }}" as="r" hint-placeholder-count="3">
+              <div style="position: relative; flex: none; display: flex; align-items: center; gap: 13px; padding: 15px 16px; border-radius: 3px; background: var(--p3); box-shadow: var(--lift-2); animation: pp-stack 520ms cubic-bezier(0.22,1,0.36,1) both; animation-delay: {{ r.delay }}; transition: transform 180ms ease, box-shadow 180ms ease;" style-active="transform: translateY(2px); box-shadow: var(--lift-0);">
+                <div style="width: 5px; align-self: stretch; border-radius: 1px; background: {{ r.tone }};"></div>
+                <div style="flex: 1; min-width: 0;">
+                  <div style="font-size: 15px; font-weight: 600; letter-spacing: -0.015em;">{{ r.title }}</div>
+                  <div style="font-size: 11.5px; color: var(--ink-faint); padding-top: 3px;">{{ r.course }} · {{ r.state }}</div>
+                </div>
+                <div style="text-align: right; flex: none;">
+                  <div style="font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums;">{{ r.due }}</div>
+                  <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; color: var(--ink-faint); padding-top: 2px;">{{ r.dueSub }}</div>
+                </div>
+              </div>
+            </sc-for>
+
+            <div style="position: relative; flex: none;">
+              <div style="position: absolute; inset: 8px -7px -9px -5px; border-radius: 3px; background: var(--kraft); opacity: 0.3;"></div>
+              <div style="position: absolute; inset: -4px 6px 14px 6px; border-radius: 3px; background: var(--glow); opacity: 0.5; filter: blur(10px);"></div>
+              <div style="position: relative; border-radius: 3px; background: var(--p3); box-shadow: var(--lift-3); padding: 15px 16px;">
+                <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--slate);">Needs review · 3</div>
+                <div style="font-size: 15px; font-weight: 700; letter-spacing: -0.015em; padding-top: 9px;">Field notes 3</div>
+                <div style="font-size: 12px; color: var(--ink-soft); padding-top: 4px; line-height: 1.45;">Title says Section 04 — you're in Section 02.</div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 9px; padding-top: 13px;">
+                  <button onClick="{{ noop }}" style="min-height: 44px; border-radius: 3px; border: 1px solid var(--kraft-2); background: var(--kraft); color: var(--ink); font-size: 12.5px; font-weight: 700; cursor: pointer; box-shadow: var(--lift-2);" style-active="transform: translateY(2px); box-shadow: var(--press);">For me</button>
+                  <button onClick="{{ noop }}" style="min-height: 44px; border-radius: 3px; border: 1px solid var(--edge); background: var(--p2); color: var(--ink); font-size: 12.5px; font-weight: 600; cursor: pointer; box-shadow: var(--lift-1);" style-active="transform: translateY(2px); box-shadow: var(--press);">Not for me</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <nav style="flex: none; background: var(--p0); padding: 8px 10px 20px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; align-items: end; box-shadow: inset 0 8px 14px -12px oklch(56% 0.05 62 / 0.45);">
+            <div style="position: relative; min-height: 54px; border-radius: 3px 3px 0 0; background: var(--p3); box-shadow: var(--lift-2); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; transform: translateY(-3px); clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 0 100%);">
+              <div style="position: absolute; left: 8px; right: 8px; bottom: 0; height: 3px; background: var(--glow);"></div>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"></path><path d="M5 9.5V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9.5"></path></svg>
+              <span style="font-size: 10.5px; font-weight: 700;">Today</span>
+            </div>
+            <div style="min-height: 50px; border-radius: 3px 3px 0 0; background: var(--p1); box-shadow: var(--lift-0); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: var(--ink-soft); clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 0 100%);">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M3 10h18M8 3v4M16 3v4"></path></svg>
+              <span style="font-size: 10.5px; font-weight: 500;">Upcoming</span>
+            </div>
+            <div style="min-height: 50px; border-radius: 3px 3px 0 0; background: var(--p1); box-shadow: var(--lift-0); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: var(--ink-soft); clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 0 100%);">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H10a2 2 0 0 1 2 2v14a2 2 0 0 0-2-2H5.5A1.5 1.5 0 0 1 4 15.5Z"></path><path d="M20 4.5A1.5 1.5 0 0 0 18.5 3H14a2 2 0 0 0-2 2v14a2 2 0 0 1 2-2h4.5a1.5 1.5 0 0 0 1.5-1.5Z"></path></svg>
+              <span style="font-size: 10.5px; font-weight: 500;">Courses</span>
+            </div>
+            <div style="position: relative; min-height: 50px; border-radius: 3px 3px 0 0; background: var(--p1); box-shadow: var(--lift-0); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: var(--ink-soft); clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 0 100%);">
+              <div style="position: absolute; top: 6px; right: 16px; min-width: 16px; padding: 1px 4px; border-radius: 2px; background: var(--slate); color: var(--p3); font-family: 'IBM Plex Mono', monospace; font-size: 9.5px; text-align: center;">3</div>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M9.6 9.2a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2.2-2.4 3.6"></path><path d="M12 17.2h.01"></path></svg>
+              <span style="font-size: 10.5px; font-weight: 500;">Review</span>
+            </div>
+          </nav>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 18px; width: 780px;">
+      <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-faint);">States</div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+        <div style="border-radius: 3px; background: var(--p2); box-shadow: var(--lift-1); padding: 18px;">
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-faint); padding-bottom: 14px;">Loading · sheets stacking</div>
+          <div style="display: flex; flex-direction: column; gap: 9px;">
+            <sc-for list="{{ skeleton }}" as="s" hint-placeholder-count="3">
+              <div style="height: 58px; border-radius: 3px; background: var(--p1); box-shadow: var(--lift-0); animation: pp-stack 700ms cubic-bezier(0.22,1,0.36,1) both; animation-delay: {{ s.delay }}; display: flex; align-items: center; gap: 12px; padding: 0 14px;">
+                <div style="width: 5px; align-self: stretch; margin: 12px 0; border-radius: 1px; background: var(--edge-soft);"></div>
+                <div style="flex: 1; display: flex; flex-direction: column; gap: 7px;">
+                  <div style="height: 11px; width: {{ s.w1 }}; border-radius: 2px; background: linear-gradient(90deg, var(--p0) 20%, var(--p2) 40%, var(--p0) 60%); background-size: 220% 100%; animation: pp-shimmer 1.6s linear infinite;"></div>
+                  <div style="height: 9px; width: {{ s.w2 }}; border-radius: 2px; background: var(--p0);"></div>
+                </div>
+                <div style="width: 44px; height: 11px; border-radius: 2px; background: var(--p0);"></div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="border-radius: 3px; background: var(--p2); box-shadow: var(--lift-1); padding: 18px;">
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-faint); padding-bottom: 14px;">Empty · nothing due</div>
+          <div style="position: relative; border-radius: 3px; background: var(--p1); box-shadow: var(--press); padding: 30px 22px; text-align: center;">
+            <div style="display: flex; justify-content: center; gap: 4px; padding-bottom: 16px;">
+              <div style="width: 34px; height: 8px; border-radius: 1px; background: var(--p2); box-shadow: var(--lift-0);"></div>
+              <div style="width: 34px; height: 8px; border-radius: 1px; background: var(--p3); box-shadow: var(--lift-0);"></div>
+              <div style="width: 34px; height: 8px; border-radius: 1px; background: var(--p2); box-shadow: var(--lift-0);"></div>
+            </div>
+            <div style="font-size: 16px; font-weight: 700; letter-spacing: -0.02em;">You're all caught up.</div>
+            <div style="font-size: 13px; color: var(--ink-soft); padding-top: 6px;">Nothing due for Section 02 right now.</div>
+            <button onClick="{{ noop }}" style="min-height: 40px; padding: 0 16px; margin-top: 16px; border-radius: 3px; border: 1px solid var(--edge); background: var(--p3); color: var(--ink); font-size: 12.5px; font-weight: 600; cursor: pointer; box-shadow: var(--lift-1); transition: transform 160ms ease;" style-hover="transform: translateY(-2px);" style-active="transform: translateY(2px); box-shadow: var(--press);">See this week</button>
+          </div>
+        </div>
+
+        <div style="border-radius: 3px; background: var(--p2); box-shadow: var(--lift-1); padding: 18px;">
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-faint); padding-bottom: 14px;">Stale · calm, never hidden</div>
+          <div style="position: relative; border-radius: 3px; background: var(--p3); box-shadow: var(--lift-1); padding: 15px 16px; overflow: hidden;">
+            <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 5px; background: var(--glow-deep);"></div>
+            <div style="padding-left: 6px;">
+              <div style="font-size: 14px; font-weight: 700;">Showing data from 3 hours ago</div>
+              <div style="font-size: 12.5px; color: var(--ink-soft); padding-top: 4px; line-height: 1.45;">Classroom didn't answer on the last two tries. Deadlines below may have changed.</div>
+              <div style="display: flex; gap: 9px; padding-top: 13px;">
+                <button onClick="{{ noop }}" style="min-height: 40px; padding: 0 15px; border-radius: 3px; border: 1px solid var(--edge); background: var(--p2); color: var(--ink); font-size: 12.5px; font-weight: 600; cursor: pointer; box-shadow: var(--lift-1);" style-active="transform: translateY(2px); box-shadow: var(--press);">Try again</button>
+                <button onClick="{{ noop }}" style="min-height: 40px; padding: 0 15px; border-radius: 3px; border: none; background: transparent; color: var(--ink-soft); font-size: 12.5px; font-weight: 600; cursor: pointer;">Dismiss</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="border-radius: 3px; background: var(--p2); box-shadow: var(--lift-1); padding: 18px;">
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-faint); padding-bottom: 14px;">Error · reconnect needed</div>
+          <div style="position: relative; border-radius: 3px; background: var(--p3); box-shadow: var(--lift-1); padding: 15px 16px; overflow: hidden;">
+            <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 5px; background: var(--terra);"></div>
+            <div style="padding-left: 6px;">
+              <div style="font-size: 14px; font-weight: 700;">Google Classroom needs reconnecting</div>
+              <div style="font-size: 12.5px; color: var(--ink-soft); padding-top: 4px; line-height: 1.45;">Your access expired. Nothing was lost — reconnect and LockIn picks up where it left off.</div>
+              <div style="display: flex; gap: 9px; padding-top: 13px;">
+                <button onClick="{{ noop }}" style="min-height: 40px; padding: 0 15px; border-radius: 3px; border: 1px solid var(--kraft-2); background: var(--kraft); color: var(--ink); font-size: 12.5px; font-weight: 700; cursor: pointer; box-shadow: var(--lift-2);" style-active="transform: translateY(2px); box-shadow: var(--press);">Reconnect</button>
+                <button onClick="{{ noop }}" style="min-height: 40px; padding: 0 15px; border-radius: 3px; border: 1px solid var(--edge); background: var(--p2); color: var(--ink); font-size: 12.5px; font-weight: 600; cursor: pointer; box-shadow: var(--lift-1);" style-active="transform: translateY(2px); box-shadow: var(--press);">What breaks?</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 10px; padding: 18px; border-radius: 3px; background: var(--p2); box-shadow: var(--lift-1);">
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-faint);">Component set</div>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+          <div style="padding: 6px 11px; border-radius: 2px; background: var(--p3); box-shadow: var(--lift-1); font-family: 'IBM Plex Mono', monospace; font-size: 11.5px;">PaperSurface</div>
+          <div style="padding: 6px 11px; border-radius: 2px; background: var(--p3); box-shadow: var(--lift-1); font-family: 'IBM Plex Mono', monospace; font-size: 11.5px;">LayeredCard</div>
+          <div style="padding: 6px 11px; border-radius: 2px; background: var(--p3); box-shadow: var(--lift-1); font-family: 'IBM Plex Mono', monospace; font-size: 11.5px;">ContourCard</div>
+          <div style="padding: 6px 11px; border-radius: 2px; background: var(--p3); box-shadow: var(--lift-1); font-family: 'IBM Plex Mono', monospace; font-size: 11.5px;">PaperButton</div>
+          <div style="padding: 6px 11px; border-radius: 2px; background: var(--p3); box-shadow: var(--lift-1); font-family: 'IBM Plex Mono', monospace; font-size: 11.5px;">PaperTab</div>
+          <div style="padding: 6px 11px; border-radius: 2px; background: var(--p3); box-shadow: var(--lift-1); font-family: 'IBM Plex Mono', monospace; font-size: 11.5px;">PaperBadge</div>
+          <div style="padding: 6px 11px; border-radius: 2px; background: var(--p3); box-shadow: var(--lift-1); font-family: 'IBM Plex Mono', monospace; font-size: 11.5px;">CutoutIcon</div>
+          <div style="padding: 6px 11px; border-radius: 2px; background: var(--p3); box-shadow: var(--lift-1); font-family: 'IBM Plex Mono', monospace; font-size: 11.5px;">LayeredPanel</div>
+          <div style="padding: 6px 11px; border-radius: 2px; background: var(--p3); box-shadow: var(--lift-1); font-family: 'IBM Plex Mono', monospace; font-size: 11.5px;">PaperNavigation</div>
+        </div>
+        <div style="font-size: 12.5px; line-height: 1.6; color: var(--ink-soft); padding-top: 4px; text-wrap: pretty;">Elevation is a token, not a judgement call: lift-0 through lift-4 add one visible sheet each. Contour stacking (the offset kraft outlines) is allowed on exactly two things — the hero copy block and Needs Review — so depth stays meaningful. Glow only appears in the gap under a forward layer, never as a border.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;light&quot;,&quot;dark&quot;],&quot;default&quot;:&quot;light&quot;,&quot;tsType&quot;:&quot;'light' | 'dark'&quot;,&quot;section&quot;:&quot;Material&quot;},&quot;contourDepth&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;restrained&quot;,&quot;full&quot;],&quot;default&quot;:&quot;restrained&quot;,&quot;tsType&quot;:&quot;'restrained' | 'full'&quot;,&quot;section&quot;:&quot;Material&quot;}}">
+class Component extends DCLogic {
+  state = { theme: null };
+
+  get theme() {
+    return this.state.theme ?? this.props.theme ?? 'light';
+  }
+
+  renderVals() {
+    const t = this.theme;
+    return {
+      noop: () => {},
+      theme: t,
+      themeLabel: t === 'dark' ? 'Dark' : 'Light',
+      toggleTheme: () => this.setState({ theme: this.theme === 'dark' ? 'light' : 'dark' }),
+      heroGlow: t === 'dark' ? '1' : '0.85',
+      cloudGlow: t === 'dark' ? '0.75' : '0.5',
+      clouds: [
+        { left: '8%', top: '46px', w: '300px', h: '74px' },
+        { left: '44%', top: '22px', w: '380px', h: '86px' },
+        { left: '30%', top: '124px', w: '250px', h: '58px' },
+        { left: '66%', top: '138px', w: '300px', h: '64px' }
+      ],
+      ridges: (() => {
+        const rnd = (n) => { const x = Math.sin(n * 12.9898) * 43758.5453; return x - Math.floor(x); };
+        const lobes = (seed, count, minW, maxW, hMin, hMax) => Array.from({ length: count }, (_, i) => ({
+          w: Math.round(minW + rnd(seed + i) * (maxW - minW)) + 'px',
+          h: Math.round(hMin + rnd(seed + i + 40) * (hMax - hMin)) + 'px',
+          ml: (i === 0 ? 0 : -Math.round(18 + rnd(seed + i + 80) * 30)) + 'px'
+        }));
+        const curls = (seed, count, minS, maxS, spread) => Array.from({ length: count }, (_, i) => ({
+          x: Math.round((i / count) * spread + rnd(seed + i) * (spread / count) * 0.6 - 40) + 'px',
+          s: Math.round(minS + rnd(seed + i + 40) * (maxS - minS)) + 'px'
+        }));
+        return [
+          { bottom: '0', h: '210px', fill: 'var(--p3)', edge: 'var(--kraft)', curls: curls(1, 5, 120, 200, 1300) },
+          { bottom: '0', h: '140px', fill: 'var(--p2)', edge: 'var(--kraft-2)', curls: curls(20, 7, 80, 130, 1320) },
+          { bottom: '0', h: '76px', fill: 'var(--p1)', edge: 'var(--kraft-3)', curls: curls(40, 9, 44, 72, 1340) }
+        ];
+      })(),
+      stream: [
+        { title: 'Lab report 2 — Sec 04', meta: 'Tue 17:00', tone: 'var(--edge)', bg: 'var(--p1)', lift: 'var(--lift-0)', op: '0.6', shift: '0' },
+        { title: 'Problem set 4', meta: 'Mon 23:59', tone: 'var(--glow-deep)', bg: 'var(--p3)', lift: 'var(--lift-2)', op: '1', shift: '6px' },
+        { title: 'Field notes 3 — Section 04?', meta: 'Thu 23:59', tone: 'var(--slate)', bg: 'var(--p2)', lift: 'var(--lift-1)', op: '0.85', shift: '3px' },
+        { title: 'Reading response 6 — Sec 01', meta: 'Wed 12:00', tone: 'var(--edge)', bg: 'var(--p1)', lift: 'var(--lift-0)', op: '0.6', shift: '0' },
+        { title: 'Lab report 2', meta: 'Mon 17:00', tone: 'var(--glow-deep)', bg: 'var(--p3)', lift: 'var(--lift-2)', op: '1', shift: '6px' },
+        { title: 'Weekly quiz — all sections', meta: 'Mon 21:00', tone: 'var(--glow-deep)', bg: 'var(--p3)', lift: 'var(--lift-2)', op: '1', shift: '6px' }
+      ],
+      kept: [
+        { title: 'Problem set 4', due: 'Mon 23:59' },
+        { title: 'Lab report 2', due: 'Mon 17:00' },
+        { title: 'Weekly quiz', due: 'Mon 21:00' }
+      ],
+      aside: [
+        { title: 'Lab report 2', sec: 'Sec 04' },
+        { title: 'Reading response 6', sec: 'Sec 01' }
+      ],
+      courseRows: [
+        { name: 'Course A', status: 'Tracked · Sec 02', tone: 'var(--moss)', bg: 'var(--p3)', lift: 'var(--lift-1)', color: 'var(--ink)', toggleBg: 'var(--kraft)', knob: '17px' },
+        { name: 'Course B', status: 'Tracked · Sec 07', tone: 'var(--moss)', bg: 'var(--p3)', lift: 'var(--lift-1)', color: 'var(--ink)', toggleBg: 'var(--kraft)', knob: '17px' },
+        { name: 'Course E', status: 'Sync issue', tone: 'var(--glow-deep)', bg: 'var(--p3)', lift: 'var(--lift-1)', color: 'var(--ink)', toggleBg: 'var(--kraft)', knob: '17px' },
+        { name: 'Course F · 2025', status: 'Archived', tone: 'var(--edge)', bg: 'var(--p1)', lift: 'var(--press)', color: 'var(--ink-soft)', toggleBg: 'var(--p1)', knob: '3px' },
+        { name: 'Course G', status: 'Unavailable', tone: 'var(--edge)', bg: 'var(--p1)', lift: 'var(--press)', color: 'var(--ink-soft)', toggleBg: 'var(--p1)', knob: '3px' }
+      ],
+      syncStates: [
+        { label: 'Updated 2 min ago', meta: 'all courses', tone: 'var(--moss)' },
+        { label: 'Updating Classroom', meta: 'in progress', tone: 'var(--slate)' },
+        { label: 'Showing data from 3 hours ago', meta: 'Course E', tone: 'var(--glow-deep)' },
+        { label: 'Google Classroom needs reconnecting', meta: 'action', tone: 'var(--terra)' }
+      ],
+      privacy: [
+        { t: 'Read-only access', d: 'LockIn never posts, submits or edits anything in Classroom.' },
+        { t: 'Coursework only', d: 'Assignments, due dates and course names. No grades, no messages.' },
+        { t: 'Disconnect anytime', d: 'Revoke access in one tap. Cached data is removed with it.' }
+      ],
+      preview: [
+        { title: 'Problem set 4', course: 'Course A', due: '23:59', tone: 'var(--glow-deep)' },
+        { title: 'Lab report 2', course: 'Course B', due: '17:00', tone: 'var(--glow-deep)' },
+        { title: 'Draft outline', course: 'Course B', due: 'Wed', tone: 'var(--edge)' }
+      ],
+      today: [
+        { title: 'Problem set 4', course: 'Course A · Section 02', due: '23:59', dueSub: 'in 5h 20m', state: 'Not submitted', tone: 'var(--glow-deep)', delay: '60ms' },
+        { title: 'Lab report 2', course: 'Course B · Section 07', due: '17:00', dueSub: 'in 2h 45m', state: 'Draft saved', tone: 'var(--glow-deep)', delay: '140ms' },
+        { title: 'Weekly quiz', course: 'Course D · Section 02', due: '21:00', dueSub: 'in 9h 20m', state: 'Not submitted', tone: 'var(--glow-deep)', delay: '220ms' }
+      ],
+      week: [
+        { title: 'Group brief', course: 'Course A', due: 'Tue 12:00', state: 'Not submitted' },
+        { title: 'Draft outline', course: 'Course B', due: 'Wed 23:59', state: 'Not submitted' },
+        { title: 'Seminar prep', course: 'Course D', due: 'Thu 09:00', state: 'Not submitted' },
+        { title: 'Problem set 5', course: 'Course A', due: 'Fri 23:59', state: 'Submitted' }
+      ],
+      courses: [
+        { name: 'Course A', section: 'Sec 02', tone: 'var(--moss)' },
+        { name: 'Course B', section: 'Sec 07', tone: 'var(--moss)' },
+        { name: 'Course C', section: 'Sec 02', tone: 'var(--moss)' },
+        { name: 'Course D', section: 'Sec 02', tone: 'var(--moss)' },
+        { name: 'Course E', section: 'Sec 01', tone: 'var(--glow-deep)' }
+      ],
+      skeleton: [
+        { delay: '0ms', w1: '58%', w2: '34%' },
+        { delay: '110ms', w1: '46%', w2: '28%' },
+        { delay: '220ms', w1: '64%', w2: '38%' }
+      ]
+    };
+  }
+}
+
+</script>
+</body>
+</html>

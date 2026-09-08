@@ -16,6 +16,10 @@ export default tseslint.config(
       '.next-verify/**',
       'coverage/**',
       'next-env.d.ts',
+      // The design handoff: a reference prototype and the runtime it needs to
+      // render. Its README says the runtime is not part of the deliverable, and
+      // it is not written against this project's TypeScript program.
+      'design_handoff_lockin_paper/**',
     ],
   },
   js.configs.recommended,

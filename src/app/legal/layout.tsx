@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 
+import { LogoTile, PaperNotice } from '@/components/paper';
 import { LEGAL_PAGES, LEGAL_STATUS } from './content';
 
 /**
@@ -12,18 +13,22 @@ import { LEGAL_PAGES, LEGAL_STATUS } from './content';
  */
 export default function LegalLayout({ children }: { readonly children: ReactNode }) {
   return (
-    <div className="min-h-dvh pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]">
-      <header className="border-b border-line px-5 py-4">
+    <div className="grain min-h-dvh bg-p0 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]">
+      <header className="border-b border-edge-soft px-5 py-4">
         <div className="mx-auto flex max-w-[52rem] items-center justify-between gap-3">
-          <Link href="/" className="text-lg font-semibold tracking-[-0.02em] text-ink">
-            LockIn
+          <Link
+            href="/"
+            className="flex items-center gap-2.5 focus-visible:paper-focus"
+          >
+            <LogoTile size={28} />
+            <span className="text-[16px] font-bold tracking-[-0.03em] text-ink">LockIn</span>
           </Link>
-          <nav aria-label="Legal" className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+          <nav aria-label="Legal" className="flex flex-wrap gap-x-4 gap-y-1 text-[13px]">
             {LEGAL_PAGES.map((page) => (
               <Link
                 key={page.href}
                 href={page.href}
-                className="font-medium text-ink-soft hover:text-ink"
+                className="font-medium text-ink-soft hover:text-ink focus-visible:paper-focus"
               >
                 {page.shortTitle}
               </Link>
@@ -32,16 +37,18 @@ export default function LegalLayout({ children }: { readonly children: ReactNode
         </div>
       </header>
 
-      <main className="mx-auto max-w-[52rem] px-5 py-10">
+      {/* The text sits on a sheet of its own, the way every other screen's
+          content does. Legal pages are read by people who are not signed in,
+          including Google's reviewers, so they are the one part of the product
+          a stranger sees first -- looking like a different application is not
+          a detail here. */}
+      <main className="grain mx-auto mt-6 mb-10 max-w-[52rem] rounded-lg bg-p2 px-5 py-10 shadow-lift-2 sm:px-8">
         {/* Stated at the top of every page rather than buried at the bottom.
             Someone relying on these documents needs to know their status
             before they read them, not after. */}
-        <p
-          role="note"
-          className="surface-flat measure mb-8 border-warning/35 bg-warning-soft p-3.5 text-sm text-ink"
-        >
+        <PaperNotice tone="glow-deep" title="About these documents" className="mb-8">
           {LEGAL_STATUS}
-        </p>
+        </PaperNotice>
         {children}
       </main>
     </div>

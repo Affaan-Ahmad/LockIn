@@ -1,6 +1,6 @@
 
 import { CheckIcon } from '@/components/icons';
-import { AppShell } from '@/components/shell/AppShell';
+import { Shell } from '@/components/shell/Shell';
 import { ButtonLink } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { AssignmentCard } from '@/features/assignments/AssignmentCard';
@@ -33,7 +33,7 @@ export default async function IgnoredPage() {
   const now = new Date();
 
   return (
-    <AppShell
+    <Shell
       title="Hidden"
       subtitle={
         items.length === 0
@@ -73,6 +73,6 @@ export default async function IgnoredPage() {
         Hiding is only about what you see. It does not tell LockIn the work was for someone
         else, and it does not mark anything as done in Google Classroom.
       </p>
-    </AppShell>
+    </Shell>
   );
 }

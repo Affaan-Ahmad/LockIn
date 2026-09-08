@@ -6,8 +6,11 @@
   --color-ink-2: var(--ink-soft);
   --color-rule: var(--line);
   --color-focus: var(--brand-ring);
-  --font-display: var(--font-geist-sans), ui-sans-serif, sans-serif;
-  --font-body: var(--font-geist-sans), ui-sans-serif, sans-serif;
+  /* Aliases onto the real face. These pointed at --font-geist-sans, which
+     stopped existing when the paper system took over the type, so every rule
+     using them had been silently falling back to ui-sans-serif. */
+  --font-display: var(--font-sans);
+  --font-body: var(--font-sans);
   --space-xs: 0.25rem;
   --space-sm: 0.5rem;
   --space-md: 1rem;
@@ -23,8 +26,13 @@
   --control-touch: 2.75rem;
   --control-pointer: 2.25rem;
   --text-display: clamp(2.5rem, 4.5vw, 4.5rem);
-  --radius-desktop: 0.5rem;
-  --radius-mobile: 1rem;
+  /* Expressed in the radius scale rather than in pixels, because the two skins
+     disagree about it: paper is cut (3-4px at every width), workbench is
+     moulded (8px and 16px). Hard-coding either meant a 16px card sitting inside
+     a 3px one, which is what made the phone layout read as a different product
+     from the desktop. */
+  --radius-desktop: var(--r-sm);
+  --radius-mobile: var(--r-lg);
   --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
   --dur-micro: 120ms;
   --stale: var(--warning);

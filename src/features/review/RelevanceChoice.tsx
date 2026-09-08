@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 
+import { BUTTON_VARIANT } from '@/components/ui/Button';
 import { cx } from '@/lib/cx';
 
 /**
@@ -142,12 +143,13 @@ function Choice({
       disabled={disabled}
       aria-label={`${label}: ${describedBy}`}
       className={cx(
-        'press min-h-11 rounded-control px-4 text-sm font-medium active:translate-y-px',
-        'md:min-h-8 md:px-3',
+        'press min-h-11 rounded-sm px-4 text-[13.5px] active:translate-y-[2px] active:shadow-press',
+        'md:min-h-9 md:px-3.5',
         'disabled:opacity-50',
-        tone === 'brand'
-          ? 'bg-brand text-on-brand shadow-clay hover:bg-brand-hover'
-          : 'surface-raised text-ink hover:bg-overlay',
+        // The two answers on this screen are the primary and secondary button
+        // of the whole product. Sharing their classes is what stops "this is
+        // for me" drifting into a shade of its own.
+        BUTTON_VARIANT[tone === 'brand' ? 'primary' : 'secondary'],
       )}
     >
       {label}

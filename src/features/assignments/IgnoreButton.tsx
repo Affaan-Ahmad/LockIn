@@ -71,11 +71,14 @@ export function IgnoreButton({ assignmentId, ignored, title }: IgnoreButtonProps
         aria-busy={busy || undefined}
         aria-label={ignored ? `Restore ${title}` : `Hide ${title}`}
         className={cx(
-          'press min-h-9 rounded-control px-3 text-xs font-medium active:translate-y-px',
-          ' disabled:opacity-50',
+          'press min-h-9 rounded-xs px-3 text-[12px] font-medium active:translate-y-px',
+          'disabled:opacity-50',
+          // Restoring something is a raised sheet; hiding it is not a control
+          // until you reach for it. The tinted fill this replaces was the only
+          // brand-coloured chip left outside a button.
           ignored
-            ? 'bg-brand-soft text-brand-ink hover:brightness-95'
-            : 'text-ink-muted hover:bg-sunken hover:text-ink',
+            ? 'bg-p3 font-semibold text-kraft-3 shadow-lift-1 hover:shadow-lift-2'
+            : 'text-ink-faint hover:bg-p1 hover:text-ink hover:shadow-press',
         )}
       >
         {busy ? '…' : ignored ? 'Restore' : 'Hide'}

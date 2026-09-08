@@ -28,11 +28,11 @@ export function Skeleton({ variant = 'line', width, count = 1 }: SkeletonProps) 
           aria-hidden="true"
           style={width === undefined ? undefined : { width }}
           className={cx(
-            'animate-pulse bg-sunken',
+            'animate-pulse bg-p1 shadow-press workbench:shadow-none',
             // Matches the real card: face plus well. A placeholder of the
             // wrong height causes exactly the shift it exists to prevent.
             variant === 'card'
-              ? 'h-[6.5rem] rounded-card md:h-[3.25rem] md:rounded-control'
+              ? 'h-[6.5rem] rounded-sm md:h-[4.1rem]'
               : 'h-[0.8em] rounded-xs',
           )}
         />

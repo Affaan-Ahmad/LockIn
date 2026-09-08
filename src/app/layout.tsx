@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { GeistSans } from 'geist/font/sans';
+import { Caveat, IBM_Plex_Mono, Instrument_Sans } from 'next/font/google';
 
 import { THEME_BOOT } from '@/shared/theme-boot';
 import { ThemeChrome } from '@/components/shell/ThemeChrome';
@@ -10,20 +11,50 @@ import './globals.css';
 /**
  * Root layout.
  *
- * One font family, self-hosted. Self-hosting is not only a performance choice:
- * it means the Content-Security-Policy needs no fonts.gstatic.com entry, so the
- * policy stays as tight as it was written.
+ * Three faces, all self-hosted. `next/font/google` downloads them at build time
+ * and serves them from this origin, so the Content-Security-Policy still needs
+ * no fonts.gstatic.com entry and stays exactly as tight as it was written.
  *
- * Geist rather than Inter. Inter is the default of every generated interface
- * and of most of the products LockIn sits beside, which is the opposite of what
- * the brief asked for. Geist is quieter at the 13px this interface mostly lives
- * at, its numerals are unambiguous at a glance, and it ships tabular figures,
- * which matters when a column of deadline times has to line up.
+ * Each has one job and does not take another's.
  *
- * Still one family. LockIn's character comes from colour, shape and surface; a
- * display face would cost real bytes for decoration the design system already
- * provides.
+ * **Instrument Sans** is the interface: everything a person reads as a label,
+ * a title or a sentence.
+ *
+ * **IBM Plex Mono** carries times, dates, counts and section captions, always
+ * with tabular figures, because a column of deadline times that does not line
+ * up is a column nobody can scan.
+ *
+ * **Caveat** is annotation only -- the pencilled note in the margin. Never a
+ * label, never data, never a control. A handwriting face used for a value is
+ * the fastest way to make an interface look unserious about the value.
+ *
+ * **Geist** belongs to the workbench skin and is loaded beside them. Declaring
+ * it here rather than lazily is not an oversight: `next/font` resolves at build
+ * time, so a face can only be swapped by a stylesheet, and a skin that arrives
+ * a paint late is worse than one extra self-hosted family. It is self-hosted
+ * too, so the Content-Security-Policy is unchanged.
  */
+
+const sans = Instrument_Sans({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-instrument-sans',
+  display: 'swap',
+});
+
+const mono = IBM_Plex_Mono({
+  subsets: ['latin'],
+  weight: ['400', '500'],
+  variable: '--font-plex-mono',
+  display: 'swap',
+});
+
+const hand = Caveat({
+  subsets: ['latin'],
+  weight: ['500', '600'],
+  variable: '--font-caveat',
+  display: 'swap',
+});
 
 export const metadata = {
   title: 'LockIn',
@@ -45,10 +76,14 @@ export const viewport = {
 // on every route that renders this layout.
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className={GeistSans.variable} suppressHydrationWarning>
+    <html
+      lang="en"
+      className={`${sans.variable} ${mono.variable} ${hand.variable} ${GeistSans.variable}`}
+      suppressHydrationWarning
+    >
       <head>
         {/* Owned here so the synchronous boot script can update it before paint. */}
-        <meta name="theme-color" content="#f4f4ef" suppressHydrationWarning />
+        <meta name="theme-color" content="#e3dbd0" suppressHydrationWarning />
         {/* No nonce, and therefore nothing for React to compare across
             hydration. The CSP authorises this script by SHA-256 instead; see
             src/shared/theme-boot.ts for why that is both the fix and the

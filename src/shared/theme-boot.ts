@@ -28,7 +28,7 @@
  * nothing else.
  * ---------------------------------------------------------------------------
  */
-export const THEME_COLORS = { light: '#f4f4ef', dark: '#080b08' } as const;
+export const THEME_COLORS = { light: '#e3dbd0', dark: '#19140f' } as const;
 
 export const THEME_BOOT =
   `try{var t=localStorage.getItem('lockin-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t)}catch(e){}try{var d=document.documentElement.getAttribute('data-theme'),m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute('content',d==='dark'||(d!=='light'&&matchMedia('(prefers-color-scheme: dark)').matches)?'${THEME_COLORS.dark}':'${THEME_COLORS.light}')}catch(e){}`;
@@ -46,4 +46,4 @@ export const THEME_BOOT =
  * recomputes the digest and fails if the two ever disagree, so the constant
  * cannot rot unnoticed.
  */
-export const THEME_BOOT_SHA256 = 'sha256-1fmIzO9MXOBackvAH5cV5HN19W/zoQ6PkYBTh0wKQeA=';
+export const THEME_BOOT_SHA256 = 'sha256-KcCcvNvL377Uq4t+Uv4+5cKrhJv57UwkuBS9LZsAlUU=';

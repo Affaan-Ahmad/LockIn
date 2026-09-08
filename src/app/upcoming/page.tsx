@@ -1,7 +1,7 @@
 import Link from 'next/link';
 
 import { CheckIcon } from '@/components/icons';
-import { AppShell } from '@/components/shell/AppShell';
+import { Shell } from '@/components/shell/Shell';
 import { Button, ButtonLink } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { DeadlineGroups } from '@/features/dashboard/DeadlineGroups';
@@ -68,7 +68,7 @@ export default async function UpcomingPage({
   }
 
   return (
-    <AppShell
+    <Shell
       title="Upcoming"
       subtitle={
         data.upcoming.length === 0
@@ -91,8 +91,10 @@ export default async function UpcomingPage({
       <SyncStatus freshness={data.freshness} variant="banner" />
       <AutoSync level={data.freshness.level} />
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-xl font-semibold text-ink">Plan what comes next</h2>
-        <a href="#deadline-calendar" className="button-link text-brand-ink xl:hidden">Browse dates</a>
+        <h2 className="text-[16px] font-bold tracking-[-0.02em] text-ink">Plan what comes next</h2>
+        <a href="#deadline-calendar" className="button-link text-kraft-3 xl:hidden">
+          Browse dates
+        </a>
       </div>
 
       {listed.length === 0 ? (
@@ -121,7 +123,7 @@ export default async function UpcomingPage({
       ) : (
         <DeadlineGroups items={listed} now={now} timeZone={timeZone} />
       )}
-    </AppShell>
+    </Shell>
   );
 }
 

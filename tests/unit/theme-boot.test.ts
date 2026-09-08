@@ -8,12 +8,12 @@ import { THEME_BOOT, THEME_BOOT_SHA256, THEME_COLORS } from '@/shared/theme-boot
 
 describe('theme boot script', () => {
   it.each([
-    ['dark', false, '#080b08'],
-    ['light', true, '#f4f4ef'],
-    ['system', true, '#080b08'],
-    [null, false, '#f4f4ef'],
-    ['invalid', true, '#080b08'],
-    ['blocked', true, '#080b08'],
+    ['dark', false, '#19140f'],
+    ['light', true, '#e3dbd0'],
+    ['system', true, '#19140f'],
+    [null, false, '#e3dbd0'],
+    ['invalid', true, '#19140f'],
+    ['blocked', true, '#19140f'],
   ])('aligns chrome with saved %s theme (device dark: %s)', (saved, systemDark, expected) => {
     let theme: string | null = null;
     let chrome = '';

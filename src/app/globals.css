@@ -42,29 +42,29 @@
      adjacent yellows, neither committing. 107 is the logo's own off-white
      (#F4F4EF), near-neutral with a whisper of the brand hue, so the lime is
      the only saturated thing on the page. */
-  --surface-ground: oklch(96.6% 0.007 107);
-  --surface-raised: oklch(98.5% 0.005 107);
-  --surface-sunken: oklch(93.9% 0.010 107);
-  --surface-pressed: oklch(94.7% 0.009 107);
-  --surface-overlay: oklch(99.3% 0.003 107);
+  --surface-ground: oklch(89.5% 0.018 76);
+  --surface-raised: oklch(98.5% 0.010 88);
+  --surface-sunken: oklch(93.5% 0.016 80);
+  --surface-pressed: oklch(93.5% 0.016 80);
+  --surface-overlay: oklch(98.5% 0.010 88);
 
   /* Carried over to the logo's near-black rather than the old cool blue. Text
      and mark now share one family, which is what stops the ink reading as a
      third colour beside lime and off-white. */
-  --ink: oklch(22% 0.010 145);
-  --ink-soft: oklch(46% 0.010 145);
+  --ink: oklch(29% 0.022 62);
+  --ink-soft: oklch(46% 0.024 62);
   /* 54%, not 60%. At 60 this measured 3.6:1 on the ground, under the 4.5:1 AA
      floor -- and it is used at text-xs for deadline metadata and the footer, so
      it is normal-size body text, not large. That failure predates the rebrand;
      the contrast suite added alongside it is what finally caught it. */
-  --ink-muted: oklch(54% 0.009 145);
+  --ink-muted: oklch(48% 0.028 64);
 
   /* The lime, because on a light page --brand is the near-black half of the
      mark. Flips with it: see the brand block below.
 
      Never white. Whichever way round the pair sits, white lands on one of them
      at 1.3:1 and the button's label disappears. */
-  --ink-on-brand: oklch(89.6% 0.190 122);
+  --ink-on-brand: oklch(29% 0.022 62);
 
   /* What sits on a saturated SEMANTIC fill -- danger, review -- as opposed to
      the brand fill above.
@@ -75,10 +75,10 @@
      2.7-3.1:1. So the label flips with the theme exactly as the brand's does:
      near-white on the darker light-theme fills, near-black on the lighter
      dark-theme ones. */
-  --ink-on-fill: oklch(99% 0.003 107);
+  --ink-on-fill: oklch(98.5% 0.010 88);
 
-  --line: oklch(88% 0.009 107);
-  --line-strong: oklch(78% 0.012 107);
+  --line: oklch(84% 0.024 76);
+  --line-strong: oklch(74% 0.035 70);
 
   /* ----------------------------------------------------------------------
      Brand and semantics.
@@ -118,21 +118,21 @@
      A violet brand needed none of this, because one value happened to serve
      every role. Lime forgives nothing, so each role has its own token and a
      call site is forced to choose. */
-  --brand: oklch(17.9% 0.005 145);
-  --brand-hover: oklch(26% 0.010 145);
-  --brand-ink: oklch(45% 0.140 130);
-  --brand-ink-hover: oklch(38% 0.130 130);
-  --brand-soft: oklch(94% 0.055 118);
-  --brand-ring: oklch(55% 0.160 128);
+  --brand: oklch(79% 0.045 68);
+  --brand-hover: oklch(71% 0.052 64);
+  --brand-ink: oklch(52% 0.060 60);
+  --brand-ink-hover: oklch(44% 0.062 58);
+  --brand-soft: oklch(92% 0.032 74);
+  --brand-ring: oklch(52% 0.060 60);
 
-  --success: oklch(48% 0.12 155);
-  --success-soft: oklch(94% 0.045 155);
-  --warning: oklch(50% 0.12 70);
-  --warning-soft: oklch(95% 0.055 80);
-  --danger: oklch(55% 0.19 25);
-  --danger-soft: oklch(95% 0.040 25);
-  --review: oklch(56% 0.17 330);
-  --review-soft: oklch(95% 0.038 330);
+  --success: oklch(52% 0.075 138);
+  --success-soft: oklch(93% 0.030 138);
+  --warning: oklch(82% 0.120 72);
+  --warning-soft: oklch(90% 0.095 80);
+  --danger: oklch(53% 0.135 42);
+  --danger-soft: oklch(93% 0.035 42);
+  --review: oklch(48% 0.030 250);
+  --review-soft: oklch(93% 0.018 250);
 
   /* ----------------------------------------------------------------------
      Elevation. Two layers maximum, modest blur.
@@ -163,21 +163,13 @@
      what keeps a surface looking like tinted ceramic instead of a cutout
      floating over a void.
      -------------------------------------------------------------------- */
-  --elev-raised:
-    0 1px 1px oklch(70% 0.020 85 / 0.16),
-    0 2px 4px -2px oklch(70% 0.020 85 / 0.20),
-    inset 0 1px 0 oklch(100% 0 0 / 0.70);
+  --elev-raised: var(--lift-1);
 
-  --elev-raised-lg:
-    0 2px 3px -1px oklch(68% 0.022 85 / 0.18),
-    0 8px 16px -8px oklch(64% 0.024 85 / 0.24),
-    inset 0 1px 0 oklch(100% 0 0 / 0.80);
+  --elev-raised-lg: var(--lift-3);
 
   /* The signature well. Metadata sits in this, one step below the card face,
      which is what groups it instead of leaving it scattered across a row. */
-  --elev-inset:
-    inset 0 1px 2px oklch(70% 0.020 85 / 0.20),
-    inset 0 -1px 0 oklch(100% 0 0 / 0.55);
+  --elev-inset: var(--press);
 
   /* Clay: one directional drop plus an inner top highlight. The highlight is
      what reads as inflated; without it a clay card is just a rounded box. */
@@ -185,15 +177,62 @@
      what reads as inflated; without it a clay card is just a rounded box. It
      is kept subtle here -- a strong one is what makes claymorphism look like
      a plastic toy. */
-  --elev-clay:
-    0 1px 1px oklch(66% 0.026 85 / 0.14),
-    0 4px 10px -6px oklch(58% 0.030 85 / 0.22),
-    inset 0 1px 0 oklch(100% 0 0 / 0.85);
+  --elev-clay: var(--lift-2);
 
-  --elev-clay-lifted:
-    0 2px 4px -1px oklch(64% 0.028 85 / 0.16),
-    0 12px 22px -10px oklch(56% 0.032 85 / 0.26),
-    inset 0 1px 0 oklch(100% 0 0 / 0.9);
+  --elev-clay-lifted: var(--lift-3);
+
+
+  /* ----------------------------------------------------------------------
+     The paper materials.
+
+     Six sheets, five elevations, one rule: every surface sits on a visible
+     sheet below it, and light escapes from the gap between them. The role
+     tokens above are aliases onto these -- `--surface-raised` is cardstock,
+     `--brand` is kraft -- so a screen written against the old vocabulary
+     inherits the new material without being rewritten.
+     -------------------------------------------------------------------- */
+  --p0: oklch(89.5% 0.018 76);
+  --p1: oklch(93.5% 0.016 80);
+  --p2: oklch(96.5% 0.013 84);
+  --p3: oklch(98.5% 0.010 88);
+
+  --kraft: oklch(79% 0.045 68);
+  --kraft-2: oklch(71% 0.052 64);
+  --kraft-3: oklch(52% 0.060 60);
+  --edge: oklch(74% 0.035 70);
+  --edge-soft: oklch(84% 0.024 76);
+  --ink-faint: oklch(48% 0.028 64);
+
+  /* Glow only ever lives in a gap -- a pool under a forward layer. Never a
+     border, never text. */
+  --glow: oklch(90% 0.095 80);
+  --glow-deep: oklch(82% 0.120 72);
+
+  --terra: oklch(53% 0.135 42);
+  --moss: oklch(52% 0.075 138);
+  --slate: oklch(48% 0.030 250);
+
+  /* Stacked paper edges -- hard 1-4px offsets in sheet colours -- plus one
+     soft ambient shadow. Never a plain blur alone; each step adds one sheet. */
+  --lift-0: 0 1px 0 var(--edge-soft);
+  --lift-1: 0 1px 0 var(--edge-soft), 0 2px 3px -1px oklch(58% 0.05 62 / 0.16);
+  --lift-2:
+    0 1px 0 var(--edge-soft), 0 2px 0 var(--p1),
+    0 4px 8px -3px oklch(56% 0.05 62 / 0.22), 0 10px 18px -12px oklch(52% 0.05 62 / 0.26);
+  --lift-3:
+    0 1px 0 var(--edge-soft), 0 3px 0 var(--p1), 0 5px 0 var(--edge-soft),
+    0 9px 16px -6px oklch(54% 0.05 62 / 0.26), 0 20px 34px -18px oklch(50% 0.05 62 / 0.32);
+  --lift-4:
+    0 1px 0 var(--edge-soft), 0 4px 0 var(--p2), 0 6px 0 var(--edge-soft),
+    0 8px 0 var(--p1), 0 10px 0 var(--edge-soft),
+    0 16px 26px -8px oklch(52% 0.05 62 / 0.28), 0 34px 50px -24px oklch(48% 0.05 62 / 0.34);
+  --press:
+    inset 0 2px 4px oklch(56% 0.05 62 / 0.28), inset 0 -1px 0 oklch(100% 0 0 / 0.5);
+
+  /* Grain, not a pattern. At full strength it reads as corduroy. */
+  --grain:
+    repeating-linear-gradient(31deg, oklch(50% 0.03 62 / 0.038) 0 1px, transparent 1px 4px),
+    repeating-linear-gradient(-59deg, oklch(50% 0.03 62 / 0.035) 0 1px, transparent 1px 5px);
 
   /* ----------------------------------------------------------------------
      Radius hierarchy.
@@ -208,12 +247,12 @@
      button at 44px tall reads as a toy, and the softened rectangle sits
      better against the card corners it lives inside.
      -------------------------------------------------------------------- */
-  --r-xs: 0.375rem;
-  --r-sm: 0.5rem;
-  --r-md: 0.75rem;
-  --r-lg: 1rem;
-  --r-xl: 1.375rem;
-  --r-full: 999px;
+  --r-xs: 2px;
+  --r-sm: 3px;
+  --r-md: 3px;
+  --r-lg: 4px;
+  --r-xl: 5px;
+  --r-full: 2px;
 
   /* ----------------------------------------------------------------------
      Spacing scale.
@@ -322,70 +361,98 @@
 :root {
   /* Rehued to the mark's near-black (#101210, hue 145) so the app icon sitting
      on a dark home screen and the app behind it are the same material. */
-  --dark-surface-ground: oklch(14.5% 0.008 145);
-  --dark-surface-raised: oklch(19% 0.009 145);
-  --dark-surface-sunken: oklch(11% 0.007 145);
-  --dark-surface-pressed: oklch(12.5% 0.007 145);
-  --dark-surface-overlay: oklch(22% 0.010 145);
+  --dark-surface-ground: oklch(19.5% 0.013 66);
+  --dark-surface-raised: oklch(32% 0.017 72);
+  --dark-surface-sunken: oklch(23.5% 0.015 68);
+  --dark-surface-pressed: oklch(23.5% 0.015 68);
+  --dark-surface-overlay: oklch(32% 0.017 72);
 
   /* Unchanged between themes, because the surface it sits on is unchanged:
      --brand is lime in both. */
-  --dark-ink-on-brand: oklch(17.9% 0.005 145);
-  --dark-ink-on-fill: oklch(17.9% 0.005 145);
+  --dark-ink-on-brand: oklch(95% 0.012 82);
+  --dark-ink-on-fill: oklch(19.5% 0.013 66);
 
-  --dark-ink: oklch(96% 0.006 145);
-  --dark-ink-soft: oklch(76% 0.009 145);
-  --dark-ink-muted: oklch(62% 0.009 145);
+  --dark-ink: oklch(95% 0.012 82);
+  --dark-ink-soft: oklch(79% 0.016 78);
+  --dark-ink-muted: oklch(72% 0.018 74);
 
-  --dark-line: oklch(26% 0.010 145);
-  --dark-line-strong: oklch(37% 0.013 145);
+  --dark-line: oklch(44% 0.024 72);
+  --dark-line-strong: oklch(40% 0.022 70);
 
   /* In the dark the split collapses, and that is the point rather than an
      accident: lime reaches 14.9:1 on this ground, so the fill colour and the
      text colour can finally be the same value. The brand looks most like
      itself here -- which is exactly the pairing the mark was drawn in. */
-  --dark-brand: oklch(89.6% 0.190 122);
-  --dark-brand-hover: oklch(93% 0.170 122);
-  --dark-brand-ink: oklch(89.6% 0.190 122);
-  --dark-brand-ink-hover: oklch(93% 0.170 122);
-  --dark-brand-soft: oklch(28% 0.070 130);
-  --dark-brand-ring: oklch(80% 0.170 125);
+  --dark-brand: oklch(45% 0.048 62);
+  --dark-brand-hover: oklch(53% 0.055 60);
+  --dark-brand-ink: oklch(76% 0.060 68);
+  --dark-brand-ink-hover: oklch(84% 0.058 68);
+  --dark-brand-soft: oklch(30% 0.030 66);
+  --dark-brand-ring: oklch(76% 0.060 68);
 
-  --dark-success: oklch(72% 0.12 155);
-  --dark-success-soft: oklch(25% 0.050 155);
-  --dark-warning: oklch(78% 0.12 75);
-  --dark-warning-soft: oklch(26% 0.050 75);
-  --dark-danger: oklch(68% 0.16 25);
-  --dark-danger-soft: oklch(26% 0.062 25);
-  --dark-review: oklch(72% 0.14 330);
-  --dark-review-soft: oklch(26% 0.058 330);
+  --dark-success: oklch(71% 0.090 140);
+  --dark-success-soft: oklch(30% 0.035 140);
+  --dark-warning: oklch(74% 0.130 70);
+  --dark-warning-soft: oklch(32% 0.045 72);
+  --dark-danger: oklch(73% 0.150 40);
+  --dark-danger-soft: oklch(32% 0.050 40);
+  --dark-review: oklch(74% 0.065 250);
+  --dark-review-soft: oklch(30% 0.030 250);
 
   /* Same four tiers, re-derived rather than dimmed. In the dark the drop
      shadow does almost no work -- black on near-black is invisible -- so the
      lit top rim carries the elevation instead, and the shadow only anchors
      the element to the surface below it. */
-  --dark-elev-raised:
-    0 1px 2px oklch(4% 0.006 268 / 0.55),
-    inset 0 1px 0 oklch(72% 0.020 268 / 0.10);
 
-  --dark-elev-raised-lg:
-    0 2px 4px -1px oklch(4% 0.006 268 / 0.60),
-    0 10px 20px -10px oklch(3% 0.005 268 / 0.65),
-    inset 0 1px 0 oklch(74% 0.020 268 / 0.13);
+  /* Dark is not an inversion: sheets get darker as they go *down*, and the
+     highlight is a 1px inner top light rather than a white rim. */
+  --dark-p0: oklch(19.5% 0.013 66);
+  --dark-p1: oklch(23.5% 0.015 68);
+  --dark-p2: oklch(27.5% 0.016 70);
+  --dark-p3: oklch(32% 0.017 72);
 
-  --dark-elev-inset:
-    inset 0 1px 3px oklch(2% 0.004 268 / 0.70),
-    inset 0 -1px 0 oklch(70% 0.018 268 / 0.07);
+  --dark-kraft: oklch(45% 0.048 62);
+  --dark-kraft-2: oklch(53% 0.055 60);
+  --dark-kraft-3: oklch(76% 0.060 68);
+  --dark-edge: oklch(40% 0.022 70);
+  --dark-edge-soft: oklch(44% 0.024 72);
+  --dark-ink-faint: oklch(72% 0.018 74);
 
-  --dark-elev-clay:
-    0 1px 2px oklch(4% 0.006 268 / 0.55),
-    0 6px 14px -8px oklch(3% 0.005 268 / 0.60),
-    inset 0 1px 0 oklch(74% 0.020 268 / 0.12);
+  --dark-glow: oklch(80% 0.110 78);
+  --dark-glow-deep: oklch(74% 0.130 70);
 
-  --dark-elev-clay-lifted:
-    0 2px 4px -1px oklch(4% 0.006 268 / 0.60),
-    0 14px 26px -12px oklch(3% 0.005 268 / 0.70),
-    inset 0 1px 0 oklch(76% 0.020 268 / 0.16);
+  --dark-terra: oklch(73% 0.150 40);
+  --dark-moss: oklch(71% 0.090 140);
+  --dark-slate: oklch(74% 0.065 250);
+
+  --dark-lift-0: inset 0 1px 0 oklch(100% 0 0 / 0.05), 0 1px 2px oklch(6% 0.01 60 / 0.5);
+  --dark-lift-1: inset 0 1px 0 oklch(100% 0 0 / 0.06), 0 2px 4px -1px oklch(5% 0.01 60 / 0.6);
+  --dark-lift-2:
+    inset 0 1px 0 oklch(100% 0 0 / 0.07), 0 2px 0 var(--p1),
+    0 3px 0 oklch(100% 0 0 / 0.05), 0 6px 12px -4px oklch(4% 0.01 60 / 0.65);
+  --dark-lift-3:
+    inset 0 1px 0 oklch(100% 0 0 / 0.09), 0 3px 0 var(--p1),
+    0 4px 0 oklch(100% 0 0 / 0.06), 0 6px 0 var(--p0), 0 12px 22px -6px oklch(4% 0.01 60 / 0.7);
+  --dark-lift-4:
+    inset 0 1px 0 oklch(100% 0 0 / 0.1), 0 4px 0 var(--p2),
+    0 5px 0 oklch(100% 0 0 / 0.07), 0 8px 0 var(--p1),
+    0 9px 0 oklch(100% 0 0 / 0.05), 0 20px 34px -10px oklch(3% 0.01 60 / 0.75);
+  --dark-press:
+    inset 0 2px 5px oklch(4% 0.01 60 / 0.7), inset 0 -1px 0 oklch(100% 0 0 / 0.05);
+
+  --dark-grain:
+    repeating-linear-gradient(31deg, oklch(85% 0.03 70 / 0.05) 0 1px, transparent 1px 4px),
+    repeating-linear-gradient(-59deg, oklch(85% 0.03 70 / 0.022) 0 1px, transparent 1px 5px);
+
+  --dark-elev-raised: var(--dark-lift-1);
+
+  --dark-elev-raised-lg: var(--dark-lift-3);
+
+  --dark-elev-inset: var(--dark-press);
+
+  --dark-elev-clay: var(--dark-lift-2);
+
+  --dark-elev-clay-lifted: var(--dark-lift-3);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -424,6 +491,28 @@
     --review: var(--dark-review);
     --review-soft: var(--dark-review-soft);
 
+    --p0: var(--dark-p0);
+    --p1: var(--dark-p1);
+    --p2: var(--dark-p2);
+    --p3: var(--dark-p3);
+    --kraft: var(--dark-kraft);
+    --kraft-2: var(--dark-kraft-2);
+    --kraft-3: var(--dark-kraft-3);
+    --edge: var(--dark-edge);
+    --edge-soft: var(--dark-edge-soft);
+    --ink-faint: var(--dark-ink-faint);
+    --glow: var(--dark-glow);
+    --glow-deep: var(--dark-glow-deep);
+    --terra: var(--dark-terra);
+    --moss: var(--dark-moss);
+    --slate: var(--dark-slate);
+    --lift-0: var(--dark-lift-0);
+    --lift-1: var(--dark-lift-1);
+    --lift-2: var(--dark-lift-2);
+    --lift-3: var(--dark-lift-3);
+    --lift-4: var(--dark-lift-4);
+    --press: var(--dark-press);
+    --grain: var(--dark-grain);
     --elev-raised: var(--dark-elev-raised);
     --elev-raised-lg: var(--dark-elev-raised-lg);
     --elev-inset: var(--dark-elev-inset);
@@ -467,12 +556,383 @@
   --review: var(--dark-review);
   --review-soft: var(--dark-review-soft);
 
+  --p0: var(--dark-p0);
+  --p1: var(--dark-p1);
+  --p2: var(--dark-p2);
+  --p3: var(--dark-p3);
+  --kraft: var(--dark-kraft);
+  --kraft-2: var(--dark-kraft-2);
+  --kraft-3: var(--dark-kraft-3);
+  --edge: var(--dark-edge);
+  --edge-soft: var(--dark-edge-soft);
+  --ink-faint: var(--dark-ink-faint);
+  --glow: var(--dark-glow);
+  --glow-deep: var(--dark-glow-deep);
+  --terra: var(--dark-terra);
+  --moss: var(--dark-moss);
+  --slate: var(--dark-slate);
+  --lift-0: var(--dark-lift-0);
+  --lift-1: var(--dark-lift-1);
+  --lift-2: var(--dark-lift-2);
+  --lift-3: var(--dark-lift-3);
+  --lift-4: var(--dark-lift-4);
+  --press: var(--dark-press);
+  --grain: var(--dark-grain);
   --elev-raised: var(--dark-elev-raised);
   --elev-raised-lg: var(--dark-elev-raised-lg);
   --elev-inset: var(--dark-elev-inset);
   --elev-clay: var(--dark-elev-clay);
   --elev-clay-lifted: var(--dark-elev-clay-lifted);
 }
+
+/* ==========================================================================
+   The workbench skin.
+
+   LockIn has two front ends, not two colour schemes. Paper is the default;
+   workbench is the design that came before it, kept rather than deleted, and
+   chosen in Settings. Light and dark are a property *of* each one, so there are
+   four real combinations and every block below accounts for all of them.
+
+   The values are the committed palette, lifted wholesale into a `--wb-*`
+   namespace. They are generated from the previous globals.css rather than
+   retyped, which is why they carry no prose: the reasoning behind each choice
+   is in that file's history, and a second copy of it here could only drift from
+   the first. What they mean has not changed; only which design uses them.
+
+   The skin attribute sits on the shell's root element, not on `<html>`. Reading
+   a cookie in the root layout would opt every route that renders it into
+   dynamic rendering -- including the four legal pages, which are deliberately
+   static and are read by people with no cookie at all. Custom properties
+   inherit, so scoping them one element lower costs nothing.
+   ========================================================================== */
+
+:root {
+  --wb-surface-ground: oklch(96.6% 0.007 107);
+  --wb-surface-raised: oklch(98.5% 0.005 107);
+  --wb-surface-sunken: oklch(93.9% 0.010 107);
+  --wb-surface-pressed: oklch(94.7% 0.009 107);
+  --wb-surface-overlay: oklch(99.3% 0.003 107);
+  --wb-ink: oklch(22% 0.010 145);
+  --wb-ink-soft: oklch(46% 0.010 145);
+  --wb-ink-muted: oklch(54% 0.009 145);
+  --wb-ink-on-brand: oklch(89.6% 0.190 122);
+  --wb-ink-on-fill: oklch(99% 0.003 107);
+  --wb-line: oklch(88% 0.009 107);
+  --wb-line-strong: oklch(78% 0.012 107);
+  --wb-brand: oklch(17.9% 0.005 145);
+  --wb-brand-hover: oklch(26% 0.010 145);
+  --wb-brand-ink: oklch(45% 0.140 130);
+  --wb-brand-ink-hover: oklch(38% 0.130 130);
+  --wb-brand-soft: oklch(94% 0.055 118);
+  --wb-brand-ring: oklch(55% 0.160 128);
+  --wb-success: oklch(48% 0.12 155);
+  --wb-success-soft: oklch(94% 0.045 155);
+  --wb-warning: oklch(50% 0.12 70);
+  --wb-warning-soft: oklch(95% 0.055 80);
+  --wb-danger: oklch(55% 0.19 25);
+  --wb-danger-soft: oklch(95% 0.040 25);
+  --wb-review: oklch(56% 0.17 330);
+  --wb-review-soft: oklch(95% 0.038 330);
+  --wb-elev-raised: 0 1px 1px oklch(70% 0.020 85 / 0.16), 0 2px 4px -2px oklch(70% 0.020 85 / 0.20), inset 0 1px 0 oklch(100% 0 0 / 0.70);
+  --wb-elev-raised-lg: 0 2px 3px -1px oklch(68% 0.022 85 / 0.18), 0 8px 16px -8px oklch(64% 0.024 85 / 0.24), inset 0 1px 0 oklch(100% 0 0 / 0.80);
+  --wb-elev-inset: inset 0 1px 2px oklch(70% 0.020 85 / 0.20), inset 0 -1px 0 oklch(100% 0 0 / 0.55);
+  --wb-elev-clay: 0 1px 1px oklch(66% 0.026 85 / 0.14), 0 4px 10px -6px oklch(58% 0.030 85 / 0.22), inset 0 1px 0 oklch(100% 0 0 / 0.85);
+  --wb-elev-clay-lifted: 0 2px 4px -1px oklch(64% 0.028 85 / 0.16), 0 12px 22px -10px oklch(56% 0.032 85 / 0.26), inset 0 1px 0 oklch(100% 0 0 / 0.9);
+  --wb-r-xs: 0.375rem;
+  --wb-r-sm: 0.5rem;
+  --wb-r-md: 0.75rem;
+  --wb-r-lg: 1rem;
+  --wb-r-xl: 1.375rem;
+  --wb-r-full: 999px;
+  --wb-space-1: 0.25rem;
+  --wb-space-2: 0.5rem;
+  --wb-space-3: 0.75rem;
+  --wb-space-4: 1rem;
+  --wb-space-5: 1.5rem;
+  --wb-space-6: 2.5rem;
+  --wb-dur-fast: 120ms;
+  --wb-dur-base: 200ms;
+  --wb-curve-out: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --wb-curve-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --wb-content-max: 44rem;
+  --wb-app-max: 87.5rem;
+  --wb-sidebar-w: 15rem;
+  --wb-sidebar-w-compact: 4.5rem;
+  --wb-rail-w: 20rem;
+  --wb-nav-h: 4.25rem;
+  --wb-control-h: 2.75rem;
+  --wb-control-h-sm: 2.25rem;
+  --wb-card-pad: 1rem;
+  --wb-row-gap: 0.75rem;
+  --wb-card-radius: var(--wb-r-lg);
+  --wb-dark-surface-ground: oklch(14.5% 0.008 145);
+  --wb-dark-surface-raised: oklch(19% 0.009 145);
+  --wb-dark-surface-sunken: oklch(11% 0.007 145);
+  --wb-dark-surface-pressed: oklch(12.5% 0.007 145);
+  --wb-dark-surface-overlay: oklch(22% 0.010 145);
+  --wb-dark-ink-on-brand: oklch(17.9% 0.005 145);
+  --wb-dark-ink-on-fill: oklch(17.9% 0.005 145);
+  --wb-dark-ink: oklch(96% 0.006 145);
+  --wb-dark-ink-soft: oklch(76% 0.009 145);
+  --wb-dark-ink-muted: oklch(62% 0.009 145);
+  --wb-dark-line: oklch(26% 0.010 145);
+  --wb-dark-line-strong: oklch(37% 0.013 145);
+  --wb-dark-brand: oklch(89.6% 0.190 122);
+  --wb-dark-brand-hover: oklch(93% 0.170 122);
+  --wb-dark-brand-ink: oklch(89.6% 0.190 122);
+  --wb-dark-brand-ink-hover: oklch(93% 0.170 122);
+  --wb-dark-brand-soft: oklch(28% 0.070 130);
+  --wb-dark-brand-ring: oklch(80% 0.170 125);
+  --wb-dark-success: oklch(72% 0.12 155);
+  --wb-dark-success-soft: oklch(25% 0.050 155);
+  --wb-dark-warning: oklch(78% 0.12 75);
+  --wb-dark-warning-soft: oklch(26% 0.050 75);
+  --wb-dark-danger: oklch(68% 0.16 25);
+  --wb-dark-danger-soft: oklch(26% 0.062 25);
+  --wb-dark-review: oklch(72% 0.14 330);
+  --wb-dark-review-soft: oklch(26% 0.058 330);
+  --wb-dark-elev-raised: 0 1px 2px oklch(4% 0.006 268 / 0.55), inset 0 1px 0 oklch(72% 0.020 268 / 0.10);
+  --wb-dark-elev-raised-lg: 0 2px 4px -1px oklch(4% 0.006 268 / 0.60), 0 10px 20px -10px oklch(3% 0.005 268 / 0.65), inset 0 1px 0 oklch(74% 0.020 268 / 0.13);
+  --wb-dark-elev-inset: inset 0 1px 3px oklch(2% 0.004 268 / 0.70), inset 0 -1px 0 oklch(70% 0.018 268 / 0.07);
+  --wb-dark-elev-clay: 0 1px 2px oklch(4% 0.006 268 / 0.55), 0 6px 14px -8px oklch(3% 0.005 268 / 0.60), inset 0 1px 0 oklch(74% 0.020 268 / 0.12);
+  --wb-dark-elev-clay-lifted: 0 2px 4px -1px oklch(4% 0.006 268 / 0.60), 0 14px 26px -12px oklch(3% 0.005 268 / 0.70), inset 0 1px 0 oklch(76% 0.020 268 / 0.16);
+}
+
+[data-skin='workbench'] {
+  color-scheme: light;
+
+  /* Geist, not Instrument Sans. `--font-sans` is declared in `@theme inline`,
+     which still emits it as a custom property, so overriding it here changes
+     the body face by inheritance. */
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+
+  /* Paper's material vocabulary, restated in the workbench's own values.
+
+     Several components are shared between the two designs -- the assignment
+     row, the status chip, every button -- and they are written in paper tokens
+     because paper is the default. Mapping the vocabulary here is what lets one
+     component serve both skins: `bg-p3` is the brightest sheet in either, and
+     which colour that is becomes the skin's business rather than the
+     component's. Only where the two disagree about *structure* does a component
+     branch, using the `paper:` and `workbench:` variants below. */
+  --p0: var(--wb-surface-ground);
+  --p1: var(--wb-surface-sunken);
+  --p2: var(--wb-surface-raised);
+  --p3: var(--wb-surface-overlay);
+  --kraft: var(--wb-brand);
+  --kraft-2: var(--wb-brand-hover);
+  --kraft-3: var(--wb-brand-ink);
+  --edge: var(--wb-line-strong);
+  --edge-soft: var(--wb-line);
+  --ink-faint: var(--wb-ink-muted);
+  --glow: var(--wb-warning-soft);
+  --glow-deep: var(--wb-warning);
+  --terra: var(--wb-danger);
+  --moss: var(--wb-success);
+  --slate: var(--wb-review);
+  --lift-0: var(--wb-elev-raised);
+  --lift-1: var(--wb-elev-raised);
+  --lift-2: var(--wb-elev-clay);
+  --lift-3: var(--wb-elev-clay-lifted);
+  --lift-4: var(--wb-elev-clay-lifted);
+  --press: var(--wb-elev-inset);
+
+  /* The workbench has no paper stock to show the weave of. */
+  --grain: none;
+
+  --surface-ground: var(--wb-surface-ground);
+  --surface-raised: var(--wb-surface-raised);
+  --surface-sunken: var(--wb-surface-sunken);
+  --surface-pressed: var(--wb-surface-pressed);
+  --surface-overlay: var(--wb-surface-overlay);
+  --ink: var(--wb-ink);
+  --ink-soft: var(--wb-ink-soft);
+  --ink-muted: var(--wb-ink-muted);
+  --ink-on-brand: var(--wb-ink-on-brand);
+  --ink-on-fill: var(--wb-ink-on-fill);
+  --line: var(--wb-line);
+  --line-strong: var(--wb-line-strong);
+  --brand: var(--wb-brand);
+  --brand-hover: var(--wb-brand-hover);
+  --brand-ink: var(--wb-brand-ink);
+  --brand-ink-hover: var(--wb-brand-ink-hover);
+  --brand-soft: var(--wb-brand-soft);
+  --brand-ring: var(--wb-brand-ring);
+  --success: var(--wb-success);
+  --success-soft: var(--wb-success-soft);
+  --warning: var(--wb-warning);
+  --warning-soft: var(--wb-warning-soft);
+  --danger: var(--wb-danger);
+  --danger-soft: var(--wb-danger-soft);
+  --review: var(--wb-review);
+  --review-soft: var(--wb-review-soft);
+  --elev-raised: var(--wb-elev-raised);
+  --elev-raised-lg: var(--wb-elev-raised-lg);
+  --elev-inset: var(--wb-elev-inset);
+  --elev-clay: var(--wb-elev-clay);
+  --elev-clay-lifted: var(--wb-elev-clay-lifted);
+  --r-xs: var(--wb-r-xs);
+  --r-sm: var(--wb-r-sm);
+  --r-md: var(--wb-r-md);
+  --r-lg: var(--wb-r-lg);
+  --r-xl: var(--wb-r-xl);
+  --r-full: var(--wb-r-full);
+  --space-1: var(--wb-space-1);
+  --space-2: var(--wb-space-2);
+  --space-3: var(--wb-space-3);
+  --space-4: var(--wb-space-4);
+  --space-5: var(--wb-space-5);
+  --space-6: var(--wb-space-6);
+  --dur-fast: var(--wb-dur-fast);
+  --dur-base: var(--wb-dur-base);
+  --curve-out: var(--wb-curve-out);
+  --curve-in-out: var(--wb-curve-in-out);
+  --content-max: var(--wb-content-max);
+  --app-max: var(--wb-app-max);
+  --sidebar-w: var(--wb-sidebar-w);
+  --sidebar-w-compact: var(--wb-sidebar-w-compact);
+  --rail-w: var(--wb-rail-w);
+  --nav-h: var(--wb-nav-h);
+  --control-h: var(--wb-control-h);
+  --control-h-sm: var(--wb-control-h-sm);
+  --card-pad: var(--wb-card-pad);
+  --row-gap: var(--wb-row-gap);
+  --card-radius: var(--wb-card-radius);
+}
+
+/* The system's preference, unless an explicit light choice overrides it. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) [data-skin='workbench'] {
+    color-scheme: dark;
+
+  --p0: var(--wb-dark-surface-ground);
+  --p1: var(--wb-dark-surface-sunken);
+  --p2: var(--wb-dark-surface-raised);
+  --p3: var(--wb-dark-surface-overlay);
+  --kraft: var(--wb-dark-brand);
+  --kraft-2: var(--wb-dark-brand-hover);
+  --kraft-3: var(--wb-dark-brand-ink);
+  --edge: var(--wb-dark-line-strong);
+  --edge-soft: var(--wb-dark-line);
+  --ink-faint: var(--wb-dark-ink-muted);
+  --glow: var(--wb-dark-warning-soft);
+  --glow-deep: var(--wb-dark-warning);
+  --terra: var(--wb-dark-danger);
+  --moss: var(--wb-dark-success);
+  --slate: var(--wb-dark-review);
+  --lift-0: var(--wb-dark-elev-raised);
+  --lift-1: var(--wb-dark-elev-raised);
+  --lift-2: var(--wb-dark-elev-clay);
+  --lift-3: var(--wb-dark-elev-clay-lifted);
+  --lift-4: var(--wb-dark-elev-clay-lifted);
+  --press: var(--wb-dark-elev-inset);
+  --grain: none;
+
+  --surface-ground: var(--wb-dark-surface-ground);
+  --surface-raised: var(--wb-dark-surface-raised);
+  --surface-sunken: var(--wb-dark-surface-sunken);
+  --surface-pressed: var(--wb-dark-surface-pressed);
+  --surface-overlay: var(--wb-dark-surface-overlay);
+  --ink: var(--wb-dark-ink);
+  --ink-soft: var(--wb-dark-ink-soft);
+  --ink-muted: var(--wb-dark-ink-muted);
+  --ink-on-brand: var(--wb-dark-ink-on-brand);
+  --ink-on-fill: var(--wb-dark-ink-on-fill);
+  --line: var(--wb-dark-line);
+  --line-strong: var(--wb-dark-line-strong);
+  --brand: var(--wb-dark-brand);
+  --brand-hover: var(--wb-dark-brand-hover);
+  --brand-ink: var(--wb-dark-brand-ink);
+  --brand-ink-hover: var(--wb-dark-brand-ink-hover);
+  --brand-soft: var(--wb-dark-brand-soft);
+  --brand-ring: var(--wb-dark-brand-ring);
+  --success: var(--wb-dark-success);
+  --success-soft: var(--wb-dark-success-soft);
+  --warning: var(--wb-dark-warning);
+  --warning-soft: var(--wb-dark-warning-soft);
+  --danger: var(--wb-dark-danger);
+  --danger-soft: var(--wb-dark-danger-soft);
+  --review: var(--wb-dark-review);
+  --review-soft: var(--wb-dark-review-soft);
+  --elev-raised: var(--wb-dark-elev-raised);
+  --elev-raised-lg: var(--wb-dark-elev-raised-lg);
+  --elev-inset: var(--wb-dark-elev-inset);
+  --elev-clay: var(--wb-dark-elev-clay);
+  --elev-clay-lifted: var(--wb-dark-elev-clay-lifted);
+  }
+}
+
+/* An explicit choice beats the system preference in both directions. */
+:root[data-theme='dark'] [data-skin='workbench'] {
+  color-scheme: dark;
+
+  --p0: var(--wb-dark-surface-ground);
+  --p1: var(--wb-dark-surface-sunken);
+  --p2: var(--wb-dark-surface-raised);
+  --p3: var(--wb-dark-surface-overlay);
+  --kraft: var(--wb-dark-brand);
+  --kraft-2: var(--wb-dark-brand-hover);
+  --kraft-3: var(--wb-dark-brand-ink);
+  --edge: var(--wb-dark-line-strong);
+  --edge-soft: var(--wb-dark-line);
+  --ink-faint: var(--wb-dark-ink-muted);
+  --glow: var(--wb-dark-warning-soft);
+  --glow-deep: var(--wb-dark-warning);
+  --terra: var(--wb-dark-danger);
+  --moss: var(--wb-dark-success);
+  --slate: var(--wb-dark-review);
+  --lift-0: var(--wb-dark-elev-raised);
+  --lift-1: var(--wb-dark-elev-raised);
+  --lift-2: var(--wb-dark-elev-clay);
+  --lift-3: var(--wb-dark-elev-clay-lifted);
+  --lift-4: var(--wb-dark-elev-clay-lifted);
+  --press: var(--wb-dark-elev-inset);
+  --grain: none;
+
+  --surface-ground: var(--wb-dark-surface-ground);
+  --surface-raised: var(--wb-dark-surface-raised);
+  --surface-sunken: var(--wb-dark-surface-sunken);
+  --surface-pressed: var(--wb-dark-surface-pressed);
+  --surface-overlay: var(--wb-dark-surface-overlay);
+  --ink: var(--wb-dark-ink);
+  --ink-soft: var(--wb-dark-ink-soft);
+  --ink-muted: var(--wb-dark-ink-muted);
+  --ink-on-brand: var(--wb-dark-ink-on-brand);
+  --ink-on-fill: var(--wb-dark-ink-on-fill);
+  --line: var(--wb-dark-line);
+  --line-strong: var(--wb-dark-line-strong);
+  --brand: var(--wb-dark-brand);
+  --brand-hover: var(--wb-dark-brand-hover);
+  --brand-ink: var(--wb-dark-brand-ink);
+  --brand-ink-hover: var(--wb-dark-brand-ink-hover);
+  --brand-soft: var(--wb-dark-brand-soft);
+  --brand-ring: var(--wb-dark-brand-ring);
+  --success: var(--wb-dark-success);
+  --success-soft: var(--wb-dark-success-soft);
+  --warning: var(--wb-dark-warning);
+  --warning-soft: var(--wb-dark-warning-soft);
+  --danger: var(--wb-dark-danger);
+  --danger-soft: var(--wb-dark-danger-soft);
+  --review: var(--wb-dark-review);
+  --review-soft: var(--wb-dark-review-soft);
+  --elev-raised: var(--wb-dark-elev-raised);
+  --elev-raised-lg: var(--wb-dark-elev-raised-lg);
+  --elev-inset: var(--wb-dark-elev-inset);
+  --elev-clay: var(--wb-dark-elev-clay);
+  --elev-clay-lifted: var(--wb-dark-elev-clay-lifted);
+}
+
+/* ---------------------------------------------------------------------------
+   Per-skin utilities.
+
+   `paper:` and `workbench:` let one component carry both designs without a
+   prop, a context or a second file. That matters most for the shared client
+   components -- a button cannot read a cookie, and threading the skin down to
+   every one of them would put a provider between the server and every leaf.
+   --------------------------------------------------------------------------- */
+
+@custom-variant paper (&:is([data-skin='paper'] *, [data-skin='paper']));
+@custom-variant workbench (&:is([data-skin='workbench'] *, [data-skin='workbench']));
 
 /* ==========================================================================
    Tailwind theme mapping.
@@ -582,7 +1042,11 @@
   --text-4xl--line-height: 1.05;
   --text-4xl--letter-spacing: -0.035em;
 
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-instrument-sans), ui-sans-serif, system-ui, sans-serif;
+  /* Times, counts and captions. Tabular by default -- see the base layer. */
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+  /* Annotation only. Never data, never a label, never a control. */
+  --font-hand: var(--font-caveat), ui-serif, cursive;
 
   /* ----------------------------------------------------------------------
      shadcn/ui bridge.
@@ -634,6 +1098,34 @@
   --radius-md: var(--r-md);
   --radius-lg: var(--r-lg);
   --radius-xl: var(--r-xl);
+
+  /* ------------------------------------------------------------------
+     The paper materials, as utilities: bg-p2, text-kraft-3, shadow-lift-3.
+     Named for the material rather than the role, because a sheet is chosen
+     by which layer it sits on, not by what happens to be printed on it.
+     ------------------------------------------------------------------ */
+  --color-p0: var(--p0);
+  --color-p1: var(--p1);
+  --color-p2: var(--p2);
+  --color-p3: var(--p3);
+  --color-kraft: var(--kraft);
+  --color-kraft-2: var(--kraft-2);
+  --color-kraft-3: var(--kraft-3);
+  --color-edge: var(--edge);
+  --color-edge-soft: var(--edge-soft);
+  --color-ink-faint: var(--ink-faint);
+  --color-glow: var(--glow);
+  --color-glow-deep: var(--glow-deep);
+  --color-terra: var(--terra);
+  --color-moss: var(--moss);
+  --color-slate: var(--slate);
+
+  --shadow-lift-0: var(--lift-0);
+  --shadow-lift-1: var(--lift-1);
+  --shadow-lift-2: var(--lift-2);
+  --shadow-lift-3: var(--lift-3);
+  --shadow-lift-4: var(--lift-4);
+  --shadow-press: var(--press);
 }
 
 /* ==========================================================================
@@ -917,4 +1409,91 @@
 @utility measure {
   max-width: 62ch;
   text-wrap: pretty;
+}
+
+/* ==========================================================================
+   Paper components.
+
+   Only the parts that cannot be expressed as utility classes live here: the
+   grain, the clipped tab corner, and the offset sheets behind a contour card.
+   Everything else is composed from the material and elevation utilities above.
+   ========================================================================== */
+
+/* Barely-visible crossed hairlines. Applied to p0 and p2 sheets and the hero. */
+@utility grain {
+  background-image: var(--grain);
+}
+
+/* A tab with its top-right corner cut off, the way a paper tab is trimmed. */
+@utility paper-tab {
+  clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 0 100%);
+  border-radius: 3px 3px 0 0;
+}
+
+/*
+   Contour stacking: two offset sheets behind a card, suggesting a stack cut
+   slightly out of register.
+
+   Rationed on purpose. The handoff allows it on exactly two things -- the hero
+   copy block and Needs Review -- because depth stops meaning anything once
+   everything has it.
+*/
+@utility contour {
+  position: relative;
+}
+@utility contour-sheets {
+  position: relative;
+}
+.contour::before,
+.contour::after {
+  content: '';
+  position: absolute;
+  border-radius: 3px;
+  pointer-events: none;
+  z-index: -1;
+}
+.contour::before {
+  inset: 6px -6px -7px -4px;
+  background: var(--p1);
+  box-shadow: var(--lift-0);
+}
+.contour::after {
+  inset: 11px -12px -12px -8px;
+  background: color-mix(in oklab, var(--kraft) 40%, transparent);
+}
+
+/* The glow pool: a blurred warm light escaping from under a forward layer.
+   Never a border, never text -- it only ever lives in a gap. */
+@utility glow-pool {
+  position: absolute;
+  inset: -6px 4px 20px 4px;
+  background: var(--glow);
+  filter: blur(12px);
+  opacity: 0.55;
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* Focus, drawn as two rings so it reads on any sheet. */
+@utility paper-focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--p3), 0 0 0 4px var(--kraft-3);
+}
+
+/* The light behind the hero. Slow enough to be felt rather than watched, and
+   it stops entirely for anyone who asked for less motion. */
+@keyframes breathe {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 0.95; }
+}
+
+/* Sheets arriving: each one lands slightly after the last, like a stack being
+   dealt. */
+@keyframes pp-stack {
+  from { opacity: 0; transform: translateY(10px) scale(0.985); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [class*='animate-'] { animation: none !important; }
 }

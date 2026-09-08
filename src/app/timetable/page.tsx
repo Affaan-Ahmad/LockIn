@@ -1,14 +1,12 @@
-import Link from 'next/link';
-
 import { CalendarIcon, ClockIcon } from '@/components/icons';
-import { AppShell } from '@/components/shell/AppShell';
+import { PaperRailHeading, PaperTab } from '@/components/paper';
+import { Shell } from '@/components/shell/Shell';
 import { ButtonLink } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { CAMPUS_TIME_ZONE, WHOLE_COHORT_SECTION, type Weekday } from '@/domain/timetable';
 import { ClassList } from '@/features/timetable/ClassList';
 import { CohortPicker } from '@/features/timetable/CohortPicker';
 import { FreeRoomsPanel } from '@/features/timetable/FreeRoomsPanel';
-import { cx } from '@/lib/cx';
 import { loadReviewCount, requireSessionUser } from '@/lib/queries';
 import { classesFor, loadTimetableScreen } from '@/lib/timetable';
 
@@ -69,7 +67,7 @@ export default async function TimetablePage({
   const matches = screen.selection === null ? [] : classesFor(screen, selectedDay, screen.selection);
 
   return (
-    <AppShell
+    <Shell
       title="Timetable"
       subtitle={
         screen.selection === null
@@ -82,7 +80,7 @@ export default async function TimetablePage({
       rail={
         <>
           <section className="flex flex-col gap-3" aria-label="Your cohort">
-            <h2 className="context-heading">Your cohort</h2>
+            <PaperRailHeading>Your cohort</PaperRailHeading>
             {screen.configured && screen.error === null ? (
               <CohortPicker options={screen.options} selected={screen.selection} />
             ) : (
@@ -95,7 +93,7 @@ export default async function TimetablePage({
           </section>
 
           <section className="flex flex-col gap-3" aria-label="Free rooms">
-            <h2 className="context-heading">Find a free room</h2>
+            <PaperRailHeading>Find a free room</PaperRailHeading>
             {screen.configured && screen.error === null ? (
               <FreeRoomsPanel timeFormat={screen.timeFormat} />
             ) : (
@@ -104,7 +102,7 @@ export default async function TimetablePage({
           </section>
 
           <section className="flex flex-col gap-2" aria-label="Timetable source">
-            <h2 className="context-heading">Source</h2>
+            <PaperRailHeading>Source</PaperRailHeading>
             <p className="text-xs text-ink-muted">
               {screen.documentTitle ?? 'The university timetable'}
               {screen.fetchedAt === null ? null : (
@@ -152,7 +150,7 @@ export default async function TimetablePage({
           {day?.dayLabel !== undefined && day.dayLabel.toLowerCase() !== selectedDay.toLowerCase() ? (
             // The sheet uses the day heading to say things that change where a
             // student has to be -- "Friday ONLINE" -- so it is shown, not tidied.
-            <p className="text-sm font-medium text-ink">{day.dayLabel}</p>
+            <p className="text-[13.5px] font-semibold text-ink">{day.dayLabel}</p>
           ) : null}
 
           {screen.selection === null ? (
@@ -176,7 +174,7 @@ export default async function TimetablePage({
           )}
         </div>
       )}
-    </AppShell>
+    </Shell>
   );
 }
 
@@ -188,28 +186,22 @@ function DayTabs({
   readonly today: Weekday | null;
 }) {
   return (
-    <nav aria-label="Day" className="flex flex-wrap gap-1.5">
-      {DAYS.map((weekday) => {
-        const active = weekday === selected;
-        return (
-          <Link
-            key={weekday}
-            href={`/timetable?day=${weekday}`}
-            aria-current={active ? 'page' : undefined}
-            className={cx(
-              'min-h-9 rounded-control px-3 py-1.5 text-sm transition-colors duration-[120ms]',
-              active
-                ? 'bg-brand-soft font-semibold text-brand-ink'
-                : 'font-medium text-ink-soft hover:bg-sunken hover:text-ink',
-            )}
-          >
-            {SHORT[weekday]}
-            {weekday === today ? (
-              <span className="ml-1.5 text-2xs font-normal text-ink-muted">today</span>
-            ) : null}
-          </Link>
-        );
-      })}
+    // Cut tabs, not filled chips. The selected day is a sheet of cardstock
+    // lifted clear of the row with a strip of glow along its bottom edge, so it
+    // reads as joined to the classes below it rather than as a pressed button.
+    <nav aria-label="Day" className="flex flex-wrap items-end gap-1">
+      {DAYS.map((weekday) => (
+        <PaperTab
+          key={weekday}
+          href={`/timetable?day=${weekday}`}
+          active={weekday === selected}
+        >
+          {SHORT[weekday]}
+          {weekday === today ? (
+            <span className="ml-1.5 font-mono text-[10px] text-ink-faint">today</span>
+          ) : null}
+        </PaperTab>
+      ))}
     </nav>
   );
 }

@@ -16,12 +16,20 @@ export interface AppShellProps {
   readonly children: ReactNode;
 }
 
-/** One content tree: CSS places it before first paint, without viewport JavaScript. */
+/**
+ * The workbench frame.
+ *
+ * One content tree: CSS places it before first paint, without viewport
+ * JavaScript. Carries `data-skin` so everything inside it -- the tokens, and
+ * every `workbench:` utility -- resolves to this design rather than to paper.
+ * The attribute lives here and not on `<html>` so the root layout never has to
+ * read a cookie; see the skin block in globals.css.
+ */
 export function AppShell({
   title, subtitle, reviewCount = 0, headerAside, rail, children,
 }: AppShellProps) {
   return (
-    <div className="workspace">
+    <div className="workspace" data-skin="workbench">
       <a href="#main-content" className="skip-link">Skip to content</a>
       <aside className="workspace-sidebar"><SidebarNav reviewCount={reviewCount} /></aside>
       <div className="workspace-body">

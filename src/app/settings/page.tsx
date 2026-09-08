@@ -1,16 +1,17 @@
 import Link from 'next/link';
 
-import { AppShell } from '@/components/shell/AppShell';
+import { Shell } from '@/components/shell/Shell';
 import { buildLabel } from '@/config/version';
 import { ProfileForm } from '@/features/onboarding/ProfileForm';
 import { DangerZone } from '@/features/settings/DangerZone';
 import { ClockToggle } from '@/features/settings/ClockToggle';
+import { SkinToggle } from '@/features/settings/SkinToggle';
 import { ThemeToggle } from '@/features/settings/ThemeToggle';
 import { SyncButton } from '@/features/sync/SyncButton';
 import { AutoSync } from '@/features/sync/AutoSync';
 import { SyncStatus } from '@/features/sync/SyncStatus';
 import { formatAge } from '@/lib/format';
-import { readTimeFormat } from '@/lib/preferences';
+import { readSkin, readTimeFormat } from '@/lib/preferences';
 import { loadDashboard, loadProfile, loadSetupState, requireSessionUser } from '@/lib/queries';
 
 /**
@@ -26,7 +27,7 @@ export const metadata = { robots: { index: false, follow: false } };
 
 export default async function SettingsPage() {
   const user = await requireSessionUser();
-  const timeFormat = await readTimeFormat();
+  const [timeFormat, skin] = await Promise.all([readTimeFormat(), readSkin()]);
   const [setup, data, profile] = await Promise.all([
     loadSetupState(user.id),
     loadDashboard(user.id),
@@ -34,7 +35,7 @@ export default async function SettingsPage() {
     ]);
 
   return (
-    <AppShell title="Settings" reviewCount={data.reviewCount}>
+    <Shell title="Settings" reviewCount={data.reviewCount}>
       {/* A failed or stale sync belongs here too: this is where a student
           comes to find out why nothing is updating. */}
       <SyncStatus freshness={data.freshness} variant="banner" />
@@ -74,6 +75,18 @@ export default async function SettingsPage() {
         <section aria-labelledby="appearance">
           <SectionHeading id="appearance">Appearance</SectionHeading>
           <div className="flex flex-col gap-3">
+            {/* First, because it is the largest of the three: theme and clock
+                change how the interface looks, this changes which interface it
+                is. */}
+            <div className="surface-raised p-4">
+              <p className="text-sm text-ink-soft">
+                Which design LockIn uses. Both show the same coursework; they
+                differ in how the day is laid out.
+              </p>
+              <div className="mt-3">
+                <SkinToggle initial={skin} />
+              </div>
+            </div>
             <div className="surface-raised flex flex-wrap items-center justify-between gap-3 p-4">
               <p className="text-sm text-ink-soft">
                 LockIn follows your device by default. Choose one to override it.
@@ -157,7 +170,7 @@ export default async function SettingsPage() {
         </p>
         </div>
       </div>
-    </AppShell>
+    </Shell>
   );
 }
 

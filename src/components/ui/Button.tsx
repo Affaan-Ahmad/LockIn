@@ -16,9 +16,12 @@ import type { ComponentProps } from 'react';
  * tertiary carries no container at all until it is hovered. That is what makes
  * the primary obvious without having to shout.
  *
- * Not a pill. A fully round 44px button reads as a toy and fought every card
- * corner it sat inside; the softened rectangle belongs to the same family as
- * the surfaces around it.
+ * Cut from the same stock as the sheets around it: a 3px corner, a hard edge
+ * and a stacked shadow. Nothing here is a pill -- a fully round control in a
+ * stack of cut paper reads as borrowed from a different interface.
+ *
+ * A press pushes the sheet *into* the page rather than dimming or shrinking it,
+ * which is why the tap animation moves down instead of scaling.
  *
  * Every size clears a 44px touch target. Presses animate `transform` only --
  * animating shadow or padding would repaint or reflow on every frame.
@@ -27,24 +30,36 @@ import type { ComponentProps } from 'react';
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 
 const BASE =
-  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-control font-medium ' +
-  'cursor-pointer select-none transition-colors ' +
+  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-sm ' +
+  'cursor-pointer select-none tracking-[-0.01em] transition-[box-shadow,color] duration-[160ms] ' +
+  'active:shadow-press ' +
   // Focus is not styled here. globals.css defines one :focus-visible outline
   // for the whole product; a ring on top of it drew two indicators, and the
   // `outline-none` that came with the ring suppressed the global rule.
   'disabled:cursor-not-allowed disabled:opacity-50 disabled:active:translate-y-0';
 
-const VARIANT: Record<ButtonVariant, string> = {
-  // The only filled button. Its shadow is the clay tier, so the one action a
-  // screen is asking for is also the one thing standing off the surface.
-  primary: 'bg-brand text-on-brand shadow-clay hover:bg-brand-hover',
-  secondary: 'surface-raised text-ink hover:bg-overlay',
+export const BUTTON_VARIANT: Record<ButtonVariant, string> = {
+  // The only filled button, and the only control the warm glow touches. The
+  // glow sits *under* the sheet -- light escaping from the gap beneath it --
+  // never on its face and never on its label.
+  // The under-glow is light escaping from the gap beneath a raised sheet, which
+  // is a paper idea. The workbench's primary is a solid near-black block and
+  // gets the plain clay shadow it was designed with.
+  primary:
+    'bg-kraft text-on-brand font-bold border border-kraft-2 ' +
+    'paper:shadow-[var(--lift-2),0_12px_22px_-12px_var(--glow-deep)] ' +
+    'paper:hover:shadow-[var(--lift-3),0_14px_26px_-12px_var(--glow-deep)] ' +
+    'workbench:border-transparent workbench:shadow-clay',
+  secondary:
+    'bg-p3 text-ink font-semibold border border-edge shadow-lift-1 hover:shadow-lift-2 ' +
+    'workbench:border-line-strong',
   // No container until hovered. A tertiary action that already looks like a
   // button competes with the secondary one beside it.
-  ghost: 'bg-transparent text-ink-soft hover:bg-sunken hover:text-ink',
+  ghost: 'bg-transparent text-ink-soft font-medium hover:text-ink',
   // Filled, and visually distinct from primary rather than a shade of it:
-  // deleting an account must not look like confirming one.
-  danger: 'bg-danger text-on-fill shadow-clay hover:brightness-[0.94]',
+  // deleting an account must not look like confirming one. Terra is the only
+  // red in the system, which is exactly why it is trustworthy here.
+  danger: 'bg-terra text-on-fill font-bold border border-terra shadow-lift-2 hover:shadow-lift-3',
 };
 
 export interface ButtonProps extends HTMLMotionProps<'button'> {
@@ -73,15 +88,15 @@ export function Button({
       type="button"
       {...rest}
       disabled={inert}
-      whileHover={inert || reduce ? {} : { y: -1 }}
-      whileTap={inert || reduce ? {} : { scale: 0.97, y: 0 }}
+      whileHover={inert || reduce ? {} : { y: -2 }}
+      whileTap={inert || reduce ? {} : { y: 2 }}
       // Announces the pending state to assistive tech, which a spinner alone
       // does not.
       aria-busy={busy || undefined}
       className={cx(
         BASE,
-        VARIANT[variant],
-        size === 'sm' ? 'min-h-[var(--control-h)] px-3.5 text-sm' : 'min-h-11 px-5 text-base',
+        BUTTON_VARIANT[variant],
+        size === 'sm' ? 'min-h-10 px-3.5 text-[13px]' : 'min-h-11 px-4 text-[13.5px]',
         fullWidth ? 'w-full' : '',
         className,
       )}
@@ -104,5 +119,20 @@ export function ButtonLink({ variant = 'secondary', size: _size, fullWidth = fal
   readonly fullWidth?: boolean;
 }) {
   void _size;
-  return <Link {...props} data-variant={variant} className={cx('button-link', fullWidth && 'w-full', className)} />;
+  // The same classes the button uses, not a parallel `.button-link` rule. Two
+  // definitions of "primary" is how a link and a button start to disagree.
+  return (
+    <Link
+      {...props}
+      className={cx(
+        BASE,
+        BUTTON_VARIANT[variant],
+        'min-h-11 px-4 text-[13.5px]',
+        'transition-[transform,box-shadow,color] hover:-translate-y-[2px] active:translate-y-[2px]',
+        'motion-reduce:transform-none motion-reduce:transition-none',
+        fullWidth && 'w-full',
+        className,
+      )}
+    />
+  );
 }

@@ -1,4 +1,4 @@
-import { AppShell } from '@/components/shell/AppShell';
+import { Shell } from '@/components/shell/Shell';
 import { CourseTracker } from '@/features/courses/CourseTracker';
 import { SyncButton } from '@/features/sync/SyncButton';
 import { AutoSync } from '@/features/sync/AutoSync';
@@ -34,7 +34,7 @@ export default async function CoursesPage({
     ]);
 
   return (
-    <AppShell
+    <Shell
       title={setupMode ? 'Choose your courses' : 'Courses'}
       subtitle={
         setupMode
@@ -72,6 +72,6 @@ export default async function CoursesPage({
           </div>
         </div>
       )}
-    </AppShell>
+    </Shell>
   );
 }
