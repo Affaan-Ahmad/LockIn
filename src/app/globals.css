@@ -1513,6 +1513,47 @@
 
 /* The light behind the hero. Slow enough to be felt rather than watched, and
    it stops entirely for anyone who asked for less motion. */
+/* The paper clouds along the hero floor.
+   -----------------------------------------------------------------------
+   Four keyframes, all transform-only. Nothing here animates a filter, a shadow
+   or a colour: those repaint, and this runs continuously on a marketing page
+   that an installed app opens cold.
+
+   The layers drift on different durations and in different directions, which is
+   what produces the parallax -- a stack of card pieces settling against each
+   other rather than one picture sliding about. Durations are deliberately
+   coprime-ish so the loop never visibly repeats.
+
+   `prefers-reduced-motion` kills all of it through the [class*='animate-']
+   rule at the bottom of this file; every cloud animation is applied through a
+   Tailwind `animate-` class so that one rule reaches it. */
+@keyframes cloud-float {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
+  50%      { transform: translate3d(0, -9px, 0) rotate(-0.5deg); }
+}
+
+@keyframes cloud-layer-a {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50%      { transform: translate3d(3px, -3px, 0); }
+}
+
+@keyframes cloud-layer-b {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50%      { transform: translate3d(-4px, 2px, 0); }
+}
+
+/* Doodles breathe rather than blink: opacity and a hair of scale, never a hard
+   on/off, which would read as a rendering fault at this size.
+
+   The floor is 0.6, not 0.35. At the lower value a pencil mark in kraft on an
+   ivory sheet spent half its cycle genuinely invisible -- caught mid-fade in a
+   screenshot, the wind lines simply were not there. The range is now narrow
+   enough to read as breathing rather than as blinking. */
+@keyframes doodle-breathe {
+  0%, 100% { opacity: 0.6; transform: scale(0.96); }
+  50%      { opacity: 0.95; transform: scale(1.03); }
+}
+
 /* Sheets arriving: each one lands slightly after the last, like a stack being
    dealt. */
 @keyframes pp-stack {

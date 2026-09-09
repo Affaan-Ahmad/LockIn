@@ -101,6 +101,21 @@ Not released. The version in `package.json` is unchanged, so `/api/version` stil
   submitted work, or your own calendar entries. Four sections were added and the hero no longer
   describes the product as Classroom filtering alone.
 
+- **The hero's clouds are cut paper now.** They were nested rings — concentric circles that read as
+  bubbles rather than as anything cut. Each cloud is one hand-written silhouette stamped three times
+  at small offsets, in three sheets, with a dashed thread just inside the cut edge and a pencilled
+  curl, sparkle or wind mark in kraft.
+
+  The sheets step p0 → p1 → p3 rather than through adjacent shades. Neighbouring sheets sit about
+  four points of lightness apart, which is right for a card lying on a page and far too little here:
+  stamped three times a few pixels apart they read as one shape with a thick outline. Skipping a
+  step is what makes the stack legible as a stack.
+
+  All SVG and CSS, no raster, `non-scaling-stroke` so the cut edge is identical at every size, and
+  transform-only animation — the layers drift on different durations, which is where the parallax
+  comes from. Three of the six clouds are dropped below `sm` so a phone gets fewer at full size
+  rather than six squashed ones. Every animation is `motion-safe:` gated.
+
 - **The glow is gone.** The hero's breathing pool, the pool under the closing card and under Needs
   Review, the strip along an active tab, and the primary button's under-glow. It was the one part of
   the design that measured badly: 1.47:1 against the sheets it sat on, which is a blurred layer

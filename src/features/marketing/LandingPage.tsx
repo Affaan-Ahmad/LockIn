@@ -135,50 +135,272 @@ function Hero() {
 }
 
 /**
- * A bank of curled paper clouds along the floor of the hero.
+ * The paper clouds along the floor of the hero.
  *
- * Nested rings rather than images: an edge ring in kraft, a sheet disc inside
- * it, then an inner edge and disc, so each puff reads as cut card seen slightly
- * from the side. Three rows at decreasing size give the depth.
+ * Cut card, not weather. Each cloud is one silhouette stamped three times at
+ * small offsets — a back sheet, a middle, and the face — so the depth comes from
+ * the stack rather than from a gradient or a blur. That is the same rule every
+ * card on this page follows: a surface sits on a *visible* sheet below it.
+ *
+ * The three sheets step p0 → p1 → p3, not p1 → p2 → p3. Adjacent sheets are
+ * about four points of lightness apart, which is right for a card lying flat on
+ * a page and far too little at this scale: stamped three times a few pixels
+ * apart it read as one shape with a thick outline. Skipping a step is what makes
+ * the stack legible as a stack.
+ *
+ * Silhouettes are hand-written paths rather than circles. Nested discs read as
+ * bubbles, which is exactly what the previous version looked like; a cloud needs
+ * bumps of unequal size sitting on a flat cut base.
+ *
+ * Strokes are `non-scaling-stroke`, so a cloud drawn at 96px and one at 264px
+ * share the same cut edge instead of the large one looking inflated.
+ *
+ * Transform-only, no filters, no animated shadows, six clouds at most. This runs
+ * continuously on the page an installed app opens cold.
  */
-function CloudBank() {
-  // Three depth rows. Each puff is a circle, not an oval: the reference reads
-  // as cut discs seen face-on, and stretching them turns the bank into a row of
-  // lozenges. Sizes vary within a row and the puffs overlap, so the edge of the
-  // bank is ragged the way torn card is.
-  const rows: readonly {
-    readonly sizes: readonly number[];
-    readonly bottom: number;
-    readonly opacity: string;
-  }[] = [
-    { sizes: [150, 96, 176, 120, 190, 104, 160, 128, 182], bottom: 26, opacity: 'opacity-45' },
-    { sizes: [104, 148, 88, 132, 112, 158, 96, 140, 120, 92], bottom: 14, opacity: 'opacity-75' },
-    { sizes: [64, 92, 56, 78, 68, 100, 60, 84, 72, 96, 58, 88], bottom: 2, opacity: 'opacity-100' },
-  ];
+
+/**
+ * Silhouettes, each with a flat cut base.
+ *
+ * `mid` is the centre of the viewBox and `mark` is where a doodle hangs. Both
+ * are stored per shape because the three viewBoxes are different sizes — the
+ * first version reused one set of coordinates for all of them and the doodles
+ * landed wherever that happened to fall.
+ */
+const CLOUD_SHAPES = [
+  {
+    box: '0 0 200 104',
+    d: 'M8 100 C-4 80 8 60 28 65 C31 41 60 30 78 46 C89 24 126 22 137 46 C160 37 187 50 183 72 C199 75 204 100 188 100 Z',
+    mid: [100, 52],
+    mark: [150, 26],
+  },
+  {
+    box: '0 0 150 88',
+    d: 'M6 84 C-3 68 8 52 24 57 C28 34 58 27 71 44 C88 33 111 44 108 62 C124 65 128 84 113 84 Z',
+    mid: [75, 44],
+    mark: [104, 24],
+  },
+  {
+    box: '0 0 108 68',
+    d: 'M5 64 C-2 51 7 39 20 43 C25 24 50 21 58 38 C74 34 85 45 81 60 C92 62 95 64 86 64 Z',
+    mid: [54, 34],
+    mark: [74, 16],
+  },
+] as const;
+
+type CloudDoodle = 'curl' | 'wind' | 'star' | 'none';
+
+/**
+ * One cloud: three sheets of the same shape, plus an optional pencilled mark.
+ *
+ * `seed` only varies timing. Giving every cloud the same duration makes a row of
+ * them rise and fall in unison, which reads as a loading state rather than as
+ * weather.
+ */
+function PaperCloud({
+  shape,
+  doodle = 'none',
+  seed = 0,
+  className,
+}: {
+  readonly shape: 0 | 1 | 2;
+  readonly doodle?: CloudDoodle;
+  readonly seed?: number;
+  readonly className?: string;
+}) {
+  const { box, d, mid, mark } = CLOUD_SHAPES[shape];
+  const [cx0, cy0] = mid;
+
+  // Scaled about the centre of the shape, not about the origin. `scale()` alone
+  // pulls everything toward 0,0, which slid the stitch off the cloud entirely on
+  // the wider silhouettes.
+  const stitch = `translate(${String(cx0)} ${String(cy0)}) scale(0.9) translate(${String(-cx0)} ${String(-cy0)})`;
 
   return (
-    <div aria-hidden="true" className="relative h-[150px] overflow-hidden lg:h-[190px]">
-      {rows.map((row) => (
-        <div
-          key={row.bottom}
-          className={cx('absolute inset-x-0 flex items-end justify-center', row.opacity)}
-          style={{ bottom: row.bottom }}
+    <span
+      className={cx(
+        'pointer-events-none absolute motion-safe:animate-[cloud-float_22s_ease-in-out_infinite]',
+        className,
+      )}
+      style={{
+        animationDelay: `${String(seed * 1.7)}s`,
+        animationDuration: `${String(22 + seed * 3)}s`,
+      }}
+    >
+      <svg viewBox={box} className="h-auto w-full overflow-visible" fill="none" aria-hidden="true">
+        {/* The sheet furthest back, offset up and left so it reads as a piece cut
+            slightly larger and laid underneath. */}
+        <g
+          className="motion-safe:animate-[cloud-layer-b_17s_ease-in-out_infinite]"
+          style={{ animationDelay: `${String(seed * 0.9)}s` }}
         >
-          {row.sizes.map((size, i) => (
-            <span
-              key={`${String(row.bottom)}-${String(i)}`}
-              className="flex shrink-0 items-center justify-center rounded-full border-[3px] border-kraft-2 bg-p2"
-              style={{ width: size, height: size, marginInline: -(size * 0.18) }}
-            >
-              <span
-                className="rounded-full border-2 border-kraft bg-p3"
-                style={{ width: size * 0.52, height: size * 0.52 }}
-              />
-            </span>
-          ))}
-        </div>
-      ))}
-      {/* The sheet ground the bank rests on. */}
+          <path
+            d={d}
+            transform="translate(-8 -10)"
+            fill="var(--p0)"
+            stroke="var(--kraft-2)"
+            strokeWidth={1.3}
+            strokeLinejoin="round"
+            vectorEffect="non-scaling-stroke"
+          />
+        </g>
+
+        <g
+          className="motion-safe:animate-[cloud-layer-a_13s_ease-in-out_infinite]"
+          style={{ animationDelay: `${String(seed * 0.6)}s` }}
+        >
+          <path
+            d={d}
+            transform="translate(-4 -5)"
+            fill="var(--p1)"
+            stroke="var(--kraft-2)"
+            strokeWidth={1.5}
+            strokeLinejoin="round"
+            vectorEffect="non-scaling-stroke"
+          />
+        </g>
+
+        {/* The face, and the only layer carrying detail. */}
+        <path
+          d={d}
+          fill="var(--p3)"
+          stroke="var(--kraft-2)"
+          strokeWidth={1.9}
+          strokeLinejoin="round"
+          vectorEffect="non-scaling-stroke"
+        />
+
+        {/* Thread just inside the cut edge. Dashed rather than solid so it reads
+            as stitching instead of a second outline. */}
+        <path
+          d={d}
+          transform={stitch}
+          fill="none"
+          stroke="var(--kraft)"
+          strokeWidth={1}
+          strokeDasharray="3 5"
+          strokeLinecap="round"
+          vectorEffect="non-scaling-stroke"
+          opacity={0.75}
+        />
+
+        {doodle === 'none' ? null : (
+          <CloudDoodleMark kind={doodle} seed={seed} at={[mark[0], mark[1]]} />
+        )}
+      </svg>
+    </span>
+  );
+}
+
+/**
+ * The pencilled accents, drawn around their own origin and translated into
+ * place, so one definition serves all three silhouettes.
+ *
+ * Kraft, not ink. These are marks on the paper rather than information, and at
+ * ink weight they would compete with the copy above them.
+ */
+function CloudDoodleMark({
+  kind,
+  seed,
+  at,
+}: {
+  readonly kind: CloudDoodle;
+  readonly seed: number;
+  readonly at: readonly [number, number];
+}) {
+  const pen = {
+    fill: 'none' as const,
+    stroke: 'var(--kraft-3)',
+    strokeLinecap: 'round' as const,
+    strokeLinejoin: 'round' as const,
+    vectorEffect: 'non-scaling-stroke' as const,
+  };
+
+  // Two groups, not one. A CSS `transform` animation on an SVG element replaces
+  // that element's `transform` attribute rather than composing with it, so
+  // putting the breathe animation and the positioning translate on the same <g>
+  // meant the scale silently discarded the translate and every doodle collapsed
+  // toward the origin. The outer group places it; the inner one animates.
+  //
+  // `transform-box: fill-box` makes `transform-origin: center` mean the mark's
+  // own centre rather than the corner of the whole viewBox.
+  return (
+    <g opacity={0.8} transform={`translate(${String(at[0])} ${String(at[1])})`}>
+      <g
+        className="motion-safe:animate-[doodle-breathe_9s_ease-in-out_infinite]"
+        style={{
+          animationDelay: `${String(seed * 1.3)}s`,
+          transformBox: 'fill-box',
+          transformOrigin: 'center',
+        }}
+      >
+      {kind === 'curl' ? (
+        // A shaving of paper lifting off the edge: opened out, then tightening
+        // into the centre. The first attempt was small enough to read as a
+        // stray lowercase o.
+        <path
+          d="M-2 14 c-4 -9 3 -18 12 -17 c8 1 12 9 8 15 c-3 5 -11 5 -13 -1 c-2 -5 4 -9 8 -5"
+          strokeWidth={1.5}
+          {...pen}
+        />
+      ) : null}
+
+      {kind === 'wind' ? (
+        // Three trailing strokes with hooked ends, the way wind is drawn by hand.
+        <>
+          <path d="M0 0 h20 a4 4 0 1 0 -4 -5" strokeWidth={1.5} {...pen} />
+          <path d="M-6 9 h26" strokeWidth={1.3} {...pen} />
+          <path d="M2 18 h13 a3.5 3.5 0 1 1 -3 4" strokeWidth={1.3} {...pen} />
+        </>
+      ) : null}
+
+      {kind === 'star' ? (
+        // Four-point sparkles as outlines. A filled star at this size is a dot.
+        <>
+          <path
+            d="M0 0 c0 5.4 1.8 7.2 7.2 7.2 c-5.4 0 -7.2 1.8 -7.2 7.2 c0 -5.4 -1.8 -7.2 -7.2 -7.2 c5.4 0 7.2 -1.8 7.2 -7.2 z"
+            strokeWidth={1.4}
+            {...pen}
+          />
+          <path
+            d="M17 12 c0 3.4 1.1 4.5 4.5 4.5 c-3.4 0 -4.5 1.1 -4.5 4.5 c0 -3.4 -1.1 -4.5 -4.5 -4.5 c3.4 0 4.5 -1.1 4.5 -4.5 z"
+            strokeWidth={1.2}
+            {...pen}
+          />
+          </>
+        ) : null}
+      </g>
+    </g>
+  );
+}
+
+/**
+ * The bank itself.
+ *
+ * A floor band beneath the hero content and never behind it. The clouds are the
+ * horizon this section stands on, and a decorative path crossing a heading is
+ * the one thing here that would cost readability.
+ *
+ * Heights are staggered rather than even, and the two largest run off the left
+ * and right edges, so the bank reads as a longer row continuing past the card
+ * instead of six ornaments laid out in a line.
+ *
+ * Three of the six are hidden below `sm`. A phone gets fewer clouds at close to
+ * the same scale rather than six squashed ones, which is what keeps the top edge
+ * of the bank ragged instead of crowded.
+ */
+function CloudBank() {
+  return (
+    <div aria-hidden="true" className="relative h-[124px] overflow-hidden sm:h-[156px] lg:h-[188px]">
+      <PaperCloud shape={0} doodle="wind" seed={0} className="-left-[5%] bottom-[26px] w-[190px] sm:w-[224px] lg:w-[268px]" />
+      <PaperCloud shape={2} doodle="curl" seed={5} className="bottom-[10px] left-[16%] hidden w-[84px] sm:block lg:w-[96px]" />
+      <PaperCloud shape={2} doodle="star" seed={1} className="bottom-[64px] left-[29%] hidden w-[100px] sm:block lg:w-[118px]" />
+      <PaperCloud shape={1} doodle="curl" seed={2} className="bottom-[18px] left-[41%] w-[152px] sm:w-[180px] lg:w-[210px]" />
+      <PaperCloud shape={2} seed={3} className="bottom-[72px] left-[65%] hidden w-[88px] lg:block lg:w-[104px]" />
+      <PaperCloud shape={0} doodle="star" seed={4} className="-right-[7%] bottom-[30px] w-[178px] sm:w-[212px] lg:w-[252px]" />
+
+      {/* The shelf the bank stands on, and the reason every silhouette has a flat
+          base: these are cut pieces standing up, not floating. */}
       <span className="absolute inset-x-0 bottom-0 h-[10px] bg-p1 shadow-[0_-1px_0_var(--edge)]" />
     </div>
   );
