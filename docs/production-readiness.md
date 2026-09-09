@@ -69,7 +69,7 @@ regressions — have NOT been run against a database.**
 
 | # | Gap | Severity | Notes |
 | --- | --- | --- | --- |
-| 1 | ~~No account deletion.~~ **RESOLVED 2026-08-31.** `DELETE /api/account` revokes Google, then deletes the auth user; every user-owned table cascades from it. Requires a typed confirmation. | ~~CRITICAL~~ CLOSED | End-to-end deletion against a live database is still NOT VERIFIED — unit tested only, since the only real account is the operator's. |
+| 1 | ~~No account deletion.~~ **RESOLVED 2026-08-31.** `DELETE /api/account` revokes Google, then deletes the auth user; every user-owned table cascades from it. Requires a typed confirmation. | ~~CRITICAL~~ CLOSED | **VERIFIED end to end 2026-09-09** against production: a throwaway account deleted through the UI left zero rows in all eighteen tables and no `auth.users` row. See the verification log. |
 | 2 | ~~No Google disconnect.~~ **RESOLVED 2026-08-31.** `DELETE /api/connection` revokes at Google then clears local credentials. Imported coursework is deliberately kept, and the response says so. | ~~CRITICAL~~ CLOSED | `revoke()` is no longer dead code. |
 | 3 | ~~No inbound rate limiting.~~ **RESOLVED 2026-08-31.** Database-backed fixed-window limiter on both Google-facing endpoints, with `Retry-After` on the 429. | ~~HIGH~~ CLOSED | Verified against the live database. Fails open by design if the limiter itself is unreachable — it guards a quota, not authorisation. |
 | 4 | ~~No security headers / CSP.~~ **RESOLVED 2026-08-31.** Nonce-based CSP set per request in middleware; static headers in `next.config.mjs`. Verified on a live response. | ~~HIGH~~ CLOSED | One documented relaxation: `style-src 'unsafe-inline'`, because Next.js injects inline styles that cannot yet carry a nonce. Revisit once the UI exists. |
@@ -203,6 +203,38 @@ cleanup, but no full deletion has been run — the only real account belongs to
 the operator.
 
 ---
+
+### 2026-09-09 — account deletion, verified against production
+
+Gap 1 has been closed in code since 31 August with the note that end-to-end deletion had never been
+run, because the only real account was the operator's. A throwaway account settles it.
+
+**The mechanism first, read out of the live catalogue rather than the migrations.** Every foreign
+key in `public` was listed with its delete rule, sorted non-`CASCADE` first. Seventeen tables carry
+`user_id -> user_profiles` as `CASCADE`, and `user_profiles.id -> auth.users.id`
+(`user_profiles_id_fkey`) is `CASCADE` too -- which is the keystone, since the route deletes the
+auth user and everything below only fires if that edge cascades.
+
+Two foreign keys are **not** `CASCADE`, and both are correct:
+`assignments.topic_id -> topics` and `sync_course_results.course_id -> courses` are `SET NULL`, so
+an assignment survives a topic disappearing mid-sync and a historical sync result survives its
+course. Neither weakens deletion -- those rows still cascade on their own `user_id`.
+
+**Then the deletion.** Before: `user_profiles`, `academic_profiles` and `google_connections` each
+held one row for the account; every other table held none. Deleted through Settings, with the typed
+confirmation, as a student would. After: **zero rows in all eighteen tables, and no `auth.users`
+row.**
+
+The counting query discovers its own table list from `information_schema.columns` rather than a list
+typed by hand, so a table added later cannot be silently skipped by the check that is supposed to
+notice it.
+
+**What this establishes and what it does not.** The cascade exists across every table and it fires.
+It does not establish behaviour for an account carrying coursework, classifications and sync history
+-- the throwaway was a personal Gmail with no Classroom enrolment, so the deeper chains
+(`assignments -> classifications`, `sync_runs -> sync_course_results -> sync_errors`) held no rows
+to remove. The schema check covers what the empirical test could not reach: those chains are
+`CASCADE` by construction, verified in the live catalogue rather than assumed from the migration.
 
 ### 2026-09-09 — the consent flow, exercised end to end against production
 
