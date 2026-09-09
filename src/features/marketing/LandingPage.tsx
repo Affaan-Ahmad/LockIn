@@ -814,7 +814,7 @@ function Privacy() {
     },
     {
       title: 'Coursework only',
-      body: 'No roster scope and no profile scope. Grades arrive with the submission data and are discarded before anything is written down.',
+      body: 'No roster scope, and nothing that can change your Classroom. Beyond the four, only the sign-in permissions every Google login uses. Grades arrive with the submission data and are discarded before anything is written down.',
     },
     {
       title: 'Disconnect anytime',

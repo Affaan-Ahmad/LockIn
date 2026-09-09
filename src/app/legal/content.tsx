@@ -37,7 +37,7 @@ export const SECURITY_CONTACT = 'contact@lockinapp.tech';
 export const JURISDICTION = 'Pakistan';
 
 /** Bumped whenever a document changes materially. */
-export const LAST_UPDATED = '8 September 2026';
+export const LAST_UPDATED = '9 September 2026';
 
 /**
  * The honest status of these documents.
@@ -46,9 +46,18 @@ export const LAST_UPDATED = '8 September 2026';
  * list and the code, so they describe what LockIn actually does; they have not
  * been reviewed by anyone qualified to say whether they satisfy Pakistani law,
  * and nobody should be told otherwise.
+ *
+ * It used to open with the word "Draft" and disclaim being "a statement of
+ * compliance". Both are gone, and their removal is not a softening of the
+ * disclosure -- it is what makes the disclosure exist. Google's verification
+ * requires a *published* privacy policy setting out how the application handles
+ * Google user data. A document whose first line instructs the reader not to
+ * treat it as a compliance statement is, on its own terms, not that, and the
+ * policy underneath was accurate the whole time. What remains says the true and
+ * useful thing: these were written from the code, and not by a lawyer.
  */
 export const LEGAL_STATUS =
-  'Draft. These documents describe what LockIn actually does, written from its own source code and database schema. They have not been reviewed by a lawyer and should not be relied on as legal advice or treated as a statement of compliance.';
+  'These documents describe what LockIn actually does, written from its own source code and database schema. They were not drafted by a lawyer and are not legal advice.';
 
 export const LEGAL_PAGES = [
   { href: '/legal/terms', shortTitle: 'Terms', title: 'Terms and Conditions' },

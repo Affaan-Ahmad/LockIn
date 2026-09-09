@@ -47,10 +47,13 @@ export default function PrivacyPage() {
           ]}
         />
         <p>
-          Signing in with Google also involves the basic sign-in permissions every Google
-          login uses: your email address and your Google account identifier. That is how LockIn
-          knows whose coursework to show, and it is what the Google consent screen will list
-          alongside the four above.
+          Signing in with Google also involves the two basic sign-in permissions every Google
+          login uses, <strong>email</strong> and <strong>profile</strong>. They are requested by the
+          authentication service LockIn signs you in with rather than by LockIn itself, and the
+          Google consent screen lists them alongside the four above. What LockIn keeps from them is
+          your email address and your Google account identifier, which is how it knows whose
+          coursework to show. The <strong>profile</strong> permission also returns your display name
+          and profile picture; LockIn reads neither and stores neither.
         </p>
         <p>
           The submission data Google returns also contains your grades. LockIn drops them at the

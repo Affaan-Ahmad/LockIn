@@ -187,9 +187,10 @@ function GoogleAccessDisclosure() {
       </p>
       <p>
         The access is read-only: LockIn cannot submit, edit, grade or delete anything in Classroom.
-        Signing in also uses your Google email address and account id, which is how it knows whose
-        coursework to show. Google returns your grades with your submissions and LockIn discards
-        them without storing them.
+        Signing in adds the two permissions every Google login uses, <strong className="text-ink-soft">email</strong>{' '}
+        and <strong className="text-ink-soft">profile</strong>: your address and account id are how
+        LockIn knows whose coursework to show, and it stores nothing else they return. Google sends
+        your grades with your submissions and LockIn discards them without storing them.
       </p>
       <p>
         You can disconnect Google or delete everything from Settings at any time. See the{' '}

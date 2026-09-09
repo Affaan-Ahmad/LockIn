@@ -201,6 +201,37 @@ the operator.
 
 ---
 
+### 2026-09-09 — production schema, read directly
+
+Prompted by a Google OAuth pre-submission audit, which could not proceed past the question this
+document had left open: gaps 9 and 17 record that whether `0010` and `0013` have been applied
+anywhere is unknown from the repository, and the same doubt covers `0009`. That doubt was not
+academic. `0009_drop_grades.sql` is the *only* reason the privacy policy's "the database has no
+column to put them in", the landing page's "discarded before anything is written down" and the
+pre-consent disclosure are true. Unapplied, all three would have been false about the most sensitive
+data class the product touches.
+
+Method: `limit=0` reads against PostgREST with the service-role key. PostgREST resolves the column
+list before it returns rows, so a named column that does not exist answers `400 column ... does not
+exist` while one that does answers `200 []`. The schema is the answer and **no row of anybody's
+coursework was read**.
+
+| Probe | Result |
+| --- | --- |
+| `submissions.assigned_grade` | **Absent** — `0009` is applied |
+| `submissions.draft_grade` | **Absent** — `0009` is applied |
+| `submissions.state` (control) | Present, so the probe distinguishes absent columns from absent tables |
+| `assignment_notes`, `user_events` | Present — `0015` is applied |
+| `ignored_assignments` | Present — `0007` is applied |
+| `sync_errors` | Present |
+
+**Grades are not stored in production.** The three public claims are accurate.
+
+What this does **not** settle: `0010`'s pg_cron job and `0013`'s fencing are functions and schedules,
+not columns, and no read of this kind can see them. `CRON_SECRET` is separately known to be unset —
+`GET /api/sync/sweep` answers 503 — so the retention sweep is not running whether or not `0010` was
+applied, which leaves gap 9 open on behaviour rather than on deployment.
+
 ### 2026-09-06 — local fixes, and what they did not prove
 
 Verified only by `npm run verify` on a development machine: typecheck, lint,
@@ -286,8 +317,28 @@ the privacy policy.
 | `classroom.student-submissions.me.readonly` | Sensitive | Know what is already submitted, and learn the student's Classroom user id without a roster scope | Feed filtering, source targeting | Already the `.me` variant |
 | `classroom.topics.readonly` | Sensitive | Topic names are a section-targeting signal | Classification | None |
 
-No write scopes. No roster scope. No profile scope. The student's Classroom user id is learned from
-their own submission payloads specifically to avoid a broader scope.
+No write scopes and no roster scope. The student's Classroom user id is learned from their own
+submission payloads specifically to avoid a broader scope.
+
+**Six scopes reach Google, not four.** Corrected 2026-09-09, from the live consent URL rather than
+from this repository. `signInWithOAuth` is given the four above; Supabase's Google provider appends
+`email` and `profile` to whatever it is passed, and the request that arrives at
+`accounts.google.com` carries all six. Neither is sensitive and `email` is the account identifier
+the product keys on, but two things follow and both were wrong before today. This table said "No
+profile scope", and so did the landing page, where it was a public claim contradicted by the consent
+screen one click later. And `profile` is requested while **nothing reads it** -- the only field taken
+off the Supabase user object anywhere in `src/` is `user_metadata['sub']`, in the OAuth callback.
+That is a minimum-scope question worth answering before submission, not after it is asked.
+
+| Scope | Sensitivity | Requested by | Used by |
+| --- | --- | --- | --- |
+| `email` | Non-sensitive | Supabase provider default | Account identity |
+| `profile` | Non-sensitive | Supabase provider default | **Nothing** |
+
+Supabase Studio exposes the provider's default scope list under Advanced Options, so removing
+`profile` may be possible from the dashboard -- untested, and it must not break `sub` in
+`user_metadata`, which the callback reads. If it cannot be removed, say so in the Google
+justification rather than leaving a reviewer to notice an unused scope unexplained.
 
 **A second credential exists, and no student consents to it.** The class timetable is read with a
 single service credential held by the operator, in its **own Google Cloud project**, so the
