@@ -10,6 +10,7 @@ import {
   PaperButtonLink,
   RecessedWell,
 } from '@/components/paper';
+import { IgnoreButton } from '@/features/assignments/IgnoreButton';
 import { SyncButton } from '@/features/sync/SyncButton';
 import { SyncStatus } from '@/features/sync/SyncStatus';
 import type { TimeFormat } from '@/lib/clock';
@@ -109,9 +110,29 @@ function LateBody({
 
       <p className="text-[12.5px] text-ink-soft">{stateLabel(item)}</p>
 
-      <PaperButtonLink href={detailHref(item.assignmentId)} variant="secondary" size="sm">
-        Open
-      </PaperButtonLink>
+      {/* Hide, then Open.
+          -----------------------------------------------------------------
+          The workbench skin has offered this since overdue items got a card;
+          paper never did, so a student who had switched skins could reach the
+          list of things they had already hidden but had no way to add to it.
+
+          Only on late work, which is the same rule the other skin applies
+          (`allowHideOverdue`, DeadlineGroups). Hiding something that is merely
+          due is a way to lose it; hiding something already missed is how a
+          student says "I know, and I am not doing it" -- and without that the
+          Late card is permanently occupied by one dead assignment and the
+          genuinely actionable ones behind it are never seen.
+
+          That is also why hiding the first item is worth more here than in the
+          other skin. This card shows one assignment and a count; hiding the top
+          one promotes the next, so the control empties a pile rather than
+          annotating a list. */}
+      <div className="flex items-center gap-1.5">
+        <IgnoreButton assignmentId={item.assignmentId} ignored={false} title={item.title} />
+        <PaperButtonLink href={detailHref(item.assignmentId)} variant="secondary" size="sm">
+          Open
+        </PaperButtonLink>
+      </div>
     </div>
   );
 }
