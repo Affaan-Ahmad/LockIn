@@ -204,6 +204,44 @@ the operator.
 
 ---
 
+### 2026-09-09 — the consent flow, exercised end to end against production
+
+Rows 16, 19, 20 and 21 were each closed in code and each carried the same caveat: **NOT VERIFIED
+against a live Google consent flow**. Row 21 is why that caveat mattered. Its first fix was
+unit-green and wrong, and only a live consent exposed it. The caveat is now discharged.
+
+Three consents against `lockinapp.tech`, one account, ten minutes:
+
+| Time | Action | Status | Error | Scope names |
+| --- | --- | --- | --- | --- |
+| 17:03:23 | Disconnect, consent granting everything | `ACTIVE` | none | 8 |
+| 17:09:42 | Consent again, **one Classroom checkbox unticked** | `NEEDS_RECONNECT` | `INSUFFICIENT_SCOPES` | 7 |
+| 17:13:06 | Consent again, granting everything | `ACTIVE` | none | 8 |
+
+**Detect, report, recover** -- and recovery is the half that matters. The September fault was not
+that the application noticed a problem; it was that it noticed a *phantom* problem and could never
+come back, because every retry produced the same token and the same verdict. A connection that
+returns to `ACTIVE` on a corrected consent is the thing that was broken.
+
+**The declined checkbox removed exactly one name.** Before: 8 names, submissions present, coursework
+absent. After: 7 names, **both** absent. One consent entry, one scope name, one missing permission.
+That is the coursework/submissions pair behaving exactly as `REQUIRED_CLASSROOM_PERMISSIONS` models
+it, observed rather than argued.
+
+**And the screen said one thing, once.** The connect step rendered "Grant the remaining permissions"
+with a single bullet under "Still needed" -- *"Read your coursework, its due dates, and which of it
+you have turned in"* -- no second bullet for the same declined checkbox, and no scope URL anywhere.
+Two bullets for one consent entry was the specific defect the single-permission modelling fixed, and
+it is the one thing a database read cannot check.
+
+Also confirmed live in the same screenshot: the pre-consent disclosure now names `email` and
+`profile` as the sign-in permissions, which is the correction shipped in `a0281dc` after the live
+consent URL showed six scopes rather than four.
+
+**What this does not establish.** That coursework renders correctly on screen for a fresh account,
+that account deletion cascades cleanly, or anything about the Google review itself. It establishes
+the consent lifecycle, which is what four rows of this table were waiting on.
+
 ### 2026-09-09 — which name Google returns, measured across five consents
 
 Row 21 accepts either name for the coursework/submissions permission and deliberately branches on
