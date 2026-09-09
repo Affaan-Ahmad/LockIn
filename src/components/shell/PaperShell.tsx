@@ -3,6 +3,7 @@ import Link from 'next/link';
 
 import { SettingsIcon } from '@/components/icons';
 import { LogoTile } from '@/components/paper';
+import { NetworkStatus } from '@/features/pwa/NetworkStatus';
 import { Footer } from './Footer';
 import { PaperBottomNav, PaperSidebarNav } from './PaperNav';
 
@@ -140,6 +141,9 @@ export function PaperShell({
         </div>
       </div>
 
+      {/* Beside the nav it positions itself against, and inside the frame so
+          it cannot appear on the offline page -- see the component. */}
+      <NetworkStatus />
       <PaperBottomNav reviewCount={reviewCount} />
     </div>
   );

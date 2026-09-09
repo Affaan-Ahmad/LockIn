@@ -3,6 +3,7 @@ import Link from 'next/link';
 
 import { SettingsIcon } from '@/components/icons';
 import { PageEntrance } from '@/components/ui/Motion';
+import { NetworkStatus } from '@/features/pwa/NetworkStatus';
 import { Footer } from './Footer';
 import { Nav } from './Nav';
 import { SidebarNav } from './SidebarNav';
@@ -55,6 +56,7 @@ export function AppShell({
         </main>
         <div className="workspace-footer"><Footer inShell /></div>
       </div>
+      <NetworkStatus />
       <div className="mobile-navigation"><Nav reviewCount={reviewCount} /></div>
     </div>
   );

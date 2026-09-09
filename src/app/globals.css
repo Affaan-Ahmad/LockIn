@@ -1642,3 +1642,24 @@
 @media (prefers-reduced-motion: reduce) {
   [class*='animate-'] { animation: none !important; }
 }
+
+/* Room to scroll clear of the connection banner.
+   -----------------------------------------------------------------------
+   The banner is `position: fixed`, so at maximum scroll it sits on top of
+   whatever is last on the page and there is no scroll left to move it out
+   from under. That is fine for a toast that leaves after three seconds; the
+   offline one stays for as long as the connection is gone, which turns the
+   final rows of a deadline list into rows that cannot be read at all.
+
+   An `::after` rather than a `padding-bottom` because it *adds* to whatever
+   padding the frame already set, instead of having to know and restate it --
+   the two skins pad their main differently. Unlayered so it wins over the
+   utility classes without an `!important`.
+
+   Only while the banner exists. Reserving the space permanently would leave a
+   hole at the foot of every screen for a message that is almost never up. */
+body:has(.net-status) main::after {
+  content: '';
+  display: block;
+  height: 4.5rem;
+}

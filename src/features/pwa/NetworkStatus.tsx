@@ -15,6 +15,14 @@ import { useEffect, useState, useSyncExternalStore } from 'react';
  *   walked through a stairwell does not need a banner still explaining it a
  *   minute later.
  *
+ *   It says it once *on a screen*. Rendered by the two app frames rather than by
+ *   the root layout, which is a correctness rule and not tidying: the offline
+ *   page is already headed "You're offline", so from the root this fired there
+ *   too -- repeating itself, and, being fixed to the bottom of the viewport,
+ *   sitting on top of the last rows of a cached timetable with no scroll left to
+ *   move them out from under it. A toast may cover content it can be scrolled
+ *   away from. It may not cover the end of a list.
+ *
  * `navigator.onLine` is the only signal available and it is a weak one: it
  * reports whether a network interface exists, not whether anything is
  * reachable. Captive portals and dead wifi both read as online. That is why the
@@ -71,7 +79,7 @@ export function NetworkStatus() {
       role="status"
       aria-live="polite"
       className={[
-        'pointer-events-none fixed inset-x-0 z-50 flex justify-center px-3',
+        'net-status pointer-events-none fixed inset-x-0 z-50 flex justify-center px-3',
         // Above the tab bar and the home indicator, so it never covers the
         // navigation it is telling you not to trust.
         'bottom-[calc(var(--nav-h)+env(safe-area-inset-bottom)+0.5rem)]',
