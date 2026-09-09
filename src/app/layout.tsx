@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import type { Viewport } from 'next';
 import { GeistSans } from 'geist/font/sans';
 import { Caveat, IBM_Plex_Mono, Instrument_Sans } from 'next/font/google';
 
@@ -65,12 +66,33 @@ export const metadata = {
   appleWebApp: { capable: true, title: 'LockIn', statusBarStyle: 'black-translucent' },
 };
 
-export const viewport = {
+export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   // Zoom stays enabled. Locking it is an accessibility failure that mostly
   // hurts people who need to magnify text.
-  viewportFit: 'cover' as const,
+  viewportFit: 'cover',
+  /*
+   * The software keyboard resizes the page, not just the view.
+   *
+   * Android's default is `resizes-visual`: the *visual* viewport shrinks when
+   * the keyboard opens while the *layout* viewport stays the height of the
+   * screen. Anything positioned against the bottom of the layout viewport
+   * therefore stays exactly where it was -- underneath the keyboard. The delete
+   * confirmation is a bottom sheet with a text field in it, so focusing that
+   * field hid the field.
+   *
+   * `resizes-content` shrinks the layout viewport instead, so `bottom: 0` means
+   * the top of the keyboard and the sheet rides up by itself. It also makes
+   * `100dvh` shrink, which is what the sheet's own `max-height` is measured
+   * against -- so a sheet too tall for the remaining space starts scrolling
+   * rather than being clipped. Both behaviours come from the one declaration.
+   *
+   * Typed as `Viewport` rather than inferred, because this value is a string
+   * union and a typo in it is silently ignored at runtime: the meta tag is
+   * still emitted, still looks plausible, and does nothing.
+   */
+  interactiveWidget: 'resizes-content',
 };
 
 // No longer async, and no longer reads headers(). The boot script is
