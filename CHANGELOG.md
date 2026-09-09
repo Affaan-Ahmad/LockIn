@@ -61,6 +61,18 @@ Not released. The version in `package.json` is unchanged, so `/api/version` stil
   no classification and no override history, so folding it into the deadline list would mean
   inventing those fields.
 
+- **The timetable loads about three times faster.** It fetched its six weekday tabs strictly one
+  after another — a `for` loop with the await inside it — so seven round trips to Google ran in
+  series, each carrying a full grid with its formatting. Measured against the real document: 3673ms
+  sequential against 1196ms in parallel, 5.41 MB across six tabs. The tabs do not depend on each
+  other; only the tab list they come from does, and that is already fetched first.
+
+  The Sheets responses are also cached by the platform now rather than only in the instance's own
+  memory. This is the one place in the application where a *shared* cache is the right answer: the
+  timetable is one document the whole university reads, identical for every student, so nothing
+  about the response varies by who asked. Serverless memory dies with the instance, so on quiet
+  traffic almost every visit was paying the full fetch.
+
 - **Safe areas, offline handling and a service worker — the installed app's fundamentals.**
 
   `PaperShell`, the default skin's frame, handled no insets at all while `viewportFit: cover` and an

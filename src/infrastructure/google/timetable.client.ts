@@ -183,7 +183,19 @@ async function sheetsGet(config: TimetableConfig, query: string): Promise<unknow
   const token = await getAccessToken(config);
   const response = await fetch(`${SHEETS_ENDPOINT}/${config.spreadsheetId}?${query}`, {
     headers: { Authorization: `Bearer ${token}` },
-    cache: 'no-store',
+    // Cached by the platform, deliberately, and this is the one place in the
+    // application where a *shared* cache is the right answer: the timetable is
+    // one document the whole university reads, identical for every student.
+    // Nothing about the response varies by who asked for it.
+    //
+    // The in-memory snapshot above is still the fast path; this is what stops a
+    // cold instance going all the way back to Google. Serverless memory lives
+    // and dies with the instance, so on quiet traffic almost every visit was
+    // paying the full fetch.
+    //
+    // Same window as CACHE_TTL_MS, so the two layers cannot disagree about how
+    // stale the timetable is allowed to be.
+    next: { revalidate: CACHE_TTL_MS / 1000 },
   });
 
   if (!response.ok) {
@@ -211,20 +223,37 @@ async function fetchSnapshot(config: TimetableConfig): Promise<TimetableSnapshot
     throw new GoogleApiError('The timetable document has no visible weekday tabs.');
   }
 
-  const days: TimetableDay[] = [];
-  for (const tab of standing) {
-    if (tab.weekday === null) continue;
-    const payload = envelopeSchema.parse(
-      await sheetsGet(
-        config,
-        `includeGridData=true&ranges=${encodeURIComponent(tab.title)}` +
-          `&fields=${encodeURIComponent(GRID_FIELDS)}`,
-      ),
-    );
-    const sheet = (payload.sheets as readonly SheetsSheet[])[0];
-    if (sheet === undefined) continue;
-    days.push(parseTimetableGrid(buildGridFromSheet(sheet), tab.weekday));
-  }
+  // One request per tab, all at once.
+  //
+  // This was a `for` loop with the await inside it, so six days were fetched
+  // strictly one after another -- seven round trips to Google in series, each
+  // carrying a full grid with its formatting, and every one of them waiting on
+  // the last for no reason. The tabs do not depend on each other; only the tab
+  // list they come from does, and that has already been fetched above.
+  //
+  // Six concurrent requests sits far inside Google's per-user ceiling, and the
+  // results are re-assembled in the document's own order rather than in
+  // whatever order they happen to arrive.
+  const fetched = await Promise.all(
+    standing.map(async (tab) => {
+      if (tab.weekday === null) return null;
+
+      const payload = envelopeSchema.parse(
+        await sheetsGet(
+          config,
+          `includeGridData=true&ranges=${encodeURIComponent(tab.title)}` +
+            `&fields=${encodeURIComponent(GRID_FIELDS)}`,
+        ),
+      );
+
+      const sheet = (payload.sheets as readonly SheetsSheet[])[0];
+      if (sheet === undefined) return null;
+
+      return parseTimetableGrid(buildGridFromSheet(sheet), tab.weekday);
+    }),
+  );
+
+  const days: TimetableDay[] = fetched.filter((day): day is TimetableDay => day !== null);
 
   const problems = days.flatMap((day) => day.diagnostics);
   logger.info('timetable.fetched', {
