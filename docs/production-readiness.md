@@ -204,7 +204,7 @@ the operator.
 
 ---
 
-### 2026-09-09 — which name Google returns, measured across four consents
+### 2026-09-09 — which name Google returns, measured across five consents
 
 Row 21 accepts either name for the coursework/submissions permission and deliberately branches on
 neither, on the grounds that one shape had been observed and the other was undocumented rather than
@@ -218,10 +218,29 @@ measurement.
 | 2026-09-03 08:27 | 6 | yes | **no** | yes | yes | Google, rewritten at refresh |
 | 2026-08-31 03:51 | 6 | yes | **no** | yes | yes | Google, rewritten at refresh |
 
-**Three real grants, one shape.** Google named `classroom.student-submissions.me.readonly` every
-time and `classroom.coursework.me.readonly` not once, on consents where both were requested and the
+A fourth was taken the same afternoon, deliberately, by disconnecting and consenting again:
+`updated_at` 2026-09-09 17:03, `n = 8`, coursework **no**, submissions **yes**.
+
+**Four real grants, one shape.** Google named `classroom.student-submissions.me.readonly` every time
+and `classroom.coursework.me.readonly` not once, on consents where both were requested and the
 permission was plainly granted -- the 09-07 account went on to sync and learn its Classroom user id
 from a submission payload, which is not possible without that permission.
+
+**And the reported set is not stable between consents.** The 08-31 account reported **six** names.
+The same account, reconsenting on 09-09 with the same four scopes requested and nothing granted
+differently, reported **eight** -- Google returning the identity scopes under both their short and
+long names (`email` and `userinfo.email`, `profile` and `userinfo.profile`) on one consent and not
+the other. Nothing about the grant changed; only Google's description of it did.
+
+That is the strongest argument yet for the rule as written. A comparison that trusts the *set* of
+names Google returns will eventually be wrong even for an unchanged grant, because the set is not a
+stable function of what was granted. Matching on the permission a name stands for, and refusing to
+branch on which name arrived, is not defensive coding here -- it is the only comparison that
+survives the observed behaviour.
+
+**The repeat consent issued a refresh token**, which is the other thing that had never been
+measured. `prompt=consent` is supposed to guarantee one and does not reliably; on 09-09 it did.
+Token minted 17:02:20, stored 17:03:23, expiring 18:02:20.
 
 The reverse shape is therefore not merely unobserved, it is unobserved across every consent this
 application has ever stored. That is still not a guarantee: which name Google returns is
