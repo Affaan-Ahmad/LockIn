@@ -61,7 +61,15 @@ function DialogContent({
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          "lockin-dialog fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-3 rounded-sheet border bg-background p-6 shadow-raised-lg duration-200 sm:max-w-lg",
+          // Geometry in one system. A bottom sheet below `md`, a centred
+          // panel at `md` and up -- and the mobile case cancels the centring
+          // with the same utility that applied it, so the two are the same
+          // property and cannot disagree. Cancelling it from a stylesheet is
+          // what put this dialog off the left edge of every phone; see the
+          // note in workspace.css.
+          "lockin-dialog fixed z-50 grid gap-3 border bg-background p-6 shadow-raised-lg duration-200",
+          "inset-x-0 bottom-0 w-full max-w-full translate-x-0 translate-y-0",
+          "md:inset-x-auto md:bottom-auto md:top-[50%] md:left-[50%] md:w-full md:max-w-[calc(100%-2rem)] md:translate-x-[-50%] md:translate-y-[-50%] md:rounded-sheet lg:max-w-lg",
           className
         )}
         {...props}

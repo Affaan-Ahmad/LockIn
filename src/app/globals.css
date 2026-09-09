@@ -1394,14 +1394,26 @@
   to { opacity: 0; }
 }
 
+/* Scale only, and via the standalone property.
+   -----------------------------------------------------------------------
+   These used to carry the centering translate inside `transform`, which
+   looked right and was not: Tailwind v4 centres the dialog with the separate
+   `translate` property, and `translate` and `transform` *compose* rather than
+   override. The element therefore sat at -100%/-100% for the length of the
+   animation and snapped to the middle when it ended -- a flinch on open that
+   is easy to blame on the easing curve.
+
+   Animating `scale` alone leaves the centering to the one place that owns it.
+   The browser applies translate, then rotate, then scale, then transform, so
+   the two never need to know about each other. */
 @keyframes lockin-panel-in {
-  from { opacity: 0; transform: translate(-50%, -50%) scale(0.96); }
-  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  from { opacity: 0; scale: 0.96; }
+  to { opacity: 1; scale: 1; }
 }
 
 @keyframes lockin-panel-out {
-  from { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-  to { opacity: 0; transform: translate(-50%, -50%) scale(0.96); }
+  from { opacity: 1; scale: 1; }
+  to { opacity: 0; scale: 0.96; }
 }
 
 [data-slot='dialog-overlay'][data-state='open'] {

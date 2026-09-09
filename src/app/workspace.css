@@ -151,7 +151,27 @@ button, .button-link { white-space: nowrap; }
 .calendar-panel > .grid > a > span { min-height: var(--control-touch); }
 .calendar-panel > a { min-height: var(--control-touch); display: grid; place-items: center; }
 @media (max-width: 47.999rem) {
-  .lockin-dialog { top: auto; bottom: 0; left: 0; width: 100%; max-width: 100%; transform: none; border-radius: var(--r-xl) var(--r-xl) 0 0; padding-bottom: calc(var(--space-lg) + env(safe-area-inset-bottom)); }
+  /* Appearance only. Positioning belongs to the component.
+     -----------------------------------------------------------------------
+     This rule used to place the sheet as well as dress it, with a
+     `transform: none` meant to cancel the centering. It never did. Tailwind v4
+     centres the dialog with the standalone `translate` property, not with
+     `transform`, so the reset addressed a property the element never set: the
+     `left: 0` here applied, the translate survived, and the sheet sat half its
+     own width off the left edge with the confirm field and both buttons
+     unreachable.
+
+     Resetting `translate` from here does not work either, and the reason is
+     worth writing down. Lightning CSS sees `transform`, `translate`, `scale`
+     and `rotate` together and collapses them into one `transform` shorthand --
+     the built rule came out as `transform: translate(0) scale(1) rotate(0)`,
+     with the standalone resets optimised away and Tailwind's `translate` still
+     winning. A correct declaration, minified into an incorrect one.
+
+     So positioning now lives entirely in `dialog.tsx`, expressed in the same
+     utilities that set it in the first place. Two systems cannot disagree
+     about a property only one of them writes. */
+  .lockin-dialog { border-radius: var(--r-xl) var(--r-xl) 0 0; padding-bottom: calc(var(--space-lg) + env(safe-area-inset-bottom)); }
   [data-slot='dialog-content'][data-state='open'] { animation-name: lockin-overlay-in; }
   [data-slot='dialog-content'][data-state='closed'] { animation-name: lockin-overlay-out; }
   .workspace button { min-height: var(--control-touch); }
