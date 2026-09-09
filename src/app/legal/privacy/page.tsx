@@ -229,8 +229,11 @@ export default function PrivacyPage() {
         <p>
           A record of each sync attempt and any errors is kept so LockIn can tell you how current
           your data is and so failures can be diagnosed. It is removed when you delete your account.
-          Automatic pruning of older sync history is built but is not yet running on a schedule, so
-          this page does not claim a fixed retention period for it.
+          Older sync history is deleted automatically every night, ninety days after the attempt it
+          records. Two runs survive that regardless of age: your most recent attempt, and your most
+          recent successful one. Those two are what the “how current is this?” line on every
+          screen is read from, and deleting either would leave LockIn reporting a synced account as
+          one that had never synced.
         </p>
       </Section>
 
