@@ -39,6 +39,38 @@ import { buildContentSecurityPolicy } from '@/shared/security-headers';
  */
 const PUBLIC_PATHS = ['/welcome', '/auth', '/api', '/legal', '/offline'];
 
+/**
+ * Where the visitor was heading when they were bounced to sign-in.
+ *
+ * A cookie rather than a `?next=` parameter, for two reasons. It never appears
+ * in the address bar, so it cannot end up in history or browser autocomplete --
+ * which was the stated reason the query string used to be discarded here, and
+ * that reason was right. And because nothing outside this file can write it,
+ * the value cannot be chosen by whoever crafted the link.
+ *
+ * Short-lived on purpose. This is a breadcrumb for the next minute or two, not
+ * a preference; a stale one would teleport somebody days later.
+ */
+const RETURN_COOKIE = 'lockin_return_to';
+const RETURN_MAX_AGE_SECONDS = 600;
+
+/**
+ * Whether a stored destination is safe to send somebody to.
+ *
+ * The value is written from `nextUrl.pathname`, so it is already a path on this
+ * origin -- but `//evil.example` is also a path, and a browser reads a
+ * protocol-relative redirect as another origin. That single check is the
+ * difference between a returning visitor and an open redirect.
+ */
+function isSafeReturnPath(value: string): boolean {
+  if (!value.startsWith('/')) return false;
+  if (value.startsWith('//')) return false;
+  // Backslashes are normalised to slashes by some browsers, so `/\evil.example`
+  // is the same trick wearing a different hat.
+  if (value.startsWith('/\\')) return false;
+  return true;
+}
+
 function isPublic(pathname: string): boolean {
   return PUBLIC_PATHS.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
@@ -93,16 +125,65 @@ export async function middleware(request: NextRequest) {
 
   const { data, error } = await supabase.auth.getUser();
 
-  if (!isPublic(request.nextUrl.pathname) && (error !== null || data.user === null)) {
+  const signedOut = error !== null || data.user === null;
+
+  if (!isPublic(request.nextUrl.pathname) && signedOut) {
     const target = request.nextUrl.clone();
+    const intended = `${request.nextUrl.pathname}${request.nextUrl.search}`;
+
     target.pathname = '/welcome';
-    // Any query string belonged to the screen they could not see. Carrying it
-    // to sign-in would leak it into history and browser autocomplete for no
-    // gain, since nothing on the welcome screen reads it.
+    // The query string still does not travel in the URL: carrying it to
+    // sign-in would leak it into history and browser autocomplete, and nothing
+    // on the welcome screen reads it. It travels in the cookie below instead,
+    // which is where the destination belongs -- the path used to be dropped
+    // here too, silently, so a shared link to one assignment landed everybody
+    // on Today with no way to tell that anything had been lost.
     target.search = '';
+
     // Redirect, not rewrite: the address bar must end up on /welcome, or a
     // refresh silently retries a screen the visitor still cannot open.
-    return applyCsp(NextResponse.redirect(target));
+    const redirect = applyCsp(NextResponse.redirect(target));
+
+    if (isSafeReturnPath(intended) && intended !== '/') {
+      redirect.cookies.set(RETURN_COOKIE, intended, {
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+        path: '/',
+        maxAge: RETURN_MAX_AGE_SECONDS,
+      });
+    }
+
+    return redirect;
+  }
+
+  /**
+   * Back again, with a session, at the place sign-in always lands.
+   *
+   * The OAuth callback finishes on `/`, so that is the one path worth checking
+   * -- and checking only `/` is what keeps this from interfering with ordinary
+   * navigation. The cookie is cleared on the way through, so it fires once.
+   *
+   * Known limitation, accepted deliberately: an account that has not finished
+   * onboarding is sent to the deep link rather than through setup, because
+   * middleware cannot read setup state without a database call on every
+   * request. The result is a first-run that starts on an empty screen with the
+   * navigation intact, not a broken account -- and Today still routes them into
+   * onboarding the moment they tap it.
+   */
+  if (!signedOut && request.nextUrl.pathname === '/') {
+    const stored = request.cookies.get(RETURN_COOKIE)?.value;
+
+    if (stored !== undefined && isSafeReturnPath(stored) && stored !== '/') {
+      const target = request.nextUrl.clone();
+      const [pathname, search] = stored.split('?');
+      target.pathname = pathname ?? '/';
+      target.search = search === undefined ? '' : `?${search}`;
+
+      const resume = applyCsp(NextResponse.redirect(target));
+      resume.cookies.delete(RETURN_COOKIE);
+      return resume;
+    }
   }
 
   return applyCsp(response);

@@ -115,12 +115,21 @@ export function EventForm() {
           </label>
           <input
             id="event-title"
+            type="text"
             value={title}
             onChange={(e) => {
               setTitle(e.target.value);
             }}
             maxLength={120}
             required
+            // A title is a sentence, not a name: sentence casing rather than
+            // words, and no autofill, because nothing a browser has stored is
+            // a plausible answer to "what is it?".
+            autoCapitalize="sentences"
+            autoComplete="off"
+            // The return key moves on rather than offering "Go", which on a
+            // form with three more fields does nothing a person wants.
+            enterKeyHint="next"
             placeholder="Data Structures quiz 2"
             className={field}
           />
@@ -168,11 +177,16 @@ export function EventForm() {
           </label>
           <input
             id="event-note"
+            type="text"
             value={note}
             onChange={(e) => {
               setNote(e.target.value);
             }}
             maxLength={500}
+            autoCapitalize="sentences"
+            autoComplete="off"
+            // The last field, so the return key finishes the job.
+            enterKeyHint="done"
             placeholder="Chapters 4 to 6, in the lab"
             className={field}
           />

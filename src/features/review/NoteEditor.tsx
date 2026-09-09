@@ -107,6 +107,8 @@ export function NoteEditor({ assignmentId, initial, title }: NoteEditorProps) {
         }}
         rows={3}
         maxLength={2000}
+        autoCapitalize="sentences"
+        autoComplete="off"
         placeholder="What did you hand in, what is left, what did they say?"
         className={cx(
           'block w-full rounded-sm bg-p1 px-3 py-2 text-[13px] text-ink shadow-press',
