@@ -1,5 +1,7 @@
 import { ImageResponse } from 'next/og';
 
+import { MARK_GROUND, MARK_INK } from '@/shared/brand';
+
 /**
  * The 512px PNG app icon, for installers.
  *
@@ -28,16 +30,18 @@ import { ImageResponse } from 'next/og';
  * through the same `translate(6.5 6.5) scale(0.8)` the brand kit uses, then
  * expressed as percentages so it is resolution-independent.
  *
- * Dark on lime, not lime on dark. On a home screen full of other icons the lime
- * block is what gets spotted; burying it inside a dark square hides the one
- * memorable thing about the mark.
+ * Ink on kraft, from `@/shared/brand`, so the home screen and the app agree.
+ * These were lime until the paper palette landed and the icons were left
+ * behind — the lime survives only as the `workbench` skin, and an icon cannot
+ * have two skins, so it follows the default a new install sees.
+ *
+ * Ink on the tile rather than the tile on ink: the mark is the memorable part
+ * and it wants the foreground, and `ink` clears AA against `kraft` where a
+ * reversed pairing would be a dark square with a pale smudge in it.
  */
 
 export const size = { width: 512, height: 512 };
 export const contentType = 'image/png';
-
-const LIME = '#C7F04B';
-const NEAR_BLACK = '#101210';
 
 /** The three parts, as percentages of the icon's own box. */
 const PARTS = [
@@ -55,7 +59,7 @@ export default function Icon() {
           height: '100%',
           display: 'flex',
           position: 'relative',
-          background: LIME,
+          background: MARK_GROUND,
           // 14/64 of the source artboard, kept as a ratio so it survives any
           // size this is rendered at.
           borderRadius: '21.875%',
@@ -64,7 +68,7 @@ export default function Icon() {
         {PARTS.map((part) => (
           <div
             key={part.left + part.top}
-            style={{ position: 'absolute', background: NEAR_BLACK, ...part }}
+            style={{ position: 'absolute', background: MARK_INK, ...part }}
           />
         ))}
       </div>

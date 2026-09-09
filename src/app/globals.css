@@ -1464,14 +1464,45 @@
 
 /* The glow pool: a blurred warm light escaping from under a forward layer.
    Never a border, never text -- it only ever lives in a gap. */
-@utility glow-pool {
-  position: absolute;
-  inset: -6px 4px 20px 4px;
-  background: var(--glow);
-  filter: blur(12px);
-  opacity: 0.55;
-  pointer-events: none;
-  z-index: -1;
+/* The installed app's own loading screen.
+   -----------------------------------------------------------------------
+   Android generates the launch splash from the manifest -- the icon on
+   `background_color` -- and there is no way to replace it. What there is a way
+   to do is make the thing that follows it identical, so the seam does not show:
+   the same ground, the same mark, in the same place. The OS draws it, then we
+   draw it, then the app arrives underneath.
+
+   Only in the installed app. In a browser tab there is no launch splash to
+   continue from, so a full-screen mark on every hard load would be a flash of
+   branding nobody asked for. `display-mode: standalone` is exactly the
+   condition "this was launched from a home screen". */
+@utility app-splash {
+  display: none;
+}
+
+@media (display-mode: standalone) {
+  .app-splash {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-4);
+    /* The manifest's background_color, so the OS splash and this are one
+       continuous surface rather than two screens of slightly different beige. */
+    background: var(--p0);
+    /* A failsafe, not the mechanism. The splash is removed the moment React
+       hydrates; this only matters if that never happens -- a script blocked, a
+       chunk that 404s -- and without it the app would be behind an
+       undismissable screen. */
+    animation: splash-out var(--dur-base) var(--curve-out) 2.5s forwards;
+  }
+}
+
+@keyframes splash-out {
+  to { opacity: 0; visibility: hidden; }
 }
 
 /* Focus, drawn as two rings so it reads on any sheet. */
@@ -1482,11 +1513,6 @@
 
 /* The light behind the hero. Slow enough to be felt rather than watched, and
    it stops entirely for anyone who asked for less motion. */
-@keyframes breathe {
-  0%, 100% { opacity: 0.55; }
-  50% { opacity: 0.95; }
-}
-
 /* Sheets arriving: each one lands slightly after the last, like a stack being
    dealt. */
 @keyframes pp-stack {

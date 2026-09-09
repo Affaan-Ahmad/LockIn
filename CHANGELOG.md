@@ -61,6 +61,16 @@ Not released. The version in `package.json` is unchanged, so `/api/version` stil
   no classification and no override history, so folding it into the deadline list would mean
   inventing those fields.
 
+- **A loading screen for the installed app.** Android builds the launch splash from the manifest —
+  the icon on `background_color` — and a web app cannot replace it. So this does not try to: it
+  continues it, with the same ground and the same mark in the same place, and removes itself the
+  moment the app hydrates. The seam between the two is meant to be invisible.
+
+  Only in the installed app. A browser tab has no launch splash to continue from, so
+  `display-mode: standalone` gates it; a full-screen mark on every hard load would be branding for
+  its own sake. The CSS carries a 2.5s fade as a failsafe, because a splash that outlives a failed
+  hydration is a screen the student cannot get past.
+
 ### Changed
 
 - Navigation gains a Timetable destination on both the sidebar and the mobile bar. The mobile bar's
@@ -84,6 +94,24 @@ Not released. The version in `package.json` is unchanged, so `/api/version` stil
   and is hidden below `lg`, so on anything narrower the screen could not be opened at all. It is now
   a control in the header, as it was in the previous shell — rather than a sixth tab, which would put
   six targets across a 390px bar.
+
+- **The welcome screen says what the product actually does now.** Every claim on it was already
+  accurate — filtering, review-when-unsure, opt-in courses, freshness, read-only scopes — so nothing
+  was removed. What was wrong is the inverse: it never mentioned the timetable, free rooms, notes on
+  submitted work, or your own calendar entries. Four sections were added and the hero no longer
+  describes the product as Classroom filtering alone.
+
+- **The glow is gone.** The hero's breathing pool, the pool under the closing card and under Needs
+  Review, the strip along an active tab, and the primary button's under-glow. It was the one part of
+  the design that measured badly: 1.47:1 against the sheets it sat on, which is a blurred layer
+  rendered every frame for something almost nobody could see. Active tabs now carry a kraft strip,
+  and the primary button is a raised sheet and nothing else.
+
+- **The icons follow the paper palette.** They were still the old lime, which now survives only as
+  the `workbench` skin — so the home screen and the app had different logos. The mark's colours live
+  in `src/shared/brand.ts` rather than being retyped in four files, which is how they drifted in the
+  first place. `ICON_REVISION` is bumped, which is what makes an installed Android app re-mint its
+  launcher icon instead of keeping the copy it cached.
 
 - **Today's context column shows the counts the old rail showed** — connection and sync, courses
   tracked, work hidden — in place of the list of tracked course names. A student who wants to know

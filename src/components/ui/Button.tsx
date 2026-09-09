@@ -39,16 +39,15 @@ const BASE =
   'disabled:cursor-not-allowed disabled:opacity-50 disabled:active:translate-y-0';
 
 export const BUTTON_VARIANT: Record<ButtonVariant, string> = {
-  // The only filled button, and the only control the warm glow touches. The
-  // glow sits *under* the sheet -- light escaping from the gap beneath it --
-  // never on its face and never on its label.
-  // The under-glow is light escaping from the gap beneath a raised sheet, which
-  // is a paper idea. The workbench's primary is a solid near-black block and
-  // gets the plain clay shadow it was designed with.
+  // The only filled button. In paper it is a raised sheet and nothing more: it
+  // carried a warm under-glow until the glow was removed from the system, and
+  // that glow measured 1.47:1 against the sheets it sat on -- a shadow layer
+  // rendered on every frame for something almost nobody could see. The
+  // workbench's primary is a solid near-black block and keeps the plain clay
+  // shadow it was designed with.
   primary:
     'bg-kraft text-on-brand font-bold border border-kraft-2 ' +
-    'paper:shadow-[var(--lift-2),0_12px_22px_-12px_var(--glow-deep)] ' +
-    'paper:hover:shadow-[var(--lift-3),0_14px_26px_-12px_var(--glow-deep)] ' +
+    'paper:shadow-lift-2 paper:hover:shadow-lift-3 ' +
     'workbench:border-transparent workbench:shadow-clay',
   secondary:
     'bg-p3 text-ink font-semibold border border-edge shadow-lift-1 hover:shadow-lift-2 ' +

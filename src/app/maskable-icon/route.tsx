@@ -1,13 +1,17 @@
 import { ImageResponse } from 'next/og';
 
+import { MARK_GROUND, MARK_INK } from '@/shared/brand';
+
 /**
  * The adaptive-icon variant, for Android launchers.
  *
  * A manifest that offers only `purpose: "any"` gets treated as a picture rather
  * than an icon: Android cannot mask it to the launcher's shape, so Chrome
- * centres a shrunken copy on a white plate. The result is a small lime square
+ * centres a shrunken copy on a white plate. The result is a small rounded tile
  * floating in a white circle, next to every other app that fills its shape
- * properly.
+ * properly — which is exactly what a stale install still shows, because Android
+ * mints the launcher icon once and only re-checks the manifest occasionally.
+ * `ICON_REVISION` in `manifest.ts` is what forces that re-check.
  *
  * `purpose: "maskable"` says "crop this to whatever shape you use". Two things
  * follow, and both are why this cannot simply be `icon.tsx` with a different
@@ -34,9 +38,6 @@ export const runtime = 'nodejs';
 // render.
 export const dynamic = 'force-static';
 
-const LIME = '#C7F04B';
-const NEAR_BLACK = '#101210';
-
 /**
  * The mark at 0.62 scale, centred on the 64-unit artboard, as percentages.
  *
@@ -59,13 +60,13 @@ export function GET(): ImageResponse {
           display: 'flex',
           position: 'relative',
           // Edge to edge, deliberately. The launcher's mask is the shape.
-          background: LIME,
+          background: MARK_GROUND,
         }}
       >
         {PARTS.map((part) => (
           <div
             key={part.left + part.top}
-            style={{ position: 'absolute', background: NEAR_BLACK, ...part }}
+            style={{ position: 'absolute', background: MARK_INK, ...part }}
           />
         ))}
       </div>

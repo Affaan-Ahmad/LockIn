@@ -116,8 +116,6 @@ export function LayeredCard({
 
 export interface ContourCardProps {
   readonly className?: string;
-  /** The warm pool of light escaping from under the forward sheet. */
-  readonly glow?: boolean;
   readonly children: ReactNode;
 }
 
@@ -129,10 +127,9 @@ export interface ContourCardProps {
  * and the extra sheets are how the eye is told so without a colour or a size
  * change.
  */
-export function ContourCard({ className, glow = false, children }: ContourCardProps) {
+export function ContourCard({ className, children }: ContourCardProps) {
   return (
     <div className="relative isolate">
-      {glow ? <span aria-hidden="true" className="glow-pool" /> : null}
       <div className={cx('contour rounded-sm bg-p3 shadow-lift-3', className)}>{children}</div>
     </div>
   );

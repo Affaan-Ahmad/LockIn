@@ -1,5 +1,7 @@
 import { ImageResponse } from 'next/og';
 
+import { MARK_GROUND, MARK_INK } from '@/shared/brand';
+
 /**
  * The iOS home-screen icon.
  *
@@ -13,9 +15,6 @@ import { ImageResponse } from 'next/og';
 
 export const size = { width: 180, height: 180 };
 export const contentType = 'image/png';
-
-const LIME = '#C7F04B';
-const NEAR_BLACK = '#101210';
 
 const PARTS = [
   { left: '21.41%', top: '17.66%', width: '16.25%', height: '65%' },
@@ -32,13 +31,13 @@ export default function AppleIcon() {
           height: '100%',
           display: 'flex',
           position: 'relative',
-          background: LIME,
+          background: MARK_GROUND,
         }}
       >
         {PARTS.map((part) => (
           <div
             key={part.left + part.top}
-            style={{ position: 'absolute', background: NEAR_BLACK, ...part }}
+            style={{ position: 'absolute', background: MARK_INK, ...part }}
           />
         ))}
       </div>

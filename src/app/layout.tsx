@@ -3,6 +3,7 @@ import { GeistSans } from 'geist/font/sans';
 import { Caveat, IBM_Plex_Mono, Instrument_Sans } from 'next/font/google';
 
 import { THEME_BOOT } from '@/shared/theme-boot';
+import { Splash } from '@/components/shell/Splash';
 import { ThemeChrome } from '@/components/shell/ThemeChrome';
 import { MotionProvider } from '@/components/ui/Motion';
 
@@ -90,7 +91,14 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             stricter policy. */}
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOT }} />
       </head>
-      <body><ThemeChrome /><MotionProvider>{children}</MotionProvider></body>
+      <body>
+        <ThemeChrome />
+        {/* First thing in the body so it paints before anything below it, and
+            removed the moment the app hydrates. Only visible in the installed
+            app; see the display-mode guard on .app-splash. */}
+        <Splash />
+        <MotionProvider>{children}</MotionProvider>
+      </body>
     </html>
   );
 }

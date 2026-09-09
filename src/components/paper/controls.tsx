@@ -10,9 +10,10 @@ import { cx } from '@/lib/cx';
  * Nothing is a pill. A fully rounded control in a stack of cut sheets reads as
  * borrowed from a different interface.
  *
- * The primary button is the only place the warm glow appears on a control, and
- * it appears *under* it: a pool of light escaping from the gap beneath a raised
- * sheet, never a border and never the label.
+ * The primary button is a raised sheet and nothing more. It carried a warm
+ * under-glow until the glow was removed from the system: at 1.47:1 against the
+ * sheets it was measured as barely visible in the light theme anyway, so it was
+ * costing a shadow layer to render something almost nobody could see.
  */
 
 export type PaperButtonVariant = 'primary' | 'secondary' | 'quiet';
@@ -25,9 +26,7 @@ const SIZE: Readonly<Record<PaperButtonSize, string>> = {
 };
 
 const VARIANT: Readonly<Record<PaperButtonVariant, string>> = {
-  // The under-glow is the light in the gap beneath the sheet, not a colour on it.
-  primary:
-    'bg-kraft text-on-brand font-bold border border-kraft-2 shadow-[var(--lift-2),0_12px_22px_-12px_var(--glow-deep)] hover:shadow-[var(--lift-3),0_14px_26px_-12px_var(--glow-deep)]',
+  primary: 'bg-kraft text-on-brand font-bold border border-kraft-2 shadow-lift-2 hover:shadow-lift-3',
   secondary: 'bg-p3 text-ink font-semibold border border-edge shadow-lift-1 hover:shadow-lift-2',
   quiet: 'bg-transparent text-ink-soft font-medium hover:text-ink',
 };
@@ -80,7 +79,7 @@ export interface PaperTabProps {
  * A tab with its top-right corner trimmed off, the way a paper tab is cut.
  *
  * The active one is a cardstock sheet lifted 3px clear of the row with a strip
- * of glow along its bottom edge, so it reads as joined to the content below it
+ * of kraft along its bottom edge, so it reads as joined to the content below it
  * rather than as a highlighted button.
  */
 export function PaperTab({ active = false, href, children, className }: PaperTabProps) {
@@ -99,7 +98,7 @@ export function PaperTab({ active = false, href, children, className }: PaperTab
     >
       {children}
       {active ? (
-        <span aria-hidden="true" className="absolute inset-x-0 bottom-0 h-[3px] bg-glow" />
+        <span aria-hidden="true" className="absolute inset-x-0 bottom-0 h-[3px] bg-kraft-2" />
       ) : null}
     </Link>
   );

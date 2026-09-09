@@ -40,6 +40,8 @@ export function LandingPage() {
         <Filtering />
         <ReviewSection />
         <CoursesAndFreshness />
+        <Timetable />
+        <YourOwn />
         <Privacy />
         <ClosingCta />
       </main>
@@ -88,13 +90,6 @@ function Hero() {
   return (
     <section id="overview" className="mx-auto w-full max-w-[1280px] px-5 pt-4 pb-12 lg:px-[60px]">
       <div className="relative isolate overflow-hidden rounded-lg bg-gradient-to-b from-p3 via-p2 to-p1 shadow-press">
-        {/* The light behind the paper. It breathes slowly; at rest it is a warm
-            pool rather than a glare. */}
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute top-[40%] left-1/2 -z-10 h-[320px] w-[720px] max-w-[110%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-glow opacity-70 blur-[70px] motion-safe:animate-[breathe_12s_ease-in-out_infinite]"
-        />
-
         <div className="grid items-start gap-8 px-5 pt-12 pb-6 lg:grid-cols-[520px_1fr] lg:gap-10 lg:px-14 lg:pt-14">
           <ContourCard className="p-6 lg:p-8">
             <PaperBadge className="font-mono tracking-[0.14em] uppercase">
@@ -107,7 +102,8 @@ function Hero() {
 
             <p className="mt-4 max-w-[46ch] text-[14.5px] leading-[1.65] text-ink-soft">
               One Classroom, many sections, different deadlines. LockIn sorts what is yours, asks
-              when it is not sure, and shows what is due next.
+              when it is not sure, and shows what is due next — alongside the class timetable your
+              university publishes, and whatever you add yourself.
             </p>
 
             <div className="mt-7 flex flex-wrap gap-3">
@@ -195,8 +191,8 @@ function WeekPreview() {
     readonly due: string;
     readonly bar: string;
   }[] = [
-    { title: 'Problem set 4', course: 'Course A', due: '23:59', bar: 'bg-glow-deep' },
-    { title: 'Lab report 2', course: 'Course B', due: '17:00', bar: 'bg-glow-deep' },
+    { title: 'Problem set 4', course: 'Course A', due: '23:59', bar: 'bg-kraft-2' },
+    { title: 'Lab report 2', course: 'Course B', due: '17:00', bar: 'bg-kraft-2' },
     { title: 'Draft outline', course: 'Course B', due: 'Wed', bar: 'bg-edge' },
   ];
 
@@ -367,9 +363,9 @@ function Filtering() {
             aria-hidden="true"
             className="mt-6 flex h-3 gap-1 overflow-hidden rounded-xs shadow-press"
           >
-            <span className="flex-[3] bg-glow-deep" />
-            <span className="flex-[3] bg-glow-deep" />
-            <span className="flex-[3] bg-glow-deep" />
+            <span className="flex-[3] bg-kraft-2" />
+            <span className="flex-[3] bg-kraft-2" />
+            <span className="flex-[3] bg-kraft-2" />
             <span className="flex-1 bg-slate" />
             <span className="flex-[2] bg-edge" />
             <span className="flex-[2] bg-edge" />
@@ -393,7 +389,7 @@ function ReviewSection() {
           body="An ambiguous post is never quietly discarded. It goes to Needs Review with the three plain-language reasons LockIn had, and you decide. No confidence scores — a percentage invites you to argue with a classifier instead of answering the question."
         />
         <div className="relative lg:max-w-[480px] lg:justify-self-end">
-          <ContourCard glow className="p-5">
+          <ContourCard className="p-5">
             <div className="flex items-center justify-between gap-3">
               <Caption className="text-slate">Needs review</Caption>
               <span className="font-mono text-[11.5px] text-ink-faint tabular-nums">1 of 3</span>
@@ -483,6 +479,111 @@ function CoursesAndFreshness() {
   );
 }
 
+function Timetable() {
+  const day: readonly { readonly time: string; readonly name: string; readonly room: string }[] = [
+    { time: '08:30–09:50', name: 'Operating Systems', room: 'C-301' },
+    { time: '10:00–11:20', name: 'Database Systems', room: 'C-409' },
+    { time: '11:30–13:30', name: 'OS Lab', room: 'Lab 4' },
+  ];
+
+  return (
+    <Band tone="p1">
+      <div className="grid gap-10 lg:grid-cols-2 lg:gap-14">
+        <div>
+          <SectionHeading
+            number="06"
+            title="The timetable, without the spreadsheet."
+            body="Your university publishes one enormous sheet for every programme and intake. LockIn reads it and shows the classes for your cohort and section — so a rescheduled class reaches you without anybody re-typing it."
+          />
+          <LayeredCard lift={2} className="mt-6 overflow-hidden">
+            <ul className="divide-y divide-edge-soft">
+              {day.map((entry) => (
+                <li key={entry.name} className="flex items-baseline gap-3 px-4 py-3">
+                  <span className="shrink-0 font-mono text-[12px] text-ink-soft tabular-nums">
+                    {entry.time}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-ink">
+                    {entry.name}
+                  </span>
+                  <span className="shrink-0 font-mono text-[11.5px] text-ink-faint">
+                    {entry.room}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </LayeredCard>
+          <p className="mt-2 text-[11.5px] text-ink-faint">
+            Read from the university&rsquo;s own document, not from your Google account.
+          </p>
+        </div>
+
+        <div>
+          <SectionHeading
+            number="07"
+            title="And somewhere to sit."
+            body="Which rooms have nothing in them for the next half hour, hour or two hours, answered from the campus clock. A room whose entry could not be read is reported as unaccounted for rather than counted as empty — sending you to an occupied room is the one mistake this must not make."
+          />
+          <div className="mt-6 flex flex-wrap gap-2">
+            {['C-204', 'C-310', 'Lab 2', 'D-101', 'C-407'].map((room) => (
+              <span
+                key={room}
+                className="rounded-xs bg-p3 px-3 py-2 font-mono text-[12px] text-ink shadow-lift-1"
+              >
+                {room}
+              </span>
+            ))}
+            <span className="rounded-xs bg-p1 px-3 py-2 font-mono text-[12px] text-ink-faint shadow-press">
+              2 unaccounted for
+            </span>
+          </div>
+        </div>
+      </div>
+    </Band>
+  );
+}
+
+function YourOwn() {
+  return (
+    <Band tone="p2">
+      <div className="grid gap-10 lg:grid-cols-[420px_1fr] lg:gap-14">
+        <SectionHeading
+          number="08"
+          title="Room for what Classroom does not know."
+          body="A quiz announced out loud and never posted is still a quiz. Add it yourself and it sits on the calendar beside the published deadlines — marked as yours, because one of them is authoritative and the other is a reminder you set. Work you have handed in keeps a note of its own."
+        />
+        <div className="flex flex-col gap-3">
+          <div className="relative overflow-hidden rounded-sm bg-p3 py-3 pr-4 pl-5 shadow-lift-1">
+            <span aria-hidden="true" className="absolute inset-y-0 left-0 w-[4px] bg-slate" />
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <span className="text-[13.5px] font-semibold tracking-[-0.01em] text-ink">
+                Data Structures quiz 2
+              </span>
+              <span className="rounded-xs bg-p1 px-1.5 py-0.5 text-[10.5px] font-medium text-ink-soft shadow-lift-0">
+                Quiz
+              </span>
+              <span className="ml-auto font-mono text-[12px] text-ink tabular-nums">Fri 09:00</span>
+            </div>
+            <p className="mt-1 text-[12px] text-ink-soft">Chapters 4 to 6, in the lab</p>
+          </div>
+
+          <div className="relative overflow-hidden rounded-sm bg-p3 py-3 pr-4 pl-5 shadow-lift-1">
+            <span aria-hidden="true" className="absolute inset-y-0 left-0 w-[4px] bg-moss" />
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <span className="text-[13.5px] font-semibold tracking-[-0.01em] text-ink">
+                Problem set 3
+              </span>
+              <PaperBadge className="shrink-0">Handed in</PaperBadge>
+            </div>
+            <p className="mt-1.5 text-[12px] text-ink-soft">
+              Submitted the extra credit too — ask about question 5.
+            </p>
+          </div>
+        </div>
+      </div>
+    </Band>
+  );
+}
+
 function Privacy() {
   const cards: readonly { readonly title: string; readonly body: string }[] = [
     {
@@ -502,7 +603,7 @@ function Privacy() {
   return (
     <Band id="privacy" tone="p1">
       <SectionHeading
-        number="06"
+        number="09"
         title="It asks for as little as it can."
         body="The permissions are the smallest set that makes the product work, and every one of them is read-only."
       />
@@ -523,7 +624,6 @@ function ClosingCta() {
     <section className="bg-p0 py-14 lg:py-[60px]">
       <div className="mx-auto w-full max-w-[1280px] px-5 lg:px-[60px]">
         <div className="relative isolate rounded-lg bg-p0 p-4 shadow-press lg:p-8">
-          <span aria-hidden="true" className="glow-pool" />
           <div className="rounded-sm bg-p2 px-6 py-12 text-center shadow-lift-3 lg:px-10 lg:py-14">
             <h2 className="mx-auto max-w-[22ch] text-[27px] leading-[1.06] font-bold tracking-[-0.035em] text-ink lg:text-[34px]">
               Your Classroom, filtered for your section.

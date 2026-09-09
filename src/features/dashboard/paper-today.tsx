@@ -264,7 +264,7 @@ export function NeedsReviewCard({
 
   return (
     <section aria-labelledby="review-heading" className="relative">
-      <ContourCard glow>
+      <ContourCard>
         <div className="p-4 lg:p-5">
           <div className="flex items-center justify-between gap-3">
             <Caption className="text-slate">

@@ -35,7 +35,7 @@ import { THEME_COLORS } from '@/shared/theme-boot';
  * It is not the app version: icons change far less often than releases do, and
  * tying the two would re-mint the installed app on every deploy for nothing.
  */
-const ICON_REVISION = '3';
+const ICON_REVISION = '4';
 
 /**
  * `purpose: "any maskable"`, which Next's types cannot spell.

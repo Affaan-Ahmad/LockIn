@@ -19,7 +19,7 @@ import { cx } from '@/lib/cx';
  *
  * On a desktop the active item is not a highlighted row — it is a cardstock
  * sheet pushed three pixels to the right, square on its right edge, with a
- * strip of glow along the bottom. It reads as the top sheet of the stack, and
+ * strip of kraft along the bottom. It reads as the top sheet of the stack, and
  * because it is flush with the content panel beside it the two look like one
  * continuous piece of paper. That is the whole trick of the sidebar; a tinted
  * pill in the same place would just be a menu.
@@ -103,7 +103,7 @@ function SidebarRow({
         </span>
       )}
       {active ? (
-        <span aria-hidden="true" className="absolute inset-x-0 bottom-0 h-[3px] bg-glow" />
+        <span aria-hidden="true" className="absolute inset-x-0 bottom-0 h-[3px] bg-kraft-2" />
       ) : null}
     </Link>
   );
@@ -153,7 +153,7 @@ export function PaperBottomNav({ reviewCount = 0 }: PaperNavProps) {
               </span>
               <span className="truncate">{item.label}</span>
               {active ? (
-                <span aria-hidden="true" className="absolute inset-x-0 bottom-0 h-[3px] bg-glow" />
+                <span aria-hidden="true" className="absolute inset-x-0 bottom-0 h-[3px] bg-kraft-2" />
               ) : null}
             </Link>
           );
