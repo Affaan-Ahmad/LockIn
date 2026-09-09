@@ -61,6 +61,22 @@ Not released. The version in `package.json` is unchanged, so `/api/version` stil
   no classification and no override history, so folding it into the deadline list would mean
   inventing those fields.
 
+- **Coursework is readable offline, and the app resyncs the moment it reconnects.** The Today screen
+  mirrors what it already rendered into IndexedDB, and the offline page reads it back — so an
+  installed app on a train shows the deadlines it last saw instead of a wall.
+
+  The safety rules are the design, not a footnote. One snapshot ever, stamped with whose it is, and
+  writing for a different user wipes what was there first, so two accounts can never have coursework
+  on one device. Deleting the account deletes it. It expires after seven days, because a fortnight-old
+  deadline list is not a degraded truth but a different and wrong one. Only titles, courses, dates and
+  submission state — no tokens, no email, nothing from `/api/auth`. And it is never dressed up as
+  current: the page says how old it is in words, sets it on recessed sheets rather than the raised
+  ones the live screens use, and offers no action that would need a network.
+
+  Reconnecting is a second trigger on the existing `AutoSync` rather than a new refresh path — same
+  cooldown, same lease, same silence about refusals. A reconnect deliberately does not consume the
+  reload grant, so a flaky connection cannot burn the rate limit one drop at a time.
+
 - **The timetable loads about three times faster.** It fetched its six weekday tabs strictly one
   after another — a `for` loop with the await inside it — so seven round trips to Google ran in
   series, each carrying a full grid with its formatting. Measured against the real document: 3673ms

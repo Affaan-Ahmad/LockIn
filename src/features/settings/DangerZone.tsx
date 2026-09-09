@@ -14,6 +14,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { cx } from '@/lib/cx';
+import { clearSnapshot } from '@/features/offline/store';
 
 /**
  * Disconnecting Google, and deleting the account.
@@ -172,6 +173,11 @@ function DeleteCard() {
         setError(body.error?.message ?? "Couldn't delete the account.");
         return;
       }
+
+      // The account is gone from the server; the copy on this device has to go
+      // with it. Deleting everything and then leaving a readable list of the
+      // deadlines on the home screen would make the deletion a lie.
+      await clearSnapshot();
 
       // The session is gone with the account, so there is nowhere to return to.
       router.push('/welcome');

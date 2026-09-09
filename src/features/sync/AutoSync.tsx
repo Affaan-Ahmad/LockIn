@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useRef, useState, useTransition } from 'react';
+import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
 
 import type { FreshnessLevel } from '@/domain/sync/freshness';
 import { consumeReloadGrant, cooldownElapsed, shouldAutoSync } from '@/features/sync/auto-sync';
@@ -26,6 +26,13 @@ import { consumeReloadGrant, cooldownElapsed, shouldAutoSync } from '@/features/
  * both normal outcomes of automatic behaviour -- two tabs, a quick revisit --
  * and neither is something a student did or can act on. The freshness banner
  * already says the data is old; this does not also need to complain.
+ *
+ * Two triggers, one mechanism. Opening a screen is the first. Regaining a
+ * connection is the second, and it runs through exactly the same attempt: same
+ * cooldown, same lease, same silence about refusals. A student who walked out of
+ * a basement should not have to go looking for the sync button -- and a second
+ * refresh system living beside this one would eventually disagree with it about
+ * whether a run was already in flight.
  */
 
 /** Shared across tabs, so two open windows do not both fire. */
@@ -91,64 +98,111 @@ export function AutoSync({ level }: AutoSyncProps) {
     };
   }, []);
 
-  useEffect(() => {
-    if (attempted.current || !shouldAutoSync(level)) return;
+  /**
+   * One attempt, shared by both triggers.
+   *
+   * `claimReloadGrant` is what separates them. On arrival a reload is an
+   * explicit "make this current now" and may skip the cooldown; a reconnect is
+   * not, and must not spend a grant it did not earn -- consuming it there would
+   * let a flaky connection burn the rate limit one drop at a time.
+   */
+  const attempt = useCallback(
+    (claimReloadGrant: boolean) => {
+      if (attempted.current || !shouldAutoSync(level)) return;
 
-    // Pull-to-refresh, Ctrl+R and the toolbar button all arrive as a reload,
-    // and all three mean "make this current now". That beats the anti-stampede
-    // cooldown -- but only once per document load. Navigation Timing does not
-    // reset on a client-side route change, so without spending the grant every
-    // screen in the session would skip the cooldown and exhaust the rate limit.
-    const explicit = consumeReloadGrant(navigationType());
-    if (!explicit && !cooldownElapsed(readLastAttempt(), Date.now())) return;
+      // Pull-to-refresh, Ctrl+R and the toolbar button all arrive as a reload,
+      // and all three mean "make this current now". That beats the anti-stampede
+      // cooldown -- but only once per document load. Navigation Timing does not
+      // reset on a client-side route change, so without spending the grant every
+      // screen in the session would skip the cooldown and exhaust the rate limit.
+      const explicit = claimReloadGrant && consumeReloadGrant(navigationType());
+      if (!explicit && !cooldownElapsed(readLastAttempt(), Date.now())) return;
 
-    attempted.current = true;
-    recordAttempt(Date.now());
+      attempted.current = true;
+      recordAttempt(Date.now());
 
-    void (async () => {
-      setRunning(true);
-      try {
-        const response = await fetch('/api/sync', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ mode: 'INCREMENTAL' }),
-        });
-        const body = (await response.json()) as { readonly syncRunId?: string };
-
-        // Any refusal is silent. A live run elsewhere, a rate limit, an expired
-        // grant: none of these are things this student just did.
-        if (!response.ok || body.syncRunId === undefined) return;
-
-        const deadline = Date.now() + MAX_POLL_MS;
-        while (!cancelled.current && Date.now() < deadline) {
-          await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
-          if (cancelled.current) return;
-
-          try {
-            const status = await fetch(`/api/sync/${body.syncRunId}`, { cache: 'no-store' });
-            if (!status.ok) continue;
-            const progress = (await status.json()) as { readonly complete?: boolean };
-            if (progress.complete !== true) continue;
-          } catch {
-            continue;
-          }
-
-          // Whatever the outcome, the stored data and the freshness banner have
-          // both moved on. Re-render against them rather than deciding here
-          // what the run meant -- the server already knows.
-          startTransition(() => {
-            router.refresh();
+      void (async () => {
+        setRunning(true);
+        try {
+          const response = await fetch('/api/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ mode: 'INCREMENTAL' }),
           });
-          return;
+          const body = (await response.json()) as { readonly syncRunId?: string };
+
+          // Any refusal is silent. A live run elsewhere, a rate limit, an expired
+          // grant: none of these are things this student just did.
+          if (!response.ok || body.syncRunId === undefined) return;
+
+          const deadline = Date.now() + MAX_POLL_MS;
+          while (!cancelled.current && Date.now() < deadline) {
+            await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
+            if (cancelled.current) return;
+
+            try {
+              const status = await fetch(`/api/sync/${body.syncRunId}`, { cache: 'no-store' });
+              if (!status.ok) continue;
+              const progress = (await status.json()) as { readonly complete?: boolean };
+              if (progress.complete !== true) continue;
+            } catch {
+              continue;
+            }
+
+            // Whatever the outcome, the stored data and the freshness banner have
+            // both moved on. Re-render against them rather than deciding here
+            // what the run meant -- the server already knows.
+            startTransition(() => {
+              router.refresh();
+            });
+            return;
+          }
+        } catch {
+          // Offline, or the tab went away mid-request. The page is still showing
+          // real data and the banner still says how old it is.
+        } finally {
+          if (!cancelled.current) setRunning(false);
         }
-      } catch {
-        // Offline, or the tab went away mid-request. The page is still showing
-        // real data and the banner still says how old it is.
-      } finally {
-        if (!cancelled.current) setRunning(false);
-      }
-    })();
-  }, [level, router]);
+      })();
+    },
+    [level, router],
+  );
+
+  useEffect(() => {
+    attempt(true);
+  }, [attempt]);
+
+  /**
+   * Back online: ask again, through the same door.
+   *
+   * `attempted` is cleared rather than bypassed, so this is a fresh attempt
+   * subject to every guard the first one had -- the cooldown still applies, the
+   * lease still refuses a run already in flight, and a refusal is still silent.
+   * Regaining a connection is a reason to ask, not a licence to skip the queue.
+   *
+   * `router.refresh()` runs regardless of whether a sync is started. The screen
+   * may have been rendered before the connection dropped, and re-reading the
+   * server is worth doing even when the cooldown says a Google sync is not.
+   *
+   * `navigator.onLine` turning true means an interface came back, not that
+   * anything is reachable. That is acceptable here: the worst case is one
+   * request that fails and is swallowed, which is what a flaky connection does
+   * to every other request anyway.
+   */
+  useEffect(() => {
+    const onReconnect = () => {
+      attempted.current = false;
+      attempt(false);
+      startTransition(() => {
+        router.refresh();
+      });
+    };
+
+    window.addEventListener('online', onReconnect);
+    return () => {
+      window.removeEventListener('online', onReconnect);
+    };
+  }, [attempt, router]);
 
   if (!running) return null;
 

@@ -35,23 +35,72 @@
  * WHAT THE STUDENT ACTUALLY GETS
  * ==============================
  *
- * Offline, a navigation falls back to `/offline` — a static page that says so
- * plainly. It does NOT show stale coursework, because the coursework was never
- * cached. That is a smaller offline experience than a note-taking app would
- * offer, and it is the honest one for a product whose whole promise is that a
- * deadline shown is a deadline that is current.
+ * Offline, a navigation falls back to `/offline`. That page reads the snapshot
+ * the Today screen wrote to IndexedDB on this device and renders it, clearly
+ * labelled as a memory rather than a reading — see `src/features/offline`.
+ *
+ * IndexedDB, not this cache, is where that coursework lives. The distinction
+ * matters: this cache is keyed by URL and shared by everything on the origin,
+ * whereas the snapshot is a single record stamped with whose it is, wiped when
+ * the account changes. One is a place for public bytes; the other is the only
+ * place a student's data is allowed to rest on the device.
  *
  * Online, the win is start-up: the app shell's JavaScript comes from disk
  * instead of the network, so a cold launch of the installed app paints in one
  * round trip instead of several.
  */
 
-const VERSION = 'v1';
+const VERSION = 'v2';
 const STATIC_CACHE = `lockin-static-${VERSION}`;
 const SHELL_CACHE = `lockin-shell-${VERSION}`;
 
 /** Fetched on install so the offline page is available before it is needed. */
 const SHELL_URLS = ['/offline'];
+
+/**
+ * Caches the offline page, and the scripts it needs to actually run.
+ *
+ * Caching the HTML alone is not enough any more. The offline page reads a local
+ * snapshot and renders it, so it is a client component: without its JavaScript
+ * it paints a heading and then sits there, which is a worse failure than the
+ * plain page it replaced because it looks like it is about to work.
+ *
+ * The chunk filenames carry a build hash and cannot be written down here, so
+ * they are read out of the page's own markup at install time. Most are shared
+ * with the rest of the app and would be cached anyway on the first navigation;
+ * the page's own chunk is the one that would otherwise be missing at exactly
+ * the moment it cannot be fetched.
+ */
+async function precacheOfflinePage(cache) {
+  for (const url of SHELL_URLS) {
+    try {
+      const response = await fetch(url, { cache: 'reload' });
+      if (!response.ok) continue;
+
+      const html = await response.clone().text();
+      await cache.put(url, response);
+
+      const assets = new Set();
+      const pattern = /["'](\/_next\/static\/[^"']+?\.(?:js|css))["']/g;
+      let match;
+      while ((match = pattern.exec(html)) !== null) assets.add(match[1]);
+
+      const staticCache = await caches.open(STATIC_CACHE);
+      await Promise.all(
+        [...assets].map(async (asset) => {
+          try {
+            const assetResponse = await fetch(asset);
+            if (assetResponse.ok) await staticCache.put(asset, assetResponse);
+          } catch {
+            /* One missing chunk should not fail the install. */
+          }
+        }),
+      );
+    } catch {
+      /* Offline during install. The fetch handler copes. */
+    }
+  }
+}
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -60,16 +109,7 @@ self.addEventListener('install', (event) => {
       // Individually, not addAll: addAll rejects the whole install if any one
       // request fails, and a service worker that refuses to install because an
       // icon 404'd is worse than one missing an icon.
-      await Promise.all(
-        SHELL_URLS.map(async (url) => {
-          try {
-            const response = await fetch(url, { cache: 'reload' });
-            if (response.ok) await cache.put(url, response);
-          } catch {
-            /* Offline during install. The fetch handler copes. */
-          }
-        }),
-      );
+      await precacheOfflinePage(cache);
       // Take over promptly. The alternative is a new worker sitting in
       // `waiting` until every tab closes, which on an installed app can be days.
       await self.skipWaiting();
