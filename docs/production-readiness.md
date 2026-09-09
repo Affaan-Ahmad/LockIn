@@ -77,11 +77,7 @@ regressions — have NOT been run against a database.**
 | 6 | **OAuth callback `state` handling unverified.** `exchangeCodeForSession` is assumed to validate PKCE; not confirmed. | HIGH | Must be read and proven, not assumed. |
 | 7 | ~~The entire SQL layer has never been executed.~~ **RESOLVED 2026-08-31.** All four migrations applied to a live Postgres; 27/27 integration tests pass against it. | ~~HIGH~~ CLOSED | RLS isolation, the confidence floor, the ALL_SECTIONS guard, deadline coherence, two-strike reconciliation, single-active-sync and duplicate prevention are now measured rather than argued. |
 | 8 | **No data export.** ~~None existed.~~ **RESOLVED 2026-09-01.** `GET /api/account/export` returns everything held about the caller as one downloadable JSON file, including the classification evidence behind each decision. Google tokens are deliberately excluded: they are credentials, not information about the student. **CORRECTED 2026-09-06:** this entry claimed it was "linked from Settings" while no link existed anywhere in the UI — the privacy policy said so too. Settings → Your data now carries a plain download anchor to the route, so the claim and the code agree. | MEDIUM | Required if GDPR/UK GDPR applies. |
-| 9 | **No retention policy implemented.** **ADDRESSED IN CODE 2026-09-01**, migration `0010_sync_retention.sql`: 90-day window, dependents cascade, and a daily pg_cron job. The most recent run and most recent successful run per user are preserved regardless of age, because freshness reads both and losing either would report a synced account as never synced. **RESOLVED 2026-09-09: applied, scheduled and active in production.** `cron.job` lists
-`lockin-prune-sync-history`, schedule `20 3 * * *`, `active = true`, and `pg_cron` is installed. The
-privacy policy now states the ninety-day window as fact, along with the two runs per account that
-survive it. What is *not* yet observed is a successful execution -- `cron.job_run_details` has not
-been read -- so "scheduled" is proven and "has pruned" is not. **CORRECTED 2026-09-06:** the previous note here said the privacy policy states a 90-day window and is therefore false until the job runs. It does not. `src/app/legal/privacy/page.tsx` says pruning "is built but is not yet running on a schedule, so this page does not claim a fixed retention period for it", which is accurate whether or not `0010` has been applied. The gap is the absent retention *behaviour*, not a false published claim. | MEDIUM | |
+| 9 | **No retention policy implemented.** ~~Addressed in code 2026-09-01~~ **RESOLVED 2026-09-09, verified along its whole chain.** `0010_sync_retention.sql` is applied: 90-day window, dependents cascade, daily pg_cron job, and the most recent run plus most recent successful run per user preserved regardless of age, because freshness reads both and losing either would report a synced account as never synced. In production: `pg_cron` installed, `cron.job` lists `lockin-prune-sync-history` at `20 3 * * *` with `active = true`, and `cron.job_run_details` shows five consecutive nightly runs 5--9 September 2026, **every one `succeeded`** at 03:20 UTC. The privacy policy now states the ninety-day window as fact along with the two surviving runs, and nothing in that sentence rests on an assumption: migration applied, function present, job scheduled, job executing, job succeeding. | ~~MEDIUM~~ CLOSED | Earlier notes here turned twice on whether the policy hedged. It no longer hedges, because it no longer needs to. |
 | 10 | **No monitoring or alerting.** | MEDIUM | Nobody would know sync had been failing for a week. |
 | 10a | **`CRON_SECRET` is unset in production, so the recovery sweep never runs.** `GET /api/sync/sweep` answers 503. Noted 2026-09-09. This is the *backstop* for a sync run whose handover failed and whose student never came back, not a retention control -- `0010`'s pg_cron job prunes history and needs no secret. The two were briefly conflated in a Google pre-submission audit, which read the 503 as "retention has never run"; it has. The real consequence is narrower: a stranded run sits QUEUED until its owner syncs again. | LOW | Set the variable; the endpoint should then answer 401 rather than 503 to an unauthenticated caller. |
 | 11 | **No backup restore test.** | MEDIUM | Supabase takes backups; an untested restore is not a proven restore. |
@@ -222,9 +218,15 @@ The schema probe above answered `0009`, `0015` and `0007`. The remainder were re
 | `0014` override ownership | `app_set_override` exists | Applied |
 | `0015` notes and events | `app_set_assignment_note` exists; both tables present | Applied |
 
-**Nothing is behind.** The one thing this does not establish is that the retention job has ever
-*succeeded* — `cron.job` proves a schedule, `cron.job_run_details` would prove an execution, and it
-has not been read.
+**Nothing is behind**, and the retention job is not merely scheduled but running.
+`cron.job_run_details` shows five consecutive nightly runs, 5--9 September 2026, all `succeeded`,
+each at 03:20:00 UTC.
+
+One number there is worth not misreading. `return_message` reads `1 row` on every run; that is the
+size of the result set the `select` returned -- the function's single integer return value -- and
+**not** a count of rows deleted. How much each night pruned is not visible from this table. The
+policy claims a window rather than a volume, so nothing turns on it here, but `1 row` is exactly the
+shape of number that gets quoted later as though it meant something else.
 
 A correction belongs here too, because it was wrong in the direction that matters. A Google
 pre-submission audit read `GET /api/sync/sweep` answering 503 and concluded that retention was not
