@@ -102,7 +102,19 @@ export function PaperShell({
                   unreachable -- there is no sixth tab, and adding one would put
                   six targets across a 390px bar. The old shell solved this the
                   same way, with a settings control in the header. */}
-              <div className="flex shrink-0 flex-wrap items-center gap-2">
+              {/* Shrinkable, deliberately.
+                  ---------------------------------------------------------
+                  This used to be `shrink-0`, to stop the Settings icon being
+                  squashed by a long title. It does not need to be: the icon
+                  carries its own `shrink-0` below and defends itself. What the
+                  group-level one actually did was refuse to shrink around the
+                  *sync status message*, so a running sync widened the header
+                  past the viewport and pushed its own text off the right edge.
+
+                  `min-w-0` for the same reason it appears everywhere else here:
+                  without it a flex item will not shrink below its content, and
+                  the overflow reappears the moment any child is a sentence. */}
+              <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
                 {headerAside}
                 <Link
                   href="/settings"

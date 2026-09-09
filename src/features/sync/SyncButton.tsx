@@ -28,6 +28,16 @@ export interface SyncButtonProps {
   /** FULL re-reads everything. Offered only where re-checking is the point. */
   readonly mode?: 'FULL' | 'INCREMENTAL';
   readonly label?: string;
+  /**
+   * Which edge the button and its status line sit against.
+   *
+   * A prop rather than something inferred, because the component cannot see
+   * where it was placed and guessing wrong is visible: in a right-aligned
+   * header `start` throws the button across the screen the instant it is
+   * tapped, and in the left-aligned rail `end` does the same in reverse. The
+   * caller knows; nothing here can.
+   */
+  readonly align?: 'start' | 'end';
 }
 
 interface StatusResponse {
@@ -51,7 +61,11 @@ const POLL_INTERVAL_MS = 2_000;
  */
 const MAX_POLL_MS = 5 * 60 * 1000;
 
-export function SyncButton({ mode = 'INCREMENTAL', label = 'Sync now' }: SyncButtonProps) {
+export function SyncButton({
+  mode = 'INCREMENTAL',
+  label = 'Sync now',
+  align = 'start',
+}: SyncButtonProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [running, setRunning] = useState(false);
@@ -194,7 +208,39 @@ export function SyncButton({ mode = 'INCREMENTAL', label = 'Sync now' }: SyncBut
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-3">
+    /*
+     * The status reads *under* the button, never beside it.
+     *
+     * Beside it, the pair was one flex row whose width is the button plus the
+     * whole message -- and these messages are sentences, not words: "Still
+     * updating. Refresh in a minute to see the result." is fifty characters. In
+     * the Today header on a phone that made the row wider than the screen and
+     * the text ran off the right edge, which is the one place it cannot be read
+     * and also the one place it matters.
+     *
+     * `flex-wrap` did not save it. Wrapping moves an item to the next line; it
+     * does not make the line narrower than the item, and the header's aside
+     * refused to shrink (see PaperShell). Stacking fixes it at the source: the
+     * row's intrinsic width is now just the button, and the message wraps
+     * inside whatever width it is given.
+     *
+     * `min-w-0` because a flex item defaults to `min-width: auto`, which is the
+     * quiet reason text overflows containers that look like they should clip it.
+     */
+    <div
+      className={cx(
+        'flex min-w-0 flex-col gap-2',
+        align === 'end' ? 'items-end' : 'items-start',
+        // Only once there is something to say, and only where the parent is a
+        // wrapping flex row -- the Today header. `basis-full` takes a line of
+        // its own so the message has the full width to wrap into, and
+        // `order-last` sends this past the Settings icon so that icon rides up
+        // beside the freshness pill instead of being stranded on a line below
+        // the message. Both are inert in the rail and on Settings, where the
+        // parent is an ordinary block and flex properties do not apply.
+        message !== null && 'basis-full order-last',
+      )}
+    >
       <Button variant="secondary" size="sm" busy={running || isPending} onClick={() => void run()}>
         <RefreshIcon className="size-4" aria-hidden="true" />
         {label}
@@ -203,7 +249,8 @@ export function SyncButton({ mode = 'INCREMENTAL', label = 'Sync now' }: SyncBut
         <span
           role="status"
           className={cx(
-            'text-sm',
+            'max-w-full text-sm leading-snug',
+            align === 'end' && 'text-right',
             presentation === 'FAILED'
               ? 'text-danger'
               : presentation === 'PARTIAL'

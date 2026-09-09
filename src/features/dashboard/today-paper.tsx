@@ -84,7 +84,7 @@ export async function TodayPaper({ userId, data, now, selectedId }: TodayPaperPr
               ? `Updated ${formatAge(data.freshness.ageMs)}`
               : data.freshness.reason}
           </SyncPill>
-          <SyncButton />
+          <SyncButton align="end" />
         </>
       }
     >
