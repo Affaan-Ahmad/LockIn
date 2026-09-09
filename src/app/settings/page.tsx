@@ -4,6 +4,7 @@ import { Shell } from '@/components/shell/Shell';
 import { buildLabel } from '@/config/version';
 import { ProfileForm } from '@/features/onboarding/ProfileForm';
 import { DangerZone } from '@/features/settings/DangerZone';
+import { InstallApp } from '@/features/settings/InstallApp';
 import { ClockToggle } from '@/features/settings/ClockToggle';
 import { SkinToggle } from '@/features/settings/SkinToggle';
 import { ThemeToggle } from '@/features/settings/ThemeToggle';
@@ -46,6 +47,7 @@ export default async function SettingsPage() {
           <a href="#account">Account</a>
           <a href="#section">Your section</a>
           <a href="#appearance">Appearance</a>
+          <a href="#install">Install</a>
           <a href="#data">Your data</a>
           <a href="#connection">Connection</a>
         </nav>
@@ -100,6 +102,11 @@ export default async function SettingsPage() {
               <ClockToggle initial={timeFormat} />
             </div>
           </div>
+        </section>
+
+        <section aria-labelledby="install">
+          <SectionHeading id="install">Install</SectionHeading>
+          <InstallApp />
         </section>
 
         <section aria-labelledby="data">

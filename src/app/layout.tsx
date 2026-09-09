@@ -4,6 +4,7 @@ import { Caveat, IBM_Plex_Mono, Instrument_Sans } from 'next/font/google';
 
 import { THEME_BOOT } from '@/shared/theme-boot';
 import { Splash } from '@/components/shell/Splash';
+import { InstallWatcher } from '@/features/pwa/InstallWatcher';
 import { ThemeChrome } from '@/components/shell/ThemeChrome';
 import { MotionProvider } from '@/components/ui/Motion';
 
@@ -97,6 +98,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             removed the moment the app hydrates. Only visible in the installed
             app; see the display-mode guard on .app-splash. */}
         <Splash />
+        {/* Renders nothing. Mounted here because the browser's install offer
+            arrives once, on load, and Settings is rarely the page that loaded. */}
+        <InstallWatcher />
         <MotionProvider>{children}</MotionProvider>
       </body>
     </html>

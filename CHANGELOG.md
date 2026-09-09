@@ -61,6 +61,15 @@ Not released. The version in `package.json` is unchanged, so `/api/version` stil
   no classification and no override history, so folding it into the deadline list would mean
   inventing those fields.
 
+- **An Install section in Settings.** Four states, because the browsers genuinely differ and one
+  button would be dead on half of them: already installed, an offer we hold, iOS (which has no
+  install API and gets the two taps written out), and everything else.
+
+  The captured offer lives in a module-level store watched from the root layout, not in the Settings
+  screen. `beforeinstallprompt` fires once on load and is the only way to open the install dialog —
+  there is no API to summon one — and Next.js navigates on the client, so a student arriving at
+  Settings from Today would mount the listener long after the event had gone.
+
 - **A loading screen for the installed app.** Android builds the launch splash from the manifest —
   the icon on `background_color` — and a web app cannot replace it. So this does not try to: it
   continues it, with the same ground and the same mark in the same place, and removes itself the
