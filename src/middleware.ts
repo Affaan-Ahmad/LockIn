@@ -32,8 +32,12 @@ import { buildContentSecurityPolicy } from '@/shared/security-headers';
  * privacy policy are the ones deciding whether to sign in at all, and Google's
  * OAuth reviewers never will; a privacy policy behind a login is not a
  * published privacy policy.
+ *
+ * `/offline` is public because being signed out and being offline are not
+ * mutually exclusive, and a redirect to sign-in is the one response guaranteed
+ * not to work when there is no connection. The page carries no data.
  */
-const PUBLIC_PATHS = ['/welcome', '/auth', '/api', '/legal'];
+const PUBLIC_PATHS = ['/welcome', '/auth', '/api', '/legal', '/offline'];
 
 function isPublic(pathname: string): boolean {
   return PUBLIC_PATHS.some(
@@ -121,6 +125,6 @@ export const config = {
     // something outside a browser session has to be able to reach.
     //
     // Excluding also skips an auth round trip on every icon request.
-    '/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|icon|apple-icon|maskable-icon|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|sw.js|icon|apple-icon|maskable-icon|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
     ],
 };

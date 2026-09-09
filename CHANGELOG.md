@@ -61,6 +61,31 @@ Not released. The version in `package.json` is unchanged, so `/api/version` stil
   no classification and no override history, so folding it into the deadline list would mean
   inventing those fields.
 
+- **Safe areas, offline handling and a service worker — the installed app's fundamentals.**
+
+  `PaperShell`, the default skin's frame, handled no insets at all while `viewportFit: cover` and an
+  Apple status bar style of `black-translucent` meant the app drew *under* the status bar. On a
+  notched phone the page title sat beneath the Dynamic Island. There is now one `app-frame` utility
+  carrying the status bar, the landscape notch and the tab bar clearance, with its desktop override
+  inside the utility rather than as classes at the call site. The bottom padding it replaces was a
+  fixed `pb-24` that guessed the tab bar height and ignored the home indicator entirely.
+
+  A network indicator that stays silent while the connection is fine, says plainly what is and is
+  not possible when it drops, and confirms once on return before getting out of the way. It reads
+  `navigator.onLine` and deliberately does not touch the freshness model — there is already one
+  authoritative answer to "is this current?" and a second derived from a weaker signal would
+  eventually contradict it.
+
+  A service worker that caches the build's content-hashed assets and an offline page, and nothing
+  else. No API responses and no navigation HTML: every screen here is rendered for the signed-in
+  user, and a cache is shared by every profile on the browser. Offline therefore shows a page that
+  says so rather than yesterday's deadlines — a smaller offline experience than a notes app would
+  give, and the honest one for a product whose promise is that a deadline shown is current.
+
+  Also: the browser's tap highlight removed in favour of the pressed states the design already has,
+  scroll chaining contained in standalone so Chrome's pull-to-refresh cannot fire inside the app, a
+  stable manifest `id`, and long-press shortcuts to Upcoming and Timetable.
+
 - **An Install section in Settings.** Four states, because the browsers genuinely differ and one
   button would be dead on half of them: already installed, an offer we hold, iOS (which has no
   install API and gets the two taps written out), and everything else.

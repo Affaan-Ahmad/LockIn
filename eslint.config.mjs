@@ -16,6 +16,12 @@ export default tseslint.config(
       '.next-verify/**',
       'coverage/**',
       'next-env.d.ts',
+      // Static files served verbatim, not compiled. `public/sw.js` is a service
+      // worker: it runs in a worker global with its own `self`, it is never
+      // imported by the app, and it is deliberately outside the TypeScript
+      // project -- so the type-aware rules have no program to check it against
+      // and fail on the parse rather than on anything it does.
+      'public/**',
       // The design handoff: a reference prototype and the runtime it needs to
       // render. Its README says the runtime is not part of the deliverable, and
       // it is not written against this project's TypeScript program.

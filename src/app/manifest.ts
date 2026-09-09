@@ -92,6 +92,36 @@ export default function manifest(): MetadataRoute.Manifest {
     // rendering fault -- which is exactly how it was reported.
     theme_color: THEME_COLORS.dark,
     categories: ['education', 'productivity'],
+    /**
+     * A stable identity for the installed app.
+     *
+     * Without `id`, the browser derives one from `start_url`. Changing
+     * `start_url` later would then read as a *different* app: a second icon on
+     * the home screen rather than an update to the one already there. Pinning
+     * it costs nothing now and keeps that door shut.
+     */
+    id: '/',
+    /**
+     * Long-press shortcuts, for the two screens worth jumping straight to.
+     *
+     * Only routes that already exist and are stable. Today is where the app
+     * opens anyway, so it is not repeated here -- a shortcut to the default
+     * destination is a menu item that does nothing.
+     */
+    shortcuts: [
+      {
+        name: 'Upcoming',
+        short_name: 'Upcoming',
+        description: 'Everything ahead, on a calendar',
+        url: '/upcoming',
+      },
+      {
+        name: 'Timetable',
+        short_name: 'Timetable',
+        description: "Today's classes and a free room",
+        url: '/timetable',
+      },
+    ],
     // One entry, and it is maskable.
     //
     // There were three: two `purpose: "any"` and one `"maskable"`. That reads

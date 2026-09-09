@@ -5,6 +5,8 @@ import { Caveat, IBM_Plex_Mono, Instrument_Sans } from 'next/font/google';
 import { THEME_BOOT } from '@/shared/theme-boot';
 import { Splash } from '@/components/shell/Splash';
 import { InstallWatcher } from '@/features/pwa/InstallWatcher';
+import { NetworkStatus } from '@/features/pwa/NetworkStatus';
+import { ServiceWorkerRegistrar } from '@/features/pwa/ServiceWorkerRegistrar';
 import { ThemeChrome } from '@/components/shell/ThemeChrome';
 import { MotionProvider } from '@/components/ui/Motion';
 
@@ -101,6 +103,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         {/* Renders nothing. Mounted here because the browser's install offer
             arrives once, on load, and Settings is rarely the page that loaded. */}
         <InstallWatcher />
+        {/* Silent while the connection is fine; see the component for why. */}
+        <NetworkStatus />
+        <ServiceWorkerRegistrar />
         <MotionProvider>{children}</MotionProvider>
       </body>
     </html>

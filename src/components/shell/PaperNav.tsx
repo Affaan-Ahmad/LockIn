@@ -122,7 +122,7 @@ export function PaperBottomNav({ reviewCount = 0 }: PaperNavProps) {
   return (
     <nav
       aria-label="Primary"
-      className="fixed inset-x-0 bottom-0 z-40 bg-p0 pb-[env(safe-area-inset-bottom)] shadow-[0_-1px_0_var(--edge-soft)] lg:hidden"
+      className="inset-safe-bottom inset-safe-x fixed inset-x-0 bottom-0 z-40 bg-p0 shadow-[0_-1px_0_var(--edge-soft)] lg:hidden"
     >
       <div className="mx-auto flex max-w-lg items-end justify-around gap-1 px-2 pt-2">
         {ITEMS.map((item) => {

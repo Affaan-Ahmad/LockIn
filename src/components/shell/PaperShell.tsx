@@ -69,7 +69,11 @@ export function PaperShell({
           </div>
         </aside>
 
-        <div className="min-w-0 flex-1 px-3 pt-3 pb-24 lg:px-0 lg:pt-5 lg:pr-5 lg:pb-8">
+        {/* app-frame carries the status bar, the landscape notch and the tab
+            bar clearance, and its own desktop override. The fixed pb-24 it
+            replaces was a guess at the tab bar height that took no account of
+            the home indicator at all. */}
+        <div className="app-frame min-w-0 flex-1">
           <main
             id="main-content"
             className="grain rounded-lg bg-p2 px-4 pt-5 pb-8 shadow-lift-2 lg:px-7 lg:pt-6 lg:pb-8"
