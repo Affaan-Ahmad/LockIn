@@ -1,6 +1,9 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "fluid": true,
+  "regions": [
+    "hnd1"
+  ],
   "crons": [
     {
       "path": "/api/sync/sweep",

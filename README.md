@@ -192,6 +192,33 @@ npm run test:integration  # requires Supabase credentials; skips without them
 npm run build
 ```
 
+### Deployment region
+
+`vercel.json` pins the functions to `hnd1` (Tokyo). That is not a preference —
+it has to match wherever the Supabase project lives, which for this one is
+`aws-0-ap-northeast-1`, also Tokyo.
+
+The default is `iad1` (US East), and with the default every request did this:
+
+```
+student → sin1 (Singapore edge) → iad1 (function, US East) → Tokyo (database)
+                                        ↑                          ↓
+                                        └──────────────────────────┘
+```
+
+A page render makes several database round trips in sequence — middleware
+validates the session, the page validates it again because it is a separate
+invocation, then the queries run — so a trans-Pacific hop of ~150-200ms was
+being paid three times over on every navigation, on top of the invocation
+itself. Measured before the change: an endpoint with no auth and no database
+took 600-770ms.
+
+If the Supabase project is ever moved, move this with it. They are one setting
+in two files, and splitting them costs roughly a second per screen.
+
+Region codes: `hnd1` Tokyo, `sin1` Singapore, `bom1` Mumbai, `icn1` Seoul,
+`iad1` US East. Hobby allows exactly one.
+
 ---
 
 ## Architecture
