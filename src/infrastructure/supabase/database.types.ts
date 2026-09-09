@@ -181,6 +181,30 @@ export type IgnoredAssignmentRow = {
   ignored_at: string;
 };
 
+/** The student's own note on one of their assignments. One per assignment. */
+export type AssignmentNoteRow = {
+  id: string;
+  user_id: string;
+  assignment_id: string;
+  body: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type UserEventKind = 'QUIZ' | 'EXAM' | 'ASSIGNMENT' | 'CLASS' | 'OTHER';
+
+/** A calendar entry the student added, which no sync will ever produce. */
+export type UserEventRow = {
+  id: string;
+  user_id: string;
+  title: string;
+  kind: UserEventKind;
+  starts_at: string;
+  note: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 /** One work item handed to app_enqueue_sync_courses. */
 export type SyncCourseQueueItem = {
   source_course_id: string;
@@ -409,6 +433,8 @@ export type Database = {
       assignment_classifications: TableDef<AssignmentClassificationRow>;
       classification_overrides: TableDef<ClassificationOverrideRow>;
       ignored_assignments: TableDef<IgnoredAssignmentRow>;
+      assignment_notes: TableDef<AssignmentNoteRow>;
+      user_events: TableDef<UserEventRow>;
       sync_runs: TableDef<SyncRunRow>;
       sync_course_results: TableDef<SyncCourseResultRow>;
       sync_errors: TableDef<SyncErrorRow>;
@@ -578,6 +604,15 @@ export type Database = {
        * dependable about whether a composite arrives as an object or as a
        * one-element array. The repository normalises rather than betting.
        */
+      /** Same array-or-object caveat as app_set_override. */
+      app_set_assignment_note: {
+        Args: {
+          p_user_id: string;
+          p_assignment_id: string;
+          p_body: string;
+        };
+        Returns: AssignmentNoteRow[] | AssignmentNoteRow;
+      };
       app_set_override: {
         Args: {
           p_user_id: string;

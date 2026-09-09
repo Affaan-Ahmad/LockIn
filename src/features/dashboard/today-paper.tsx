@@ -7,13 +7,13 @@ import {
   LateCard,
   NeedsReviewCard,
   ThisWeekTable,
-  TrackedCard,
+  TodayContext,
 } from '@/features/dashboard/paper-today';
 import { AutoSync } from '@/features/sync/AutoSync';
 import { SyncButton } from '@/features/sync/SyncButton';
 import { formatAge, urgencyBand } from '@/lib/format';
 import { readTimeFormat } from '@/lib/preferences';
-import { loadCourses, loadDecisions, type DashboardData } from '@/lib/queries';
+import { loadDecisions, type DashboardData } from '@/lib/queries';
 
 /**
  * Today, in the paper design.
@@ -46,11 +46,12 @@ export async function TodayPaper({ userId, data, now, selectedId }: TodayPaperPr
   const { timeZone } = data.freshness;
 
   // Fetched here rather than in the page, so the workbench skin never pays for
-  // the two queries only this composition uses.
-  const [timeFormat, review, courseData] = await Promise.all([
+  // the query only this composition uses. The course list went with the panel
+  // that listed course names: the context column shows the tracked count now,
+  // and the dashboard already carries it.
+  const [timeFormat, review] = await Promise.all([
     readTimeFormat(),
     data.reviewCount > 0 ? loadDecisions(userId) : Promise.resolve([]),
-    loadCourses(userId),
   ]);
 
   const dueToday = data.upcoming.filter(
@@ -70,8 +71,6 @@ export async function TodayPaper({ userId, data, now, selectedId }: TodayPaperPr
     day: 'numeric',
     month: 'long',
   }).format(now);
-
-  const staleCourse = data.freshness.level === 'PARTIAL' ? data.freshness.reason : null;
 
   return (
     <PaperShell
@@ -124,7 +123,11 @@ export async function TodayPaper({ userId, data, now, selectedId }: TodayPaperPr
             {selected === null ? (
               <>
                 <NeedsReviewCard item={review[0]} remaining={data.reviewCount} />
-                <TrackedCard courses={courseData.courses} staleNote={staleCourse} />
+                <TodayContext
+                  freshness={data.freshness}
+                  trackedCourseCount={data.trackedCourseCount}
+                  ignoredCount={data.ignoredCount}
+                />
               </>
             ) : (
               <AssignmentDetail item={selected} now={now} timeZone={timeZone} closeHref="/" />

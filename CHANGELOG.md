@@ -41,6 +41,26 @@ Not released. The version in `package.json` is unchanged, so `/api/version` stil
   per project: sharing one would have added a Sheets permission to the screen every student sees.
   The four read-only Classroom scopes are unchanged, and no student consents to anything new.
 
+- **Notes on work you have handed in.** Review now lists submitted coursework, filterable by course,
+  with a note against each item. The filter lives in the URL, so a filtered view is shareable and the
+  back button clears it.
+
+  The classification queue is kept rather than replaced. It is usually empty — sections that classify
+  cleanly produce nothing to review — and an empty screen is what made it feel useless, but it is
+  also the mechanism that makes the product honest about what it cannot place. It keeps the top of
+  the screen whenever it has anything in it; the guidance text and the full empty state now appear
+  only then.
+
+- **Your own calendar entries.** A quiz announced in a lecture and never posted to Classroom is real,
+  dated, and invisible to every sync. Upcoming can now hold one: it appears as a card beside the
+  deadlines and as a second dot on the calendar day.
+
+  Marked separately from published deadlines rather than merged into them, in both places. One is
+  authoritative and the other is a reminder somebody set themselves, and a single dot covering both
+  would quietly claim the same standing for each. A student-added entry also has no submission state,
+  no classification and no override history, so folding it into the deadline list would mean
+  inventing those fields.
+
 ### Changed
 
 - Navigation gains a Timetable destination on both the sidebar and the mobile bar. The mobile bar's
@@ -59,6 +79,17 @@ Not released. The version in `package.json` is unchanged, so `/api/version` stil
   and cohort cookie in the data inventory, and a new gap (22) stating plainly that the credential is
   broader than the job needs, belongs to a personal account, and expires with that person's
   enrolment.
+
+- **Settings is reachable on a phone again in the paper design.** The sidebar is the only route to it
+  and is hidden below `lg`, so on anything narrower the screen could not be opened at all. It is now
+  a control in the header, as it was in the previous shell — rather than a sixth tab, which would put
+  six targets across a 390px bar.
+
+- **Today's context column shows the counts the old rail showed** — connection and sync, courses
+  tracked, work hidden — in place of the list of tracked course names. A student who wants to know
+  *which* courses are tracked is on their way to Courses to change them; the question worth answering
+  in a side column is whether the number is the one they expect. It also drops a query from every
+  Today render, since the dashboard already carries the count.
 
 ### Security
 
@@ -102,6 +133,14 @@ this version" is a question that gets asked later.
   `app_set_override`, which the application calls directly, so until it exists every attempt to
   record a manual relevance decision fails. This is the loud kind of ordering dependency, unlike
   `0013`.
+
+- **`0015_student_notes_and_events.sql` must be applied before this code is deployed, and it bites
+  harder.** It adds `assignment_notes` and `user_events`, which Review and Upcoming read on page
+  load — so a deploy that arrives first does not degrade those screens, it breaks them outright.
+
+  Written to be safely re-runnable (`if not exists`, `or replace trigger`, policies dropped before
+  being recreated), because a migration applied by pasting into a SQL editor gets run twice sooner or
+  later, and failing halfway is worse than doing nothing twice.
 
 ---
 

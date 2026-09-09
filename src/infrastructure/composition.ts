@@ -28,6 +28,10 @@ import { SupabaseCourseTrackingRepository } from '@/infrastructure/supabase/repo
 import { SupabaseGoogleConnectionRepository } from '@/infrastructure/supabase/repositories/google-connection.repository';
 import { SupabaseRateLimiter } from '@/infrastructure/supabase/repositories/rate-limit.repository';
 import {
+  SupabaseAssignmentNoteRepository,
+  SupabaseUserEventRepository,
+} from '@/infrastructure/supabase/repositories/student-content.repository';
+import {
   SupabaseAcademicProfileRepository,
   SupabaseSyncRunRepository,
 } from '@/infrastructure/supabase/repositories/sync-run.repository';
@@ -126,6 +130,8 @@ export interface BackendContext {
   };
   readonly assignments: SupabaseAssignmentRepository;
   readonly overrides: SupabaseOverrideRepository;
+  readonly notes: SupabaseAssignmentNoteRepository;
+  readonly events: SupabaseUserEventRepository;
   readonly syncRuns: SupabaseSyncRunRepository;
   readonly connections: SupabaseGoogleConnectionRepository;
 }
@@ -201,6 +207,8 @@ function buildContext(db: AppSupabaseClient, logger: Logger): BackendContext {
   const submissions = new SupabaseSubmissionRepository(db);
   const classifications = new SupabaseClassificationRepository(db);
   const overrides = new SupabaseOverrideRepository(db);
+  const notes = new SupabaseAssignmentNoteRepository(db);
+  const events = new SupabaseUserEventRepository(db);
   const profiles = new SupabaseAcademicProfileRepository(db);
   const tracking = new SupabaseCourseTrackingRepository(db);
   const syncRuns = new SupabaseSyncRunRepository(db);
@@ -276,6 +284,8 @@ function buildContext(db: AppSupabaseClient, logger: Logger): BackendContext {
     rateLimiter,
     assignments,
     overrides,
+    notes,
+    events,
     syncRuns,
     connections,
     limits: {

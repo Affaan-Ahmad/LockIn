@@ -1,3 +1,8 @@
+import type {
+  AssignmentNote,
+  UserEvent,
+  UserEventDraft,
+} from '@/domain/student-content/types';
 import type { AcademicIdentity, SectionAlias } from '@/domain/academic/types';
 import type { Deadline } from '@/domain/assignment/deadline';
 import type { LifecycleStatus, ListingCompleteness } from '@/domain/assignment/lifecycle';
@@ -504,4 +509,25 @@ export interface SyncRunProgress {
   readonly failedCourses: number;
   readonly errorSummary: string | null;
   readonly issueCodes: readonly string[];
+}
+
+/**
+ * Notes the student writes on their own coursework.
+ *
+ * `set` takes the assignment id from the caller, so the implementation is
+ * obliged to prove the assignment belongs to that user rather than trusting a
+ * foreign key — see 0015, and 0014 for the bug that taught us to.
+ */
+export interface AssignmentNoteRepository {
+  set(userId: string, assignmentId: string, body: string): Promise<AssignmentNote>;
+  clear(userId: string, assignmentId: string): Promise<void>;
+  /** Every note the student holds, keyed by assignment. One read, not N. */
+  listByAssignment(userId: string): Promise<ReadonlyMap<string, AssignmentNote>>;
+}
+
+export interface UserEventRepository {
+  create(userId: string, draft: UserEventDraft): Promise<UserEvent>;
+  delete(userId: string, eventId: string): Promise<void>;
+  /** Entries at or after `from`, soonest first. */
+  listUpcoming(userId: string, from: Date, limit: number): Promise<readonly UserEvent[]>;
 }

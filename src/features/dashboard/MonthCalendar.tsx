@@ -1,5 +1,6 @@
 import Link from 'next/link';
 
+import type { UserEvent } from '@/domain/student-content/types';
 import { cx } from '@/lib/cx';
 import { deadlineDayKey, urgencyBand } from '@/lib/format';
 import type { AssignmentView } from '@/lib/queries';
@@ -19,10 +20,18 @@ import type { AssignmentView } from '@/lib/queries';
  * Undated coursework never appears. `deadlineDayKey` returns null for it, and
  * placing it on a guessed day would be inventing the one value the product
  * exists to get right.
+ *
+ * The student's own entries are marked with a second dot rather than folded
+ * into the first count. A quiz somebody typed in themselves and a deadline
+ * Google published are different kinds of fact -- one is authoritative, one is a
+ * reminder -- and a single dot covering both would quietly claim the same
+ * standing for each.
  */
 
 export interface MonthCalendarProps {
   readonly items: readonly AssignmentView[];
+  /** The student's own entries. Marked separately from published deadlines. */
+  readonly events?: readonly UserEvent[];
   readonly now: Date;
   readonly timeZone: string;
   /** `YYYY-MM`. The month being displayed. */
@@ -37,6 +46,7 @@ const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const;
 
 export function MonthCalendar({
   items,
+  events = [],
   now,
   timeZone,
   month,
@@ -47,15 +57,27 @@ export function MonthCalendar({
 
   // Counts per day, and the most urgent band on that day, so a cell can say
   // both how much is due and how much it matters.
-  const byDay = new Map<string, { count: number; overdue: boolean; today: boolean }>();
+  const byDay = new Map<
+    string,
+    { count: number; overdue: boolean; today: boolean; events: number }
+  >();
+  const blank = () => ({ count: 0, overdue: false, today: false, events: 0 });
+
   for (const item of items) {
     const key = deadlineDayKey(item.deadline, timeZone);
     if (key === null) continue;
     const band = urgencyBand(item.deadline, now, timeZone);
-    const entry = byDay.get(key) ?? { count: 0, overdue: false, today: false };
+    const entry = byDay.get(key) ?? blank();
     entry.count += 1;
     if (band === 'overdue') entry.overdue = true;
     if (band === 'today') entry.today = true;
+    byDay.set(key, entry);
+  }
+
+  for (const event of events) {
+    const key = localDayKey(event.startsAt, timeZone);
+    const entry = byDay.get(key) ?? blank();
+    entry.events += 1;
     byDay.set(key, entry);
   }
 
@@ -126,26 +148,39 @@ export function MonthCalendar({
             >
               {day}
               {entry === undefined ? null : (
-                // A dot, not a number. The count is in the accessible label;
+                // Dots, not numbers. The counts are in the accessible label;
                 // two digits inside a 32px cell beside a date is unreadable,
                 // and the useful question at a glance is "is there anything",
                 // not "is there one or two".
                 <span
                   aria-hidden="true"
-                  className={cx(
-                    'absolute bottom-1 size-1 rounded-full',
-                    isSelected
-                      ? 'bg-on-brand'
-                      : entry.overdue
-                        ? 'bg-danger'
-                        : entry.today
-                          ? 'bg-warning'
-                          // brand-ink: a 4px dot on the ground, where the lime
-                          // fill is invisible. The other three states here are
-                          // all mid-lightness for the same reason.
-                          : 'bg-brand-ink',
+                  className="absolute bottom-1 flex items-center justify-center gap-[2px]"
+                >
+                  {entry.count === 0 ? null : (
+                    <span
+                      className={cx(
+                        'size-1 rounded-full',
+                        isSelected
+                          ? 'bg-on-brand'
+                          : entry.overdue
+                            ? 'bg-danger'
+                            : entry.today
+                              ? 'bg-warning'
+                              // brand-ink: a 4px dot on the ground, where the
+                              // lime fill is invisible. The other states here
+                              // are all mid-lightness for the same reason.
+                              : 'bg-brand-ink',
+                      )}
+                    />
                   )}
-                />
+                  {entry.events === 0 ? null : (
+                    // Slate: the one hue in the palette that means "yours to
+                    // decide" rather than "due". It clears 3:1 on every sheet.
+                    <span
+                      className={cx('size-1 rounded-full', isSelected ? 'bg-on-brand' : 'bg-slate')}
+                    />
+                  )}
+                </span>
               )}
             </span>
           );
@@ -166,8 +201,8 @@ export function MonthCalendar({
               // Says what the cell means rather than repeating the number, and
               // states the count the dot deliberately omits.
               aria-label={`${String(day)} ${monthLabel(year, monthIndex)}, ${String(entry.count)} due${
-                isSelected ? '. Selected, activate to clear the filter' : ''
-              }`}
+                entry.events === 0 ? '' : `, ${String(entry.events)} of your own`
+              }${isSelected ? '. Selected, activate to clear the filter' : ''}`}
               className="press min-w-0 rounded-control hover:bg-sunken"
             >
               {cell}

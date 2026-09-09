@@ -5,11 +5,14 @@ import { Shell } from '@/components/shell/Shell';
 import { Button, ButtonLink } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { DeadlineGroups } from '@/features/dashboard/DeadlineGroups';
+import { EventForm } from '@/features/dashboard/EventForm';
+import { EventList } from '@/features/dashboard/EventList';
 import { MonthCalendar } from '@/features/dashboard/MonthCalendar';
 import { AutoSync } from '@/features/sync/AutoSync';
 import { SyncStatus } from '@/features/sync/SyncStatus';
 import { deadlineDayKey } from '@/lib/format';
-import { loadDashboard, requireSessionUser } from '@/lib/queries';
+import { readTimeFormat } from '@/lib/preferences';
+import { loadDashboard, loadUserEvents, requireSessionUser } from '@/lib/queries';
 
 /**
  * Everything ahead, in order, and on a calendar.
@@ -40,8 +43,16 @@ export default async function UpcomingPage({
   readonly searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const user = await requireSessionUser();
-  const [data, params] = await Promise.all([loadDashboard(user.id), searchParams]);
   const now = new Date();
+  // From the start of today, not from `now`: a quiz at 9am is still today's
+  // problem at 10am, and dropping it the moment it starts is how a student
+  // loses the thing they are walking to.
+  const [data, params, events, timeFormat] = await Promise.all([
+    loadDashboard(user.id),
+    searchParams,
+    loadUserEvents(user.id, startOfDay(now)),
+    readTimeFormat(),
+  ]);
   const { timeZone } = data.freshness;
 
   const selectedDay = typeof params['day'] === 'string' ? params['day'] : null;
@@ -58,6 +69,14 @@ export default async function UpcomingPage({
     selectedDay === null
       ? [...data.upcoming, ...data.undated]
       : calendarItems.filter((item) => deadlineDayKey(item.deadline, timeZone) === selectedDay);
+
+  // The student's own entries follow the same day filter as the deadlines, so
+  // selecting a date on the calendar narrows both halves of the screen rather
+  // than only one.
+  const listedEvents =
+    selectedDay === null
+      ? events
+      : events.filter((event) => localDayKey(event.startsAt, timeZone) === selectedDay);
 
   function hrefFor({ month: m, day }: { month?: string; day?: string | null }): string {
     const next = new URLSearchParams();
@@ -80,6 +99,7 @@ export default async function UpcomingPage({
       rail={
         <MonthCalendar
           items={calendarItems}
+          events={events}
           now={now}
           timeZone={timeZone}
           month={month}
@@ -92,12 +112,22 @@ export default async function UpcomingPage({
       <AutoSync level={data.freshness.level} />
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-[16px] font-bold tracking-[-0.02em] text-ink">Plan what comes next</h2>
-        <a href="#deadline-calendar" className="button-link text-kraft-3 xl:hidden">
-          Browse dates
-        </a>
+        <div className="flex flex-wrap items-center gap-3">
+          <a href="#deadline-calendar" className="button-link text-kraft-3 xl:hidden">
+            Browse dates
+          </a>
+          <EventForm />
+        </div>
       </div>
 
-      {listed.length === 0 ? (
+      <EventList
+        events={listedEvents}
+        timeZone={timeZone}
+        timeFormat={timeFormat}
+        filtered={selectedDay !== null}
+      />
+
+      {listed.length === 0 && listedEvents.length === 0 ? (
         <EmptyState
           icon={<CheckIcon className="size-6" />}
           title={selectedDay === null ? 'Nothing due ahead' : 'Nothing due that day'}
@@ -135,4 +165,26 @@ function monthOf(now: Date, timeZone: string): string {
       .map((part) => [part.type as string, part.value]),
   );
   return `${parts.get('year') ?? '1970'}-${parts.get('month') ?? '01'}`;
+}
+
+/** Midnight today, in the student's own zone rather than the server's. */
+function startOfDay(now: Date): Date {
+  const start = new Date(now);
+  start.setHours(0, 0, 0, 0);
+  return start;
+}
+
+/** `YYYY-MM-DD` for an instant, in the given zone. Matches deadlineDayKey. */
+function localDayKey(date: Date, timeZone: string): string {
+  const parts = new Map(
+    new Intl.DateTimeFormat('en-GB', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    })
+      .formatToParts(date)
+      .map((part) => [part.type as string, part.value]),
+  );
+  return `${parts.get('year') ?? '0000'}-${parts.get('month') ?? '00'}-${parts.get('day') ?? '00'}`;
 }

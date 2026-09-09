@@ -8,6 +8,7 @@ import { missingClassroomScopes } from '@/domain/google/scopes';
 import { createBackendContext, type BackendContext } from '@/infrastructure/composition';
 import { createUserScopedClient } from '@/infrastructure/supabase/clients';
 
+import type { AssignmentNote, UserEvent } from '@/domain/student-content/types';
 import type { ApiDeadline } from './format';
 import type { SyncRunStatus } from '@/domain/sync/outcome';
 
@@ -466,4 +467,73 @@ function toUndatedView(item: RepoUndated): AssignmentView {
 
 function pad(value: number, width: number): string {
   return String(value).padStart(width, '0');
+}
+
+/**
+ * Work the student has already handed in, with whatever they wrote about it.
+ *
+ * A separate loader rather than a flag on the dashboard, because the question is
+ * the opposite one. Every other read here asks "what still needs doing?" and
+ * deliberately excludes submitted work; this asks "what did I hand in, and what
+ * did I say about it?" -- the record rather than the queue.
+ *
+ * Notes arrive as one map for the whole set. Fetching them per row is the N+1
+ * this shape exists to prevent.
+ */
+export interface SubmittedWork {
+  readonly items: readonly AssignmentView[];
+  readonly notes: ReadonlyMap<string, AssignmentNote>;
+  readonly courses: readonly CourseView[];
+}
+
+const SUBMITTED_STATES: ReadonlySet<string> = new Set(['TURNED_IN', 'RETURNED']);
+
+export async function loadSubmitted(userId: string): Promise<SubmittedWork> {
+  const backend = await context();
+  const relevance = ['RELEVANT'] as const;
+
+  const [upcoming, overdue, notes, courseData] = await Promise.all([
+    backend.assignments.findUpcoming({
+      userId,
+      to: null,
+      relevance,
+      includeSubmitted: true,
+      limit: 300,
+    }),
+    // No lower bound. This is a record of what was handed in, and a two-month
+    // window would quietly drop the first half of a semester from it.
+    backend.assignments.findOverdue({
+      userId,
+      since: null,
+      relevance,
+      includeSubmitted: true,
+      limit: 300,
+    }),
+    backend.notes.listByAssignment(userId),
+    loadCourses(userId),
+  ]);
+
+  const items = [...overdue, ...upcoming]
+    .map(toView)
+    .filter((item) => item.submissionState !== null && SUBMITTED_STATES.has(item.submissionState))
+    // Most recently due first: the thing just handed in is the thing most
+    // likely to be annotated.
+    .sort((a, b) => (b.deadline.dueAtUtc ?? '').localeCompare(a.deadline.dueAtUtc ?? ''));
+
+  return { items, notes, courses: courseData.courses };
+}
+
+/**
+ * The student's own calendar entries, soonest first.
+ *
+ * From the start of the current day rather than from `now`, so a quiz at 9am is
+ * still listed at 10am. Something that has already begun today has not stopped
+ * being today's problem.
+ */
+export async function loadUserEvents(
+  userId: string,
+  from: Date,
+): Promise<readonly UserEvent[]> {
+  const backend = await context();
+  return backend.events.listUpcoming(userId, from, 200);
 }

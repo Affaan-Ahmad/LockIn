@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 
+import { SettingsIcon } from '@/components/icons';
 import { LogoTile } from '@/components/paper';
 import { Footer } from './Footer';
 import { PaperBottomNav, PaperSidebarNav } from './PaperNav';
@@ -89,9 +90,23 @@ export function PaperShell({
                   )}
                 </div>
               </div>
-              {headerAside === undefined ? null : (
-                <div className="flex shrink-0 flex-wrap items-center gap-2">{headerAside}</div>
-              )}
+              {/* Always rendered, because it carries Settings.
+
+                  The sidebar is the only route to Settings and it is hidden
+                  below `lg`, so on a phone or a tablet the screen was simply
+                  unreachable -- there is no sixth tab, and adding one would put
+                  six targets across a 390px bar. The old shell solved this the
+                  same way, with a settings control in the header. */}
+              <div className="flex shrink-0 flex-wrap items-center gap-2">
+                {headerAside}
+                <Link
+                  href="/settings"
+                  aria-label="Settings"
+                  className="flex size-[38px] shrink-0 items-center justify-center rounded-sm bg-p3 text-ink-soft shadow-lift-1 transition-[box-shadow,color] hover:text-ink hover:shadow-lift-2 focus-visible:paper-focus lg:hidden"
+                >
+                  <SettingsIcon className="size-[18px]" />
+                </Link>
+              </div>
             </header>
 
             {rail === undefined ? (

@@ -10,10 +10,11 @@ import {
   PaperButtonLink,
   RecessedWell,
 } from '@/components/paper';
+import { SyncButton } from '@/features/sync/SyncButton';
+import { SyncStatus } from '@/features/sync/SyncStatus';
 import type { TimeFormat } from '@/lib/clock';
-import { cx } from '@/lib/cx';
 import { formatDeadline } from '@/lib/format';
-import type { AssignmentView, CourseView } from '@/lib/queries';
+import type { AssignmentView, FreshnessView } from '@/lib/queries';
 
 /**
  * Today, as paper.
@@ -304,56 +305,97 @@ export function NeedsReviewCard({
   );
 }
 
-export function TrackedCard({
-  courses,
-  staleNote,
+/**
+ * The context column, carrying what the rail carried before the redesign.
+ *
+ * Counts and a link, not a list of course names. The list looked like the more
+ * informative thing and was the less useful one: a student who wants to know
+ * *which* courses are tracked is going to Courses to change them, and the only
+ * question worth answering in a side column is whether the number is the one
+ * they expect. The connection block sits above them because "is this data even
+ * current?" governs how much the numbers below are worth.
+ *
+ * Deliberately no "needs a decision" panel. NeedsReviewCard sits directly above
+ * this and already asks that question with the actual assignment in hand;
+ * repeating it as a number would be the same prompt twice in one column.
+ */
+export function TodayContext({
+  freshness,
+  trackedCourseCount,
+  ignoredCount,
 }: {
-  readonly courses: readonly CourseView[];
-  readonly staleNote: string | null;
+  readonly freshness: FreshnessView;
+  readonly trackedCourseCount: number;
+  readonly ignoredCount: number;
 }) {
-  const tracked = courses.filter((course) => course.isTracked).slice(0, 6);
-  if (tracked.length === 0) return null;
-
   return (
-    <section aria-labelledby="tracked-heading" className="mt-5">
+    <section aria-labelledby="context-heading" className="mt-5 flex flex-col gap-3">
       <LayeredCard lift={1}>
         <div className="p-4">
-          <div className="flex items-center justify-between gap-3">
-            <Caption>
-              <span id="tracked-heading">Tracked</span>
-            </Caption>
-            <Link
-              href="/courses"
-              className="text-[12px] font-medium text-kraft-3 hover:underline focus-visible:paper-focus"
-            >
-              Manage
-            </Link>
+          <Caption>
+            <span id="context-heading">Classroom connection</span>
+          </Caption>
+          <div className="mt-3">
+            <SyncStatus freshness={freshness} />
           </div>
-
-          <ul className="mt-3 flex flex-col gap-1.5">
-            {tracked.map((course) => (
-              <li
-                key={course.courseId}
-                className="relative flex items-center gap-3 rounded-xs bg-p1 py-2 pr-3 pl-3.5 shadow-lift-0"
-              >
-                <span aria-hidden="true" className="absolute inset-y-0 left-0 w-[3px] bg-moss" />
-                <span className="min-w-0 flex-1 truncate text-[12.5px] text-ink">{course.name}</span>
-                {course.section === null ? null : (
-                  <span className="shrink-0 font-mono text-[11px] text-ink-faint">
-                    Sec {course.section}
-                  </span>
-                )}
-              </li>
-            ))}
-          </ul>
-
-          {staleNote === null ? null : (
-            <RecessedWell tone="p1" className="mt-3 p-3">
-              <p className={cx('text-[12.5px] leading-snug text-ink-soft')}>{staleNote}</p>
-            </RecessedWell>
-          )}
+          <p className="mt-2.5 text-[12px] leading-relaxed text-ink-soft">
+            Refresh before you plan. A recent update does not guarantee every course is current.
+          </p>
+          <div className="mt-3">
+            <SyncButton />
+          </div>
         </div>
       </LayeredCard>
+
+      <StatPanel
+        href="/courses"
+        label="Courses"
+        value={trackedCourseCount}
+        hint="tracked for coursework"
+      />
+      {/* Only when there is something hidden. A panel reading "Hidden 0" is a
+          row of furniture telling the student about a feature they have not
+          used. */}
+      {ignoredCount > 0 ? (
+        <StatPanel
+          href="/ignored"
+          label="Hidden"
+          value={ignoredCount}
+          hint="not shown in your lists"
+        />
+      ) : null}
     </section>
+  );
+}
+
+function StatPanel({
+  href,
+  label,
+  value,
+  hint,
+}: {
+  readonly href: string;
+  readonly label: string;
+  readonly value: number;
+  readonly hint: string;
+}) {
+  return (
+    <LayeredCard lift={1} interactive>
+      <Link
+        href={href}
+        className="flex items-center gap-4 px-4 py-3.5 focus-visible:paper-focus"
+      >
+        <span className="min-w-0 flex-1">
+          <span className="block text-[13px] font-semibold tracking-[-0.01em] text-ink">
+            {label}
+          </span>
+          <span className="mt-0.5 block text-[11.5px] text-ink-faint">{hint}</span>
+        </span>
+        <span className="shrink-0 font-mono text-[20px] leading-none font-medium text-ink tabular-nums">
+          {value}
+        </span>
+        <ChevronRightIcon className="size-4 shrink-0 text-ink-faint" />
+      </Link>
+    </LayeredCard>
   );
 }
