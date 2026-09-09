@@ -11,6 +11,25 @@ import { LEGAL_PAGES, LEGAL_STATUS } from './content';
  * is not signed in, including Google's OAuth reviewers, so they cannot sit
  * behind a navigation bar whose destinations all require a session.
  */
+/**
+ * Rendered per request, and it has to be.
+ *
+ * The Content-Security-Policy this app sends is nonce-based, and a nonce only
+ * exists if there is a request to mint it for. A statically prerendered page is
+ * built once with no request, so its script tags carry no nonce -- while
+ * middleware still sends a policy demanding one. `strict-dynamic` then makes it
+ * absolute: browsers that honour it ignore `'self'` entirely, so every script on
+ * the page is refused and nothing hydrates.
+ *
+ * Measured on the deployed site before this was added: 38 script tags on the
+ * privacy policy, zero nonces, 37 CSP violations, no JavaScript at all. It went
+ * unnoticed because static text looks fine without it.
+ *
+ * The cost is one render per request on a handful of rarely-read pages. The
+ * alternative is weakening the policy for everyone, which is a far worse trade.
+ */
+export const dynamic = 'force-dynamic';
+
 export default function LegalLayout({ children }: { readonly children: ReactNode }) {
   return (
     <div className="grain min-h-dvh bg-p0 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]">
