@@ -204,6 +204,43 @@ the operator.
 
 ---
 
+### 2026-09-09 — which name Google returns, measured across four consents
+
+Row 21 accepts either name for the coursework/submissions permission and deliberately branches on
+neither, on the grounds that one shape had been observed and the other was undocumented rather than
+impossible. Every stored grant has now been read back, which turns that from a stance into a
+measurement.
+
+| Connected | n | courses | coursework | submissions | topics | Written by |
+| --- | --- | --- | --- | --- | --- | --- |
+| 2026-09-07 08:22 | 8 | yes | **no** | yes | yes | Google, post-fix consent |
+| 2026-09-03 17:48 | 4 | yes | **yes** | yes | yes | **This application, fabricated** |
+| 2026-09-03 08:27 | 6 | yes | **no** | yes | yes | Google, rewritten at refresh |
+| 2026-08-31 03:51 | 6 | yes | **no** | yes | yes | Google, rewritten at refresh |
+
+**Three real grants, one shape.** Google named `classroom.student-submissions.me.readonly` every
+time and `classroom.coursework.me.readonly` not once, on consents where both were requested and the
+permission was plainly granted -- the 09-07 account went on to sync and learn its Classroom user id
+from a submission payload, which is not possible without that permission.
+
+The reverse shape is therefore not merely unobserved, it is unobserved across every consent this
+application has ever stored. That is still not a guarantee: which name Google returns is
+undocumented and outside this application's control, and a rule that assumed the observed name
+would be a guess of exactly the shape that caused row 21 twice. Accepting either name costs nothing
+and remains correct. What changes is the confidence, not the code.
+
+**The 4-scope row is gap 16 preserved in amber.** It is the only row naming coursework, and it names
+it because that row holds what the callback *asked for* rather than what Google *answered* -- the
+fabrication this document recorded as closed in code on 2026-09-06, still sitting in a production
+row written three days earlier. It also carries no `openid`, `email` or `profile`, which no real
+token has ever reported, so the fabricated rows are identifiable by shape alone.
+
+It self-heals rather than needing a migration: its access token expired on 2026-09-03 and
+`last_refreshed_at` is null, so the next sync that account runs forces a refresh, and the row 20 fix
+rewrites `granted_scopes` from Google's answer in the same statement as the rotated credential. Left
+alone it will correct itself the next time that student opens the app; it is recorded here so that a
+future reader does not mistake it for evidence about Google.
+
 ### 2026-09-09 — every migration accounted for
 
 The schema probe above answered `0009`, `0015` and `0007`. The remainder were read out of
