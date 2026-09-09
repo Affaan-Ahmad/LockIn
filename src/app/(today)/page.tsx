@@ -69,8 +69,12 @@ export default async function TodayPage({
     <OfflineMirror
       userId={user.id}
       timeZone={data.freshness.timeZone}
-      overdue={data.overdue.map(toOffline)}
-      dueSoon={data.upcoming.map(toOffline)}
+      section="today"
+      value={{
+        savedAt: Date.now(),
+        overdue: data.overdue.map(toOffline),
+        dueSoon: data.upcoming.map(toOffline),
+      }}
     />
   );
 

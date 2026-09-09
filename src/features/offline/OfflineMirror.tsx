@@ -2,44 +2,40 @@
 
 import { useEffect } from 'react';
 
-import { clearSnapshot, readSnapshot, saveSnapshot, type OfflineAssignment } from './store';
+import { saveSection, type OfflineSnapshot, type SectionName } from './store';
 
 /**
- * Copies what is on screen into local storage, so it can be read offline.
+ * Copies what a screen has already rendered into local storage.
  *
- * Renders nothing. It is mounted by the Today screen with the data that screen
- * has already fetched and rendered — it triggers no request of its own, so it
- * cannot make the page slower or the data less current than what the student is
- * looking at.
+ * Renders nothing. Each screen mounts one of these with the data it just
+ * fetched, so the mirror triggers no request of its own and the stored copy can
+ * never be fresher or staler than what the student was looking at.
  *
- * The user id is the safety mechanism. If a snapshot belonging to somebody else
- * is found, it is destroyed before this one is written: two accounts must never
- * have coursework on the device at the same time, and this is the only place
- * that can notice a change of account without a server round trip.
+ * Generic over the section rather than one component per screen: the only thing
+ * that differs is which key is written, and three near-identical components
+ * would be three places to forget the user check that lives in `saveSection`.
  */
 
-export interface OfflineMirrorProps {
+export interface OfflineMirrorProps<K extends SectionName> {
   readonly userId: string;
   readonly timeZone: string;
-  readonly overdue: readonly OfflineAssignment[];
-  readonly dueSoon: readonly OfflineAssignment[];
+  readonly section: K;
+  readonly value: OfflineSnapshot[K];
 }
 
-export function OfflineMirror({ userId, timeZone, overdue, dueSoon }: OfflineMirrorProps) {
-  useEffect(() => {
-    void (async () => {
-      const existing = await readSnapshot();
-      if (existing !== null && existing.userId !== userId) await clearSnapshot();
+export function OfflineMirror<K extends SectionName>({
+  userId,
+  timeZone,
+  section,
+  value,
+}: OfflineMirrorProps<K>) {
+  // Serialised for the dependency list. The value is a fresh object on every
+  // render, so comparing by reference would rewrite the record on each one.
+  const fingerprint = JSON.stringify(value);
 
-      await saveSnapshot({
-        userId,
-        savedAt: Date.now(),
-        timeZone,
-        overdue,
-        dueSoon,
-      });
-    })();
-  }, [userId, timeZone, overdue, dueSoon]);
+  useEffect(() => {
+    void saveSection(userId, timeZone, section, JSON.parse(fingerprint) as OfflineSnapshot[K]);
+  }, [userId, timeZone, section, fingerprint]);
 
   return null;
 }

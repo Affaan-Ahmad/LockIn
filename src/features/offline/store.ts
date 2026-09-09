@@ -8,20 +8,27 @@
  * THE RULES
  * =========
  *
- *   One snapshot, ever. Not a snapshot per user — a single record, stamped with
- *   whose it is. Writing for a different user wipes what was there first, so two
- *   accounts can never have coursework on the device at the same time.
+ *   One record, ever. Not one per user — a single record stamped with whose it
+ *   is. Writing for a different user wipes what was there first, so two accounts
+ *   can never have coursework on the device at the same time.
  *
- *   Nothing sensitive. Titles, courses, due dates and submission state — the
- *   same fields already rendered into the HTML of the page. No tokens, no email
- *   address, no connection state, nothing from `/api/auth`.
+ *   Sections are replaced whole, never merged. The server's answer is the
+ *   complete truth about what a student has outstanding, so patching a section
+ *   could only ever leave behind an assignment that has since been withdrawn.
+ *   Different *sections* do coexist, because each is written by the screen that
+ *   owns it and they are fetched at different moments.
  *
- *   It expires. A snapshot older than `MAX_AGE_MS` is not shown at all. A
+ *   Every section carries its own `savedAt`. A timetable read this morning and a
+ *   deadline list read a minute ago are not equally current, and one shared
+ *   timestamp would have to lie about one of them.
+ *
+ *   Nothing sensitive. Titles, courses, times and rooms — the same fields already
+ *   rendered into the HTML of the page. No tokens, no email address, no
+ *   connection state, nothing from `/api/auth`.
+ *
+ *   It expires. A section older than `MAX_AGE_MS` is not shown at all. A
  *   fortnight-old deadline list is not a degraded view of the truth, it is a
- *   different and wrong one, and the point of this product is not showing those.
- *
- *   It is never presented as current. Callers get `savedAt` and are expected to
- *   say so; see `OfflineCoursework`.
+ *   different and wrong one, and not showing those is the point of the product.
  *
  * IndexedDB rather than localStorage because this is structured data of
  * non-trivial size, and localStorage is synchronous and would block the main
@@ -35,10 +42,10 @@ const STORE = 'snapshot';
 /** One record, always. The key is a constant because there is only ever one. */
 const KEY = 'current';
 
-/** Beyond this a snapshot is discarded rather than shown with a bigger warning. */
+/** Beyond this a section is discarded rather than shown with a bigger warning. */
 const MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
-/** Exactly the shape the deadline lists render, and nothing more. */
+/** Exactly the fields the deadline lists render, and nothing more. */
 export interface OfflineAssignment {
   readonly assignmentId: string;
   readonly courseName: string;
@@ -48,14 +55,58 @@ export interface OfflineAssignment {
   readonly submissionState: string | null;
 }
 
-export interface OfflineSnapshot {
-  /** Whose coursework this is. Used to refuse a mismatched read. */
-  readonly userId: string;
+/** A calendar entry the student added themselves. */
+export interface OfflineEvent {
+  readonly id: string;
+  readonly title: string;
+  readonly kind: string;
+  readonly startsAt: string;
+  readonly note: string | null;
+}
+
+/** One class, flattened out of a TimetableMatch. */
+export interface OfflineClass {
+  readonly courseLabel: string;
+  readonly room: string;
+  readonly startMinute: number | null;
+  readonly endMinute: number | null;
+  readonly cancelled: boolean;
+  readonly uncertain: boolean;
+}
+
+export interface OfflineDay {
+  readonly weekday: string;
+  readonly classes: readonly OfflineClass[];
+}
+
+export interface TodaySection {
   readonly savedAt: number;
-  readonly timeZone: string;
   readonly overdue: readonly OfflineAssignment[];
   readonly dueSoon: readonly OfflineAssignment[];
 }
+
+export interface UpcomingSection {
+  readonly savedAt: number;
+  readonly items: readonly OfflineAssignment[];
+  readonly events: readonly OfflineEvent[];
+}
+
+export interface TimetableSection {
+  readonly savedAt: number;
+  readonly label: string | null;
+  readonly days: readonly OfflineDay[];
+}
+
+export interface OfflineSnapshot {
+  /** Whose coursework this is. The only thing that can detect an account change. */
+  readonly userId: string;
+  readonly timeZone: string;
+  readonly today?: TodaySection;
+  readonly upcoming?: UpcomingSection;
+  readonly timetable?: TimetableSection;
+}
+
+export type SectionName = 'today' | 'upcoming' | 'timetable';
 
 function open(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -81,7 +132,7 @@ function open(): Promise<IDBDatabase> {
  * and `IDBObjectStore.get` is declared as returning `any` for exactly that
  * reason. The assertion is sound because nothing outside this module writes to
  * the store, and keeping it here means no caller has to make the same claim
- * again in a place where that context is missing.
+ * again somewhere that context is missing.
  */
 function run<T>(mode: IDBTransactionMode, work: (store: IDBObjectStore) => IDBRequest): Promise<T> {
   return open().then(
@@ -102,44 +153,73 @@ function run<T>(mode: IDBTransactionMode, work: (store: IDBObjectStore) => IDBRe
   );
 }
 
+async function readRaw(): Promise<OfflineSnapshot | null> {
+  const stored = await run<OfflineSnapshot | undefined>('readonly', (store) => store.get(KEY));
+  return stored ?? null;
+}
+
 /**
- * Replaces the stored snapshot.
+ * Writes one screen's data, leaving the others alone.
  *
- * There is no merge and no append. The server's answer is the whole truth about
- * what this student has outstanding, so a partial update could only ever leave
- * behind an assignment that has since been withdrawn.
+ * The user check happens here rather than at the call sites, because this is the
+ * one function every screen goes through. A snapshot belonging to somebody else
+ * is discarded entirely -- not merged with, not partially kept.
  */
-export async function saveSnapshot(snapshot: OfflineSnapshot): Promise<void> {
+export async function saveSection<K extends SectionName>(
+  userId: string,
+  timeZone: string,
+  section: K,
+  value: OfflineSnapshot[K],
+): Promise<void> {
   try {
-    await run('readwrite', (store) => store.put(snapshot, KEY));
+    const existing = await readRaw();
+    const base: OfflineSnapshot =
+      existing !== null && existing.userId === userId
+        ? existing
+        : { userId, timeZone };
+
+    await run('readwrite', (store) =>
+      store.put({ ...base, userId, timeZone, [section]: value }, KEY),
+    );
   } catch {
     // Private browsing, blocked site data, a storage quota. Offline reading is
-    // an enhancement; failing to store must never break the screen that was
+    // an enhancement; failing to store must never break a screen that was
     // rendering perfectly well from the network.
   }
 }
 
 /**
- * The stored snapshot, if it is this user's and recent enough to mean anything.
+ * The stored snapshot, with any section too old to mean anything removed.
  *
- * `expectedUserId` is optional because the offline page has no server to ask who
- * is signed in — the session cookie is httpOnly and unreadable from script. When
- * it is not supplied the snapshot is returned on the strength of the wipe rules
- * in `saveSnapshot`: there can only ever be one user's data present.
+ * The expiry is applied on read rather than on write, because "too old" is a
+ * question about now and a snapshot can sit untouched for a month.
  */
-export async function readSnapshot(expectedUserId?: string): Promise<OfflineSnapshot | null> {
+export async function readSnapshot(): Promise<OfflineSnapshot | null> {
   try {
-    const stored = await run<OfflineSnapshot | undefined>('readonly', (store) => store.get(KEY));
-    if (stored === undefined) return null;
-    if (expectedUserId !== undefined && stored.userId !== expectedUserId) return null;
-    if (Date.now() - stored.savedAt > MAX_AGE_MS) return null;
-    return stored;
+    const stored = await readRaw();
+    if (stored === null) return null;
+
+    const fresh = (savedAt: number): boolean => Date.now() - savedAt <= MAX_AGE_MS;
+
+    return {
+      userId: stored.userId,
+      timeZone: stored.timeZone,
+      ...(stored.today !== undefined && fresh(stored.today.savedAt)
+        ? { today: stored.today }
+        : {}),
+      ...(stored.upcoming !== undefined && fresh(stored.upcoming.savedAt)
+        ? { upcoming: stored.upcoming }
+        : {}),
+      ...(stored.timetable !== undefined && fresh(stored.timetable.savedAt)
+        ? { timetable: stored.timetable }
+        : {}),
+    };
   } catch {
     return null;
   }
 }
 
-/** Removes everything. Called when the account is deleted, and on user change. */
+/** Removes everything. Called when the account is deleted. */
 export async function clearSnapshot(): Promise<void> {
   try {
     await run('readwrite', (store) => store.delete(KEY));

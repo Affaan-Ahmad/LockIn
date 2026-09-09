@@ -8,6 +8,7 @@ import { DeadlineGroups } from '@/features/dashboard/DeadlineGroups';
 import { EventForm } from '@/features/dashboard/EventForm';
 import { EventList } from '@/features/dashboard/EventList';
 import { MonthCalendar } from '@/features/dashboard/MonthCalendar';
+import { OfflineMirror } from '@/features/offline/OfflineMirror';
 import { AutoSync } from '@/features/sync/AutoSync';
 import { SyncStatus } from '@/features/sync/SyncStatus';
 import { deadlineDayKey } from '@/lib/format';
@@ -119,6 +120,32 @@ export default async function UpcomingPage({
           <EventForm />
         </div>
       </div>
+
+      {/* The offline copy of this screen. Written from what has already been
+          rendered, so it costs no request and cannot disagree with the page. */}
+      <OfflineMirror
+        userId={user.id}
+        timeZone={timeZone}
+        section="upcoming"
+        value={{
+          savedAt: Date.now(),
+          items: [...data.upcoming, ...data.undated].map((item) => ({
+            assignmentId: item.assignmentId,
+            courseName: item.courseName,
+            title: item.title,
+            dueAtUtc: item.deadline.dueAtUtc ?? null,
+            dueDateUtc: item.deadline.dueDateUtc ?? null,
+            submissionState: item.submissionState,
+          })),
+          events: events.map((event) => ({
+            id: event.id,
+            title: event.title,
+            kind: event.kind,
+            startsAt: event.startsAt.toISOString(),
+            note: event.note,
+          })),
+        }}
+      />
 
       <EventList
         events={listedEvents}

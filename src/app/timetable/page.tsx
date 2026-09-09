@@ -7,6 +7,7 @@ import { CAMPUS_TIME_ZONE, WHOLE_COHORT_SECTION, type Weekday } from '@/domain/t
 import { ClassList } from '@/features/timetable/ClassList';
 import { CohortPicker } from '@/features/timetable/CohortPicker';
 import { FreeRoomsPanel } from '@/features/timetable/FreeRoomsPanel';
+import { OfflineMirror } from '@/features/offline/OfflineMirror';
 import { loadReviewCount, requireSessionUser } from '@/lib/queries';
 import { classesFor, loadTimetableScreen } from '@/lib/timetable';
 
@@ -65,6 +66,30 @@ export default async function TimetablePage({
 
   const day = screen.days.find((candidate) => candidate.weekday === selectedDay) ?? null;
   const matches = screen.selection === null ? [] : classesFor(screen, selectedDay, screen.selection);
+
+  /**
+   * The whole week, flattened for offline reading.
+   *
+   * Every day rather than only the one on screen: the timetable is the screen a
+   * student most often wants in a building with no signal, and caching just the
+   * selected day would mean the copy is useful only if they happened to open the
+   * right tab before losing the connection.
+   */
+  const selection = screen.selection;
+  const offlineDays =
+    selection === null
+      ? []
+      : DAYS.map((weekday) => ({
+          weekday,
+          classes: classesFor(screen, weekday, selection).map((match) => ({
+            courseLabel: match.entry.courseLabel,
+            room: match.entry.room,
+            startMinute: match.entry.time?.startMinute ?? null,
+            endMinute: match.entry.time?.endMinute ?? null,
+            cancelled: match.entry.status === 'CANCELLED',
+            uncertain: match.confidence === 'POSSIBLE',
+          })),
+        }));
 
   return (
     <Shell
@@ -129,6 +154,24 @@ export default async function TimetablePage({
         </>
       }
     >
+      {/* The offline copy. Written from what this render already parsed, so it
+          costs nothing and matches exactly what the student is looking at. */}
+      <OfflineMirror
+        userId={user.id}
+        timeZone={CAMPUS_TIME_ZONE}
+        section="timetable"
+        value={{
+          savedAt: Date.now(),
+          label:
+            screen.selection === null
+              ? null
+              : screen.selection.section === WHOLE_COHORT_SECTION
+                ? screen.selection.cohortLabel
+                : `${screen.selection.cohortLabel} · Section ${screen.selection.section}`,
+          days: offlineDays,
+        }}
+      />
+
       {!screen.configured ? (
         <EmptyState
           icon={<CalendarIcon className="size-6" />}

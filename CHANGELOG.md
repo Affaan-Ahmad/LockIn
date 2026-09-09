@@ -65,7 +65,16 @@ Not released. The version in `package.json` is unchanged, so `/api/version` stil
   mirrors what it already rendered into IndexedDB, and the offline page reads it back — so an
   installed app on a train shows the deadlines it last saw instead of a wall.
 
-  The safety rules are the design, not a footnote. One snapshot ever, stamped with whose it is, and
+  Today, Upcoming and Timetable each cache their own screen, and offline the app stays navigable:
+  the worker serves one document for any route it cannot fulfil, and because `respondWith` does not
+  rewrite the address, that document can read the URL and show the screen that was actually asked
+  for. The tabs are ordinary links, so back and forward work. Courses, review and settings say they
+  need a connection rather than pretending — they all change something on the server.
+
+  Each section carries its own age, because a timetable read this morning and a deadline list read a
+  minute ago are not equally current and one shared timestamp would have to lie about one of them.
+
+  The safety rules are the design, not a footnote. One record ever, stamped with whose it is, and
   writing for a different user wipes what was there first, so two accounts can never have coursework
   on one device. Deleting the account deletes it. It expires after seven days, because a fortnight-old
   deadline list is not a degraded truth but a different and wrong one. Only titles, courses, dates and
