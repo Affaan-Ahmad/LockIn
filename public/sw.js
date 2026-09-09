@@ -50,7 +50,7 @@
  * round trip instead of several.
  */
 
-const VERSION = 'v2';
+const VERSION = 'v3';
 const STATIC_CACHE = `lockin-static-${VERSION}`;
 const SHELL_CACHE = `lockin-shell-${VERSION}`;
 
@@ -128,6 +128,40 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+/**
+ * Refreshed once per worker startup, on the first navigation that reaches the
+ * network.
+ *
+ * `install` runs only when this file's *bytes* change, and the offline page is
+ * not this file. A deploy that fixes the offline page while leaving sw.js alone
+ * therefore leaves the old copy cached forever, with no event to correct it --
+ * which is exactly what happened: a CSP fix landed in the page, the worker never
+ * noticed, and installs kept serving markup whose scripts the policy refused.
+ * Bumping VERSION fixes that occurrence; this stops the next one.
+ *
+ * Reinstalling the app does not help either, which is worth knowing before
+ * anyone is asked to try it. A worker and its caches belong to the browser's
+ * storage for the origin, not to the home-screen shortcut.
+ *
+ * Once per startup is the right frequency: enough that any deploy is picked up
+ * the next time the app is opened with a connection, rare enough to be invisible
+ * -- and it is never awaited, so the navigation that triggered it does not wait.
+ */
+let shellRefreshed = false;
+
+function refreshShellSoon() {
+  if (shellRefreshed) return;
+  shellRefreshed = true;
+  void (async () => {
+    try {
+      const cache = await caches.open(SHELL_CACHE);
+      await precacheOfflinePage(cache);
+    } catch {
+      /* The next startup tries again. */
+    }
+  })();
+}
+
 /** Content-hashed build output: same URL, same bytes, no user in it. */
 function isImmutableAsset(url) {
   return url.pathname.startsWith('/_next/static/');
@@ -200,7 +234,11 @@ async function cacheFirst(request, cacheName) {
  */
 async function navigateOrOffline(request) {
   try {
-    return await fetch(request);
+    const response = await fetch(request);
+    // The connection is up, so this is the moment to make sure the copy kept
+    // for when it is not still matches what the server is serving.
+    refreshShellSoon();
+    return response;
   } catch {
     const cache = await caches.open(SHELL_CACHE);
     const offline = await cache.match('/offline');
